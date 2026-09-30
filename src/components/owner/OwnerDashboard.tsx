@@ -2,9 +2,9 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle, CalendarDays, Droplets, Fuel, Inbox, Image as ImageIcon, MapPinned, MessageCircle, Palette, Route as RouteIcon, Users, Wallet } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { createPaymentLink } from "@/lib/booking.functions";
+import { cancelBookingLegacy, ensureDemoData, listBlocked, ownerData, ownerSignedUrls, setApproval, setBlocked, updateSubscription } from "@/lib/owner.functions";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BeforeAfter } from "@/components/BeforeAfter";
@@ -29,15 +29,11 @@ const wa = (phone: string | null | undefined, text: string) =>
 
 function useSigned(paths: (string | null | undefined)[]) {
   const list = paths.filter(Boolean) as string[];
+  const sign = useServerFn(ownerSignedUrls);
   return useQuery({
     queryKey: ["signed", list],
     enabled: list.length > 0,
-    queryFn: async () => {
-      const { data } = await supabase.storage.from("car-media").createSignedUrls(list, 3600);
-      const m: Record<string, string> = {};
-      data?.forEach((d) => d.path && d.signedUrl && (m[d.path] = d.signedUrl));
-      return m;
-    },
+    queryFn: () => sign({ data: { paths: list } }),
   });
 }
 
@@ -72,24 +68,18 @@ function Stat({ icon: I, label, value, tone }: { icon: typeof Users; label: stri
 export function OwnerDashboard() {
   const qc = useQueryClient();
   const today = todayIST();
-  const bookingsQ = useQuery({
-    queryKey: ["bookings"],
+  const load = useServerFn(ownerData);
+  const ensure = useServerFn(ensureDemoData);
+  const dataQ = useQuery({
+    queryKey: ["owner"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("bookings").select("*, clients(*)").order("date", { ascending: true });
-      if (error) throw error;
-      return data as unknown as Booking[];
+      await ensure(); // auto-seed if there's nothing from today onwards
+      return load();
     },
   });
-  const subsQ = useQuery({
-    queryKey: ["subs"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("subscriptions").select("*, clients(*)").order("preferred_time");
-      if (error) throw error;
-      return data as unknown as Sub[];
-    },
-  });
-  const bookings = bookingsQ.data ?? [];
-  const subs = subsQ.data ?? [];
+  const bookingsQ = dataQ;
+  const bookings = (dataQ.data?.bookings ?? []) as unknown as Booking[];
+  const subs = (dataQ.data?.subs ?? []) as unknown as Sub[];
   const refresh = () => qc.invalidateQueries();
 
   const todays = bookings.filter((b) => b.date === today && ["confirmed", "pending_deposit", "consultation"].includes(b.status));
@@ -163,13 +153,9 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
   const qc = useQueryClient();
   const [start, setStart] = useState(todayIST());
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  const blockedQ = useQuery({
-    queryKey: ["blocked", start],
-    queryFn: async () => {
-      const { data } = await supabase.from("blocked_slots").select("*").gte("date", start).lt("date", addDays(start, 7));
-      return data ?? [];
-    },
-  });
+  const listB = useServerFn(listBlocked);
+  const setB = useServerFn(setBlocked);
+  const blockedQ = useQuery({ queryKey: ["blocked", start], queryFn: () => listB({ data: { start } }) });
   const blocked = new Set((blockedQ.data ?? []).map((b) => `${b.date} ${b.time}`));
   const [pending, setPending] = useState<Set<string>>(new Set());
   const mode = useRef<"block" | "unblock" | null>(null);
@@ -184,11 +170,7 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
     const keys = [...pending];
     const m = mode.current;
     mode.current = null;
-    if (m === "block") {
-      await supabase.from("blocked_slots").upsert(keys.map((k) => ({ date: k.slice(0, 10), time: k.slice(11), reason: "Water shortage" })), { onConflict: "date,time" });
-    } else {
-      for (const k of keys) await supabase.from("blocked_slots").delete().eq("date", k.slice(0, 10)).eq("time", k.slice(11));
-    }
+    await setB({ data: { mode: m, keys: keys.map((k) => ({ date: k.slice(0, 10), time: k.slice(11) })) } });
     setPending(new Set());
     await qc.invalidateQueries({ queryKey: ["blocked"] });
     toast.success(m === "block" ? `Blocked ${keys.length} slot(s) for water shortage` : `Reopened ${keys.length} slot(s)`);
@@ -262,10 +244,14 @@ function Subscriptions({ subs, bookings, onChange }: { subs: Sub[]; bookings: Bo
   const today = todayIST();
   const active = subs.filter((s) => s.active).length;
   const monthly = active * 30 + bookings.filter((b) => b.status !== "lead").length;
+  const updSub = useServerFn(updateSubscription);
   async function upd(id: string, patch: { preferred_time?: string; active?: boolean; skip_dates?: string[] }) {
-    const { error } = await supabase.from("subscriptions").update(patch).eq("id", id);
-    if (error) toast.error(error.message);
-    else onChange();
+    try {
+      await updSub({ data: { id, patch } });
+      onChange();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
   return (
     <div className="rounded-2xl bg-card p-4">
@@ -309,20 +295,15 @@ function Subscriptions({ subs, bookings, onChange }: { subs: Sub[]; bookings: Bo
 function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () => void }) {
   const [offer, setOffer] = useState<{ booking: Booking; people: { name: string; phone: string }[] } | null>(null);
   const upcoming = bookings.filter((b) => b.date && b.date >= todayIST() && ["confirmed", "pending_deposit"].includes(b.status));
+  const cancelFn = useServerFn(cancelBookingLegacy);
   async function cancel(b: Booking) {
-    const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", b.id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { people } = await cancelFn({ data: { id: b.id } });
+      setOffer({ booking: b, people });
+      onChange();
+    } catch (e) {
+      toast.error((e as Error).message);
     }
-    const { data } = await supabase.from("waitlist").select("clients(name, phone)").eq("area", b.area ?? "MG Marg").limit(3);
-    let people = (data ?? []).map((w) => w.clients as unknown as { name: string; phone: string }).filter(Boolean);
-    if (people.length < 3) {
-      const { data: more } = await supabase.from("waitlist").select("clients(name, phone)").limit(3 - people.length);
-      people = people.concat((more ?? []).map((w) => w.clients as unknown as { name: string; phone: string }));
-    }
-    setOffer({ booking: b, people });
-    onChange();
   }
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -402,8 +383,9 @@ function Leads({ bookings, onChange }: { bookings: Booking[]; onChange: () => vo
 function Wraps({ bookings, onChange }: { bookings: Booking[]; onChange: () => void }) {
   const wraps = bookings.filter((b) => b.plan.startsWith("Signature") && b.approval_status);
   const signed = useSigned(wraps.flatMap((w) => [w.photo_url, w.clean_preview_url]));
-  async function set(b: Booking, status: string) {
-    await supabase.from("bookings").update({ approval_status: status }).eq("id", b.id);
+  const approve = useServerFn(setApproval);
+  async function set(b: Booking, status: "approved" | "changes_requested") {
+    await approve({ data: { id: b.id, status } });
     toast.success(status === "approved" ? "Design approved" : "Change requested");
     if (status === "changes_requested" && b.clients?.phone)
       window.open(wa(b.clients.phone, `Hi ${b.clients.name.split(" ")[0]}, Rai here! Loved your ${b.colour} ${b.style} idea for the ${b.vehicle_model}. Can we tweak a few details before I start? 🎨`), "_blank");
