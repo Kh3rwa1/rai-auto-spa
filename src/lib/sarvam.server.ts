@@ -73,6 +73,14 @@ function unknownVars(detail: string): string[] {
   return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]!);
 }
 
+/**
+ * Variables the agent rejected earlier in this process. Remembering them means
+ * the *second* and every later booking skips the 422 round-trip entirely —
+ * without this, a slow or rate-limited retry could drop the call altogether.
+ */
+const rejectedVars = new Set<string>();
+
+
 function buildBody(env: Env, from: string, v: CallVars, vars: Record<string, string>) {
   return {
     app_config: {
