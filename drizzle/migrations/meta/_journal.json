@@ -43,6 +43,13 @@
       "when": 1790735785350,
       "tag": "0005_demo_sandbox_server_only",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790736305984,
+      "tag": "0006_subscription_visits",
+      "breakpoints": true
     }
   ]
 }
