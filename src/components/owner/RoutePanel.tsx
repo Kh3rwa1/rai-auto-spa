@@ -3,6 +3,7 @@ import { CircleCheck, MapPinned } from "lucide-react";
 import { STUDIO } from "@/lib/plans";
 import { planRoute } from "@/lib/ops-config";
 import { RouteMap } from "./shared";
+import type { Stop } from "./RouteMap";
 
 type Route = ReturnType<typeof planRoute<Stop>>;
 
