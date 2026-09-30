@@ -129,14 +129,21 @@ export const Route = createFileRoute("/api/public/update-booking")({
         const patch: {
           call_status?: string;
           call_transcript?: string;
+          call_duration_seconds?: number;
+          call_updated_at?: string;
           plan?: string;
         } = {};
         if (d.call_status) patch.call_status = d.call_status;
         if (d.call_transcript) patch.call_transcript = d.call_transcript;
+        if (d.call_duration_seconds !== undefined)
+          patch.call_duration_seconds = d.call_duration_seconds;
+        if (d.call_status || d.call_transcript || d.call_duration_seconds !== undefined)
+          patch.call_updated_at = new Date().toISOString();
         if (d.new_plan) {
           const name = planName(d.new_plan);
           if (name) patch.plan = name;
         }
+
 
         let rescheduled: string | null = null;
         if (d.new_time || d.new_date) {
