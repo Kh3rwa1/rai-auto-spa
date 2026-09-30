@@ -66,7 +66,7 @@ const Email = ({ name, vehicle, plan, date, time, location, total, deposit, prev
 
 export const template = {
   component: Email,
-  subject: (d: Record<string, any>) => `You're booked — ${d.plan ?? 'your wash'} on ${d.date ?? ''} at ${d.time ?? ''} · Rai's Auto Spa`,
+  subject: (d: Record<string, any>) => `You're booked — ${d['plan'] ?? 'your wash'} on ${d['date'] ?? ''} at ${d['time'] ?? ''} · Rai's Auto Spa`,
   displayName: 'Booking confirmation',
   previewData: {
     name: 'Pema',

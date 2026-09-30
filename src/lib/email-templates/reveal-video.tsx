@@ -59,7 +59,7 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl, previewUrl
 
 export const template = {
   component: Email,
-  subject: (d: Record<string, any>) => `Your ${d.vehicle ?? 'car'} is ready to shine ${d.date ?? ''} ${d.time ?? ''} — Rai's Auto Spa`,
+  subject: (d: Record<string, any>) => `Your ${d['vehicle'] ?? 'car'} is ready to shine ${d['date'] ?? ''} ${d['time'] ?? ''} — Rai's Auto Spa`,
   displayName: 'Reveal video ready',
   previewData: {
     name: 'Pema',
