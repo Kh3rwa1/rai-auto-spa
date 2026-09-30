@@ -19,6 +19,9 @@ async def main():
         await expect(page.locator("#step-2-body")).to_be_visible(timeout=60000)
         await page.locator("#step-2-body").get_by_role("button", name="Essential Wash").click()
         await page.get_by_role("radio", name="Come to Studio").click()
+        await page.get_by_role("button", name="Next →").click()  # next week: never past, rarely full
+        await page.wait_for_load_state("networkidle")
+        await page.wait_for_timeout(1000)
         slot = page.locator("#step-3-body button[aria-pressed='false']:not([disabled])").filter(has_text=":00").first
         await slot.click()
         await page.get_by_role("button", name="Pay & confirm").click()
