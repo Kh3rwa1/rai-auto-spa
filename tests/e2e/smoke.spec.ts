@@ -22,12 +22,24 @@ test("sample car books end to end and previews the emails", async ({ page }) => 
   await page.getByRole("radio", { name: "Come to Studio" }).click();
   await page.getByRole("button", { name: "Next →" }).click();
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(1000);
-  const slot = page
+  const free = page
     .locator("#step-3-body button[aria-pressed='false']:not([disabled])")
-    .filter({ hasText: ":00" })
-    .first();
-  await slot.click();
+    .filter({ hasText: ":00" });
+  // The grid re-renders when the availability query settles, so retry until a pick sticks.
+  await expect
+    .poll(
+      async () => {
+        const slot = free.first();
+        if ((await free.count()) === 0) return false;
+        await slot.click().catch(() => {});
+        return page
+          .locator("#step-3-body button[aria-pressed='true']")
+          .isVisible()
+          .catch(() => false);
+      },
+      { timeout: 60_000, intervals: [1000] },
+    )
+    .toBe(true);
 
   // Step 5 — details + demo payment
   await page.getByRole("button", { name: "Pay & confirm" }).click();
