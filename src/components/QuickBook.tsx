@@ -37,9 +37,13 @@ const dayLabel = (ds: string, today: string) =>
     ? "Today"
     : ds === plusDays(today, 1)
       ? "Tmrw"
-      : new Date(ds + "T00:00:00Z").toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" });
+      : new Date(ds + "T00:00:00Z").toLocaleDateString("en-IN", {
+          weekday: "short",
+          timeZone: "UTC",
+        });
 const reducedMotion = () =>
-  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 function calendarUrl(plan: PlanId, date: string, time: string, where: string) {
   const [h, m] = time.split(":").map(Number);
@@ -102,7 +106,17 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){.qb *,.qb *::after{animation:none!important;transition:none!important}}
 `;
 
-function Block({ n, title, done, children }: { n: number; title: string; done: boolean; children: ReactNode }) {
+function Block({
+  n,
+  title,
+  done,
+  children,
+}: {
+  n: number;
+  title: string;
+  done: boolean;
+  children: ReactNode;
+}) {
   return (
     <section className={`qb-in ${done ? "qb-done" : ""}`} aria-label={title}>
       <h3 className="qb-h mb-3 flex items-center gap-3 text-xl">
@@ -238,7 +252,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     }
     return null;
   })();
-  const activeDay = day ?? slot?.date ?? soonest?.date ?? days[0];
+  const activeDay = day ?? slot?.date ?? soonest?.date ?? days[0]!;
   const gridLoaded = Object.keys(slots).length > 0;
 
   async function pick(ds: string, t: string) {
@@ -347,7 +361,8 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const whereDone = !mobile || !!pin;
   const total = plan ? calcTotal(plan, mobile, mobile && !water) : 0;
   const deposit = depositOf(total);
-  const ready = !!plan && !!bookingId && !!slot && holdLive && whereDone && nameOk && phoneOk && emailOk;
+  const ready =
+    !!plan && !!bookingId && !!slot && holdLive && whereDone && nameOk && phoneOk && emailOk;
   const nextHint = !plan
     ? "Pick a service"
     : !whereDone
@@ -413,7 +428,12 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
             <CalendarPlus className="h-5 w-5" aria-hidden /> Add to calendar
           </a>
           {!mobile && (
-            <a className="qb-soon justify-center !bg-white" href={MAPS_URL} target="_blank" rel="noreferrer">
+            <a
+              className="qb-soon justify-center !bg-white"
+              href={MAPS_URL}
+              target="_blank"
+              rel="noreferrer"
+            >
               <MapPin className="h-5 w-5" aria-hidden /> Directions
             </a>
           )}
@@ -463,7 +483,9 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                 </span>
                 <span className="qb-h mt-1 block text-xl leading-tight">{p.name}</span>
                 <span className="qb-h mt-2 block text-3xl">{inr(p.price)}</span>
-                <span className="mt-2 block text-xs text-[#444]">{p.features.slice(0, 3).join(" · ")}</span>
+                <span className="mt-2 block text-xs text-[#444]">
+                  {p.features.slice(0, 3).join(" · ")}
+                </span>
               </button>
             );
           })}
@@ -473,7 +495,13 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       {plan && (
         <Block n={2} title="Where?" done={whereDone}>
           <div role="radiogroup" aria-label="Location" className="grid grid-cols-2 gap-3">
-            <button type="button" role="radio" aria-checked={!mobile} onClick={() => setMode(false)} className="qb-card p-4">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={!mobile}
+              onClick={() => setMode(false)}
+              className="qb-card p-4"
+            >
               <Store className="h-6 w-6" aria-hidden />
               <span className="qb-h mt-2 block text-lg">Studio</span>
               <span className="block text-xs text-[#444]">MG Marg · no extra fee</span>
@@ -489,7 +517,9 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
               <Truck className="h-6 w-6" aria-hidden />
               <span className="qb-h mt-2 block text-lg">Doorstep</span>
               <span className="block text-xs text-[#444]">
-                {plan === "signature" ? "Signature is studio-only" : `Van comes to you · +${inr(MOBILE_FEE)}`}
+                {plan === "signature"
+                  ? "Signature is studio-only"
+                  : `Van comes to you · +${inr(MOBILE_FEE)}`}
               </span>
             </button>
           </div>
@@ -497,7 +527,12 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
           {mobile && (
             <div className="qb-in mt-4 space-y-3">
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="qb-chip" aria-pressed={area === "My location"} onClick={locate}>
+                <button
+                  type="button"
+                  className="qb-chip"
+                  aria-pressed={area === "My location"}
+                  onClick={locate}
+                >
                   {locating ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                   ) : (
@@ -539,7 +574,8 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
               </label>
               {!water && (
                 <p className="qb-in text-sm text-[#444]">
-                  No stress — the van brings a tank (+{inr(WATER_FEE)}). 11am–4pm isn&rsquo;t available without water.
+                  No stress — the van brings a tank (+{inr(WATER_FEE)}). 11am–4pm isn&rsquo;t
+                  available without water.
                 </p>
               )}
             </div>
@@ -556,7 +592,11 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
           ) : (
             <>
               {soonest && !slot && whereDone && (
-                <button type="button" className="qb-soon mb-3" onClick={() => pick(soonest.date, soonest.time)}>
+                <button
+                  type="button"
+                  className="qb-soon mb-3"
+                  onClick={() => pick(soonest.date, soonest.time)}
+                >
                   <Zap className="h-5 w-5" aria-hidden />
                   Soonest: {dayLabel(soonest.date, today)}{" "}
                   {plan === "signature" ? "drop-off 9am" : timeLabel(soonest.time)} — tap to grab it
@@ -572,7 +612,11 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                   Signature takes 2 full days in a bay. Pick your drop-off day (9am).
                 </p>
               )}
-              <div role="group" aria-label="Day" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-1">
+              <div
+                role="group"
+                aria-label="Day"
+                className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-1"
+              >
                 {days.map((ds) => {
                   const count = openTimes(ds).length;
                   const mine = slot?.date === ds;
@@ -606,7 +650,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
               {plan !== "signature" && (
                 <div role="group" aria-label="Time" className="mt-2 flex flex-wrap gap-2">
                   {times.map((t) => {
-                    const mine = slot?.date === activeDay && slot.time === t;
+                    const mine = slot?.date === activeDay && slot?.time === t;
                     const open = isOpen(activeDay, t);
                     return (
                       <button
@@ -615,7 +659,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                         className="qb-chip"
                         disabled={!open && !mine}
                         aria-pressed={mine}
-                        onClick={() => pick(activeDay, t)}
+                        onClick={() => pick(activeDay!, t)}
                       >
                         {holding === `${activeDay} ${t}` ? (
                           <Loader2 className="h-4 w-4 animate-spin" aria-label="Holding" />
@@ -628,7 +672,11 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                 </div>
               )}
               {slot && (
-                <p key={slotText} className={`qb-held qb-in mt-3 ${holdLive ? "" : "!bg-[#FFD84D]"}`} role="status">
+                <p
+                  key={slotText}
+                  className={`qb-held qb-in mt-3 ${holdLive ? "" : "!bg-[#FFD84D]"}`}
+                  role="status"
+                >
                   {holdLive
                     ? `✓ ${slotText} is held for you for ${HOLD_MIN} min — just add your details.`
                     : "Hold expired — tap a time again."}
@@ -698,7 +746,12 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
               {inr(total)} total · {inr(deposit)} now{nextHint ? ` · ${nextHint}` : " · ready!"}
             </p>
           </div>
-          <button type="button" className="qb-pay" disabled={!ready} onClick={() => setPayOpen(true)}>
+          <button
+            type="button"
+            className="qb-pay"
+            disabled={!ready}
+            onClick={() => setPayOpen(true)}
+          >
             Pay {inr(deposit)}
           </button>
         </div>

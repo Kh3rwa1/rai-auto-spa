@@ -107,7 +107,8 @@ const CSS = `
 
 /* ───────── tiny hooks ───────── */
 const prefersReduced = () =>
-  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 function useInView<T extends Element>(threshold = 0.2) {
   const ref = useRef<T>(null);
@@ -121,7 +122,7 @@ function useInView<T extends Element>(threshold = 0.2) {
     }
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) {
+        if (e?.isIntersecting) {
           setInView(true);
           io.disconnect();
         }
@@ -134,7 +135,15 @@ function useInView<T extends Element>(threshold = 0.2) {
   return [ref, inView] as const;
 }
 
-function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
+function Reveal({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+}) {
   const [ref, inView] = useInView<HTMLDivElement>(0.15);
   return (
     <div
@@ -204,7 +213,10 @@ function Nav() {
         <a href="#top" aria-label="Rai's Auto Spa — back to top">
           <Wordmark />
         </a>
-        <nav aria-label="Main" className="flex items-center gap-1 text-[13px] font-extrabold uppercase">
+        <nav
+          aria-label="Main"
+          className="flex items-center gap-1 text-[13px] font-extrabold uppercase"
+        >
           <a href="#glow" className="ras-link hidden min-h-[44px] items-center px-3 md:flex">
             Glow-up
           </a>
@@ -246,15 +258,57 @@ function Mascot() {
     >
       <ellipse cx="100" cy="210" rx="56" ry="7" fill="#111" />
       <path d="M80 172v24M120 172v24" stroke="#111" strokeWidth="6" strokeLinecap="round" />
-      <path d="M58 202q0-15 23-13q10 1 10 13z" fill="#B9A7FF" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
-      <path d="M109 202q0-12 10-13q23-2 23 13z" fill="#B9A7FF" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
-      <path d="M47 122q-22 2-24-18" stroke="#111" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path
+        d="M58 202q0-15 23-13q10 1 10 13z"
+        fill="#B9A7FF"
+        stroke="#111"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M109 202q0-12 10-13q23-2 23 13z"
+        fill="#B9A7FF"
+        stroke="#111"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M47 122q-22 2-24-18"
+        stroke="#111"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
       <circle cx="22" cy="98" r="9" fill="#fff" stroke="#111" strokeWidth="4" />
       <g className="ras-arm">
-        <path d="M153 122q20-6 26-28" stroke="#111" strokeWidth="5" fill="none" strokeLinecap="round" />
-        <rect x="170" y="72" width="22" height="18" rx="5" fill="#9EE6C4" stroke="#111" strokeWidth="4" />
+        <path
+          d="M153 122q20-6 26-28"
+          stroke="#111"
+          strokeWidth="5"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <rect
+          x="170"
+          y="72"
+          width="22"
+          height="18"
+          rx="5"
+          fill="#9EE6C4"
+          stroke="#111"
+          strokeWidth="4"
+        />
       </g>
-      <rect x="45" y="62" width="110" height="114" rx="26" fill="#FFD84D" stroke="#111" strokeWidth="5" />
+      <rect
+        x="45"
+        y="62"
+        width="110"
+        height="114"
+        rx="26"
+        fill="#FFD84D"
+        stroke="#111"
+        strokeWidth="5"
+      />
       {[
         [62, 150, 5],
         [140, 140, 6],
@@ -284,7 +338,13 @@ function Mascot() {
       </g>
       <circle cx="63" cy="126" r="7" fill="#FF5FA2" opacity=".7" />
       <circle cx="137" cy="126" r="7" fill="#FF5FA2" opacity=".7" />
-      <path d="M82 128q18 26 36 0z" fill="#111" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
+      <path
+        d="M82 128q18 26 36 0z"
+        fill="#111"
+        stroke="#111"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
       <path d="M92 138q8 6 16 0q-2 7-8 7t-8-7z" fill="#FF5FA2" />
     </svg>
   );
@@ -315,10 +375,12 @@ function Hero() {
                 <span style={{ animationDelay: "180ms" }}>to beast.</span>
               </span>
             </h1>
-            <p className="mt-4 text-[12px] font-extrabold uppercase tracking-[0.22em]">Wash · Detail · Custom wrap</p>
+            <p className="mt-4 text-[12px] font-extrabold uppercase tracking-[0.22em]">
+              Wash · Detail · Custom wrap
+            </p>
             <p className="mt-3 max-w-md text-base leading-relaxed text-[#333]">
-              Pick a service, tap a time, done. Studio bay on MG Marg or the van to your doorstep. Priced upfront, no
-              account needed.
+              Pick a service, tap a time, done. Studio bay on MG Marg or the van to your doorstep.
+              Priced upfront, no account needed.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href="#book" className="ras-btn ras-yellow">
@@ -330,16 +392,23 @@ function Hero() {
             </div>
           </div>
 
-          <ul className="grid grid-cols-2 gap-3 self-start sm:w-44 sm:grid-cols-1" aria-label="At a glance">
+          <ul
+            className="grid grid-cols-2 gap-3 self-start sm:w-44 sm:grid-cols-1"
+            aria-label="At a glance"
+          >
             <li className="ras-box ras-white p-3">
               <div className="ras-display text-3xl">
                 <CountUp to={1500} suffix="+" />
               </div>
-              <div className="mt-1 text-[10px] font-extrabold uppercase tracking-wider">Appointments done</div>
+              <div className="mt-1 text-[10px] font-extrabold uppercase tracking-wider">
+                Appointments done
+              </div>
             </li>
             <li className="ras-box ras-white p-3">
               <div className="ras-display text-3xl">2 + 1</div>
-              <div className="mt-1 text-[10px] font-extrabold uppercase tracking-wider">Studio bays + van</div>
+              <div className="mt-1 text-[10px] font-extrabold uppercase tracking-wider">
+                Studio bays + van
+              </div>
             </li>
             <li className="ras-box ras-lilac ras-shine col-span-2 p-3 sm:col-span-1">
               <div className="text-[10px] font-extrabold uppercase tracking-wider">Starting at</div>
@@ -393,10 +462,16 @@ const TICKER = [
 function Marquee() {
   const items = [...TICKER, ...TICKER];
   return (
-    <div className="ras-marquee-wrap ras-ink mt-5 overflow-hidden border-y-[3px] border-[#111] py-3" aria-hidden>
+    <div
+      className="ras-marquee-wrap ras-ink mt-5 overflow-hidden border-y-[3px] border-[#111] py-3"
+      aria-hidden
+    >
       <div className="ras-marquee">
         {items.map((t, i) => (
-          <span key={i} className="ras-display flex items-center gap-5 px-5 text-xl text-[var(--yellow)]">
+          <span
+            key={i}
+            className="ras-display flex items-center gap-5 px-5 text-xl text-[var(--yellow)]"
+          >
             {t} <span className="text-[var(--pink)]">✦</span>
           </span>
         ))}
@@ -435,7 +510,12 @@ function GlowUp() {
   }, [inView, touched]);
 
   const steps = [
-    { icon: Zap, c: "ras-mint", t: "Pick", d: "Wash, detail or full wrap. Prices shown upfront, no surprises." },
+    {
+      icon: Zap,
+      c: "ras-mint",
+      t: "Pick",
+      d: "Wash, detail or full wrap. Prices shown upfront, no surprises.",
+    },
     {
       icon: CalendarCheck,
       c: "ras-yellow",
@@ -451,7 +531,11 @@ function GlowUp() {
   ];
 
   return (
-    <section id="glow" aria-labelledby="glow-title" className="scroll-mt-24 px-3 py-12 sm:px-5 sm:py-16">
+    <section
+      id="glow"
+      aria-labelledby="glow-title"
+      className="scroll-mt-24 px-3 py-12 sm:px-5 sm:py-16"
+    >
       <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-2">
         <Reveal>
           <div ref={wrapRef} className="ras-box ras-white ras-shadow p-2.5">
@@ -463,7 +547,11 @@ function GlowUp() {
                 decoding="async"
                 className="absolute inset-0 h-full w-full object-cover"
               />
-              <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} aria-hidden>
+              <div
+                className="absolute inset-0"
+                style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+                aria-hidden
+              >
                 <img
                   src={heroImg}
                   alt=""
@@ -541,7 +629,11 @@ function GlowUp() {
   );
 }
 
-const PLAN_COLOR: Record<PlanId, string> = { wash: "ras-mint", detail: "ras-lilac", signature: "ras-pink" };
+const PLAN_COLOR: Record<PlanId, string> = {
+  wash: "ras-mint",
+  detail: "ras-lilac",
+  signature: "ras-pink",
+};
 const PLAN_PITCH: Record<PlanId, string> = {
   wash: "Quick refresh, studio or doorstep.",
   detail: "Inside and out, showroom-level.",
@@ -550,7 +642,11 @@ const PLAN_PITCH: Record<PlanId, string> = {
 
 function Services() {
   return (
-    <section id="services" aria-labelledby="services-title" className="scroll-mt-24 px-3 pb-12 sm:px-5 sm:pb-16">
+    <section
+      id="services"
+      aria-labelledby="services-title"
+      className="scroll-mt-24 px-3 pb-12 sm:px-5 sm:pb-16"
+    >
       <div className="ras-box ras-white ras-shadow mx-auto max-w-6xl p-4 sm:p-7">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -573,7 +669,10 @@ function Services() {
                     aria-label={`${p.name}, ${inr(p.price)}, ${p.duration}. Book now`}
                     className="ras-row ras-box ras-white ras-lift flex min-h-[84px] items-stretch overflow-hidden"
                   >
-                    <span className={`ras-strip ${PLAN_COLOR[id]} shrink-0 border-r-[3px] border-[#111]`} aria-hidden />
+                    <span
+                      className={`ras-strip ${PLAN_COLOR[id]} shrink-0 border-r-[3px] border-[#111]`}
+                      aria-hidden
+                    />
                     <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
                       <span className="min-w-0">
                         <span className="flex flex-wrap items-center gap-2">
@@ -597,7 +696,9 @@ function Services() {
                         </span>
                       </span>
                       <span className="text-right">
-                        <span className="ras-price ras-display text-4xl sm:text-5xl">{inr(p.price)}</span>
+                        <span className="ras-price ras-display text-4xl sm:text-5xl">
+                          {inr(p.price)}
+                        </span>
                         <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
                           {p.duration}
                         </span>
@@ -610,8 +711,8 @@ function Services() {
           })}
         </ul>
         <p className="mt-4 text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
-          <Truck className="-mt-0.5 mr-1 inline h-4 w-4" aria-hidden /> Doorstep van adds {inr(MOBILE_FEE)} · 30%
-          deposit secures your slot
+          <Truck className="-mt-0.5 mr-1 inline h-4 w-4" aria-hidden /> Doorstep van adds{" "}
+          {inr(MOBILE_FEE)} · 30% deposit secures your slot
         </p>
       </div>
     </section>
@@ -630,7 +731,11 @@ function Booking() {
   };
 
   return (
-    <section id="book" aria-labelledby="book-title" className="scroll-mt-24 px-3 pb-14 sm:px-5 sm:pb-20">
+    <section
+      id="book"
+      aria-labelledby="book-title"
+      className="scroll-mt-24 px-3 pb-14 sm:px-5 sm:pb-20"
+    >
       <div className="mx-auto max-w-6xl">
         <Reveal>
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -683,12 +788,20 @@ function Footer() {
           <Wordmark light />
           <p className="mt-2 text-sm opacity-70">MG Marg, Gangtok 737101 · Studio + doorstep van</p>
         </div>
-        <nav aria-label="Footer" className="flex flex-wrap items-center gap-2 text-sm font-extrabold uppercase">
+        <nav
+          aria-label="Footer"
+          className="flex flex-wrap items-center gap-2 text-sm font-extrabold uppercase"
+        >
           <a href="#book" className="ras-btn ras-yellow !min-h-[44px] text-[#111]">
             Book now
           </a>
           {WA_URL && (
-            <a href={WA_URL} target="_blank" rel="noreferrer" className="ras-btn ras-mint !min-h-[44px] text-[#111]">
+            <a
+              href={WA_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="ras-btn ras-mint !min-h-[44px] text-[#111]"
+            >
               <MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp
             </a>
           )}
@@ -741,7 +854,9 @@ function Index() {
     setReady(true);
     const el = document.getElementById("book");
     if (!el || !("IntersectionObserver" in window)) return;
-    const io = new IntersectionObserver(([e]) => setBookVisible(e.isIntersecting), { threshold: 0.05 });
+    const io = new IntersectionObserver(([e]) => setBookVisible(e?.isIntersecting ?? false), {
+      threshold: 0.05,
+    });
     io.observe(el);
     return () => io.disconnect();
   }, []);
