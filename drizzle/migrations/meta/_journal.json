@@ -22,6 +22,13 @@
       "when": 1790732824602,
       "tag": "0002_guest_demo_car_media_read",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790735257881,
+      "tag": "0003_book_slot_integrity",
+      "breakpoints": true
     }
   ]
 }
