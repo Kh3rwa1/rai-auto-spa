@@ -23,21 +23,17 @@ test("sample car books end to end and previews the emails", async ({ page }) => 
   await page.getByRole("button", { name: "Next →" }).click();
   await page.waitForLoadState("networkidle");
   const free = page
-    .locator("#step-3-body button[aria-pressed='false']:not([disabled])")
-    .filter({ hasText: ":00" });
+    .locator("#step-3-body button:not([disabled])")
+    .filter({ hasText: /^\d\d:00$/ });
+  await expect(free.first()).toBeVisible({ timeout: 60_000 });
   // The grid re-renders when the availability query settles, so retry until a pick sticks.
   await expect
     .poll(
       async () => {
-        const slot = free.first();
-        if ((await free.count()) === 0) return false;
-        await slot.click().catch(() => {});
-        return page
-          .locator("#step-3-body button[aria-pressed='true']")
-          .isVisible()
-          .catch(() => false);
+        await free.first().click({ timeout: 5000 }).catch(() => {});
+        return page.locator("#step-4-body").isVisible().catch(() => false);
       },
-      { timeout: 60_000, intervals: [1000] },
+      { timeout: 60_000, intervals: [1500] },
     )
     .toBe(true);
 
