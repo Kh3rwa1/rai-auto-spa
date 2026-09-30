@@ -76,16 +76,31 @@ function fromOutcome(raw: unknown): z.infer<typeof schema> | null {
     .join("\n")
     .slice(0, 20000);
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+  // Prefer a reported duration; otherwise derive it from the start/end stamps.
+  const spanned =
+    p.data.started_at && p.data.ended_at
+      ? Math.round(
+          (new Date(p.data.ended_at).getTime() - new Date(p.data.started_at).getTime()) / 1000,
+        )
+      : null;
+  const secs = [
+    p.data.duration_seconds,
+    p.data.call_duration_seconds,
+    p.data.duration,
+    spanned,
+  ].find((n): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0);
   return schema.parse({
     bookingId: id,
     call_status: p.data.status,
     ...(transcript ? { call_transcript: transcript } : {}),
+    ...(secs !== undefined ? { call_duration_seconds: Math.round(secs) } : {}),
     ...(str(vars["new_time"]) ? { new_time: str(vars["new_time"]) } : {}),
     ...(str(vars["new_date"]) ? { new_date: str(vars["new_date"]) } : {}),
     ...(str(vars["new_plan"]) ? { new_plan: str(vars["new_plan"]) } : {}),
     ...(str(vars["new_building"]) ? { new_building: str(vars["new_building"]) } : {}),
   });
 }
+
 
 export const Route = createFileRoute("/api/public/update-booking")({
   server: {
