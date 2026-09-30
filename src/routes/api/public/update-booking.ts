@@ -3,8 +3,11 @@ import { z } from "zod";
 import { PLANS } from "@/lib/plans";
 
 /**
- * Webhook for the Sarvam agent's `modify_booking` tool and call outcomes.
- * Verified with the shared SARVAM_WEBHOOK_SECRET (x-webhook-secret header).
+ * Webhook for the Sarvam agent's `modify_booking` tool and for Sarvam's own
+ * instant-outbound call-outcome callback (docs: conversations/api/instant-outbound).
+ * Verified with SARVAM_WEBHOOK_SECRET, sent either as the x-webhook-secret
+ * header (tool calls) or as the ?k= query token (Sarvam's outcome callback,
+ * which sends no custom headers).
  */
 const schema = z.object({
   bookingId: z.string().uuid(),
@@ -22,25 +25,66 @@ const schema = z.object({
   call_transcript: z.string().max(20000).optional(),
 });
 
-const planName = (v: string) => {
-  const hit = Object.values(PLANS).find(
-    (p) =>
-      p.name.toLowerCase() === v.toLowerCase() || v.toLowerCase().includes(p.name.toLowerCase()),
+/** Sarvam's outcome callback body. */
+const outcomeSchema = z.object({
+  attempt_id: z.string(),
+  status: z.enum(["connected", "no_answer", "busy", "failed"]),
+  interaction_transcript: z
+    .array(z.object({ role: z.string().optional(), content: z.string().optional() }).passthrough())
+    .nullable()
+    .optional(),
+  final_agent_variables: z.record(z.string(), z.unknown()).nullable().optional(),
+  webhook_config: z
+    .object({ metadata: z.record(z.string(), z.unknown()).nullable().optional() })
+    .nullable()
+    .optional(),
+});
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Maps Sarvam's outcome callback onto our booking-patch shape. */
+function fromOutcome(raw: unknown): z.infer<typeof schema> | null {
+  const p = outcomeSchema.safeParse(raw);
+  if (!p.success) return null;
+  const vars = (p.data.final_agent_variables ?? {}) as Record<string, unknown>;
+  const meta = (p.data.webhook_config?.metadata ?? {}) as Record<string, unknown>;
+  const id = [meta["bookingId"], vars["bookingId"]].find(
+    (v): v is string => typeof v === "string" && UUID_RE.test(v),
   );
-  return hit?.name ?? null;
-};
+  if (!id) return null;
+  const turns = p.data.interaction_transcript ?? [];
+  const transcript = turns
+    .map((t) => `${t.role ?? "?"}: ${t.content ?? ""}`)
+    .join("\n")
+    .slice(0, 20000);
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+  return schema.parse({
+    bookingId: id,
+    call_status: p.data.status,
+    ...(transcript ? { call_transcript: transcript } : {}),
+    ...(str(vars["new_time"]) ? { new_time: str(vars["new_time"]) } : {}),
+    ...(str(vars["new_date"]) ? { new_date: str(vars["new_date"]) } : {}),
+    ...(str(vars["new_plan"]) ? { new_plan: str(vars["new_plan"]) } : {}),
+    ...(str(vars["new_building"]) ? { new_building: str(vars["new_building"]) } : {}),
+  });
+}
 
 export const Route = createFileRoute("/api/public/update-booking")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const secret = process.env["SARVAM_WEBHOOK_SECRET"];
-        if (!secret || request.headers.get("x-webhook-secret") !== secret)
-          return new Response("Unauthorized", { status: 401 });
+        const token =
+          request.headers.get("x-webhook-secret") ??
+          new URL(request.url).searchParams.get("k") ??
+          "";
+        if (!secret || token !== secret) return new Response("Unauthorized", { status: 401 });
 
-        const parsed = schema.safeParse(await request.json().catch(() => null));
-        if (!parsed.success) return new Response("Bad request", { status: 400 });
-        const d = parsed.data;
+        const raw = await request.json().catch(() => null);
+        const direct = schema.safeParse(raw);
+        const d = direct.success ? direct.data : fromOutcome(raw);
+        if (!d) return new Response("Bad request", { status: 400 });
+
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: b } = await supabaseAdmin
