@@ -39,6 +39,9 @@ function readEnv(origin: string | null): Env | null {
   ].filter((n): n is string => !!n);
   if (!apiKey || !agentId || !orgId || !workspaceId || !connectionId || numbers.length === 0)
     return null;
+  // Sarvam posts the call outcome to this URL with no custom headers, so the
+  // shared secret travels as a query token.
+  const hookSecret = process.env["SARVAM_WEBHOOK_SECRET"];
   return {
     apiKey,
     agentId,
@@ -46,7 +49,10 @@ function readEnv(origin: string | null): Env | null {
     workspaceId,
     connectionId,
     numbers,
-    webhookUrl: origin ? `${origin}/api/public/update-booking` : null,
+    webhookUrl:
+      origin && hookSecret
+        ? `${origin}/api/public/update-booking?k=${encodeURIComponent(hookSecret)}`
+        : null,
   };
 }
 
