@@ -252,14 +252,3 @@ export function Subscriptions({
     </div>
   );
 }
-
-type Offer = {
-  id: string;
-  date: string;
-  time: string;
-  area: string | null;
-  status: string;
-  expires_at: string;
-  cancelled_booking_id: string | null;
-  clients: { name: string; phone: string } | null;
-};

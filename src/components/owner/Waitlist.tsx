@@ -21,6 +21,17 @@ import { todayIST } from "@/lib/booking-rules";
 import { cn } from "@/lib/utils";
 import { type Booking, wa, minsLeft } from "./shared";
 
+type Offer = {
+  id: string;
+  date: string;
+  time: string;
+  area: string | null;
+  status: string;
+  expires_at: string;
+  cancelled_booking_id: string | null;
+  clients: { name: string; phone: string } | null;
+};
+
 export function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () => void }) {
   const upcoming = bookings.filter(
     (b) => b.date && b.date >= todayIST() && ["confirmed", "pending_deposit"].includes(b.status),
