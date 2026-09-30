@@ -163,7 +163,10 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
         setSlots(r.slots);
         setCapacity(r.capacity);
       })
-      .catch(() => toast.error("Could not load the calendar"));
+      .catch(() => {
+        // Background refreshes fail silently (e.g. a brief server restart); only the first load warns.
+        if (slotsNonce === 0) toast.error("Could not load the calendar");
+      });
   }, [weekStart, mobile, pin, slotsFn, slotsNonce]);
 
   // Live grid: owner blocks/cancellations show up without a reload (poll + on tab focus).
@@ -195,6 +198,8 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
       const { b64, url } = await compress(f);
       setLocalPhoto(url);
       const r = await upload({ data: { image: b64, mime: "image/jpeg" } });
+      if (!r.ok) throw new Error(r.error);
+      if (r.photoUrl) setLocalPhoto(r.photoUrl); // show the plate-blurred version
       setBooking({ id: r.bookingId, vehicle: r.vehicle });
       if (!r.isCar) toast.warning("Hmm, that doesn't look like a car — previews work best with a clear car photo.");
       setActiveStep(2);

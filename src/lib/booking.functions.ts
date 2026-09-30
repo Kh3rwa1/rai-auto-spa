@@ -48,25 +48,38 @@ async function bookSlot(id: string, date: string, time: string, mobile: boolean,
 }
 
 export const uploadCar = createServerFn({ method: "POST" })
-  .inputValidator((d) =>
-    z.object({ image: z.string().min(100).max(8_000_000), mime: z.string().regex(/^image\//) }).parse(d),
-  )
+  .inputValidator((d) => z.object({ image: z.string().max(9_000_000), mime: z.string().max(40).optional() }).parse(d))
   .handler(async ({ data }) => {
+    const { decodeUpload, blurRegion, parseBox } = await import("./image-safety.server");
+    const input = decodeUpload(data.image);
+    if (!input.ok) return { ok: false as const, error: input.error };
     const { detectVehicle } = await import("./ai.server");
     const sb = await admin();
-    const bytes = Uint8Array.from(atob(data.image), (c) => c.charCodeAt(0));
     const id = crypto.randomUUID();
-    const path = `uploads/${id}.jpg`;
-    const up = await sb.storage.from(BUCKET).upload(path, bytes, { contentType: data.mime });
-    if (up.error) throw new Error("Could not save your photo. Please try again.");
-    const vehicle = await detectVehicle(data.image, data.mime);
+    const b64 = data.image.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
+    let vehicle: { model: string; isCar: boolean; plate: unknown };
+    try {
+      vehicle = await detectVehicle(b64, input.mime);
+    } catch {
+      vehicle = { model: "Car", isCar: true, plate: null };
+    }
+    // Original stays private (owner-only via signed URL); the display image has the plate pixelated.
+    const originalPath = `originals/${id}.${input.mime.split("/")[1]}`;
+    const displayPath = `uploads/${id}.jpg`;
+    const box = parseBox(vehicle.plate);
+    const blurred = box && input.mime === "image/jpeg" ? blurRegion(input.bytes, box) : null;
+    const [o, u] = await Promise.all([
+      sb.storage.from(BUCKET).upload(originalPath, input.bytes, { contentType: input.mime }),
+      sb.storage.from(BUCKET).upload(displayPath, blurred ?? input.bytes, { contentType: blurred ? "image/jpeg" : input.mime }),
+    ]);
+    if (o.error || u.error) return { ok: false as const, error: "Could not save your photo. Please try again." };
     const { data: row, error } = await sb
       .from("bookings")
-      .insert({ id, vehicle_model: vehicle.model, photo_url: path, plan: "Essential Wash", status: "lead" })
+      .insert({ id, vehicle_model: vehicle.model, photo_url: displayPath, plan: "Essential Wash", status: "lead" })
       .select("id")
       .single();
-    if (error) throw new Error("Could not start your booking.");
-    return { bookingId: row.id, vehicle: vehicle.model, isCar: vehicle.isCar, photoUrl: await signed(path) };
+    if (error) return { ok: false as const, error: "Could not start your booking. Please try again." };
+    return { ok: true as const, bookingId: row.id, vehicle: vehicle.model, isCar: vehicle.isCar, plateBlurred: !!blurred, photoUrl: await signed(displayPath) };
   });
 
 export const makePreview = createServerFn({ method: "POST" })

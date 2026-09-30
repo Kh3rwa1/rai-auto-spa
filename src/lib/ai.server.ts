@@ -32,7 +32,7 @@ export async function detectVehicle(b64: string, mime: string) {
           content: [
             {
               type: "input_text",
-              text: 'Identify the car in this photo. Prefer Indian market model names (e.g. Swift, Baleno, Thar, Innova, Creta, Nexon, i20, Scorpio). Reply ONLY with JSON: {"model":"<model name, no brand>","is_car":true|false}. Keep it short.',
+              text: 'Identify the car in this photo. Prefer Indian market model names (e.g. Swift, Baleno, Thar, Innova, Creta, Nexon, i20, Scorpio). Also locate the vehicle number plate if one is visible. Reply ONLY with JSON: {"model":"<model name, no brand>","is_car":true|false,"plate":[x,y,w,h] or null}. plate is the licence plate bounding box as fractions of image width/height (0..1), top-left origin. Keep it short.',
             },
             { type: "input_image", image_url: `data:${mime};base64,${b64}` },
           ],
@@ -40,7 +40,7 @@ export async function detectVehicle(b64: string, mime: string) {
       ],
     }),
   });
-  if (!res.ok) return { model: "Car", isCar: true };
+  if (!res.ok) return { model: "Car", isCar: true, plate: null as unknown };
   const j = await res.json();
   const text: string =
     j.output_text ??
@@ -51,9 +51,9 @@ export async function detectVehicle(b64: string, mime: string) {
   const m = text.match(/\{[\s\S]*\}/);
   try {
     const parsed = JSON.parse(m?.[0] ?? "{}");
-    return { model: String(parsed.model || "Car").slice(0, 40), isCar: parsed.is_car !== false };
+    return { model: String(parsed.model || "Car").slice(0, 40), isCar: parsed.is_car !== false, plate: parsed.plate as unknown };
   } catch {
-    return { model: "Car", isCar: true };
+    return { model: "Car", isCar: true, plate: null as unknown };
   }
 }
 
