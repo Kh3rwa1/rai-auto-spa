@@ -134,6 +134,8 @@ export function BookingFlow() {
   const [paying, setPaying] = useState(false);
   const [booked, setBooked] = useState(false);
   const [revealHold, setRevealHold] = useState(false);
+  const [manageToken, setManageToken] = useState("");
+  const [slotsNonce, setSlotsNonce] = useState(0);
 
   const key = plan ? `${plan}|${plan === "signature" ? colour + "|" + style : ""}` : "";
   const previewUrl = key ? cache[key] : undefined;
@@ -148,7 +150,7 @@ export function BookingFlow() {
         setCapacity(r.capacity);
       })
       .catch(() => toast.error("Could not load the calendar"));
-  }, [weekStart, mobile, pin, slotsFn]);
+  }, [weekStart, mobile, pin, slotsFn, slotsNonce]);
 
   // clear a selected slot that became invalid
   useEffect((): void => {
@@ -252,7 +254,7 @@ export function BookingFlow() {
     setPaying(true);
     try {
       await new Promise((r) => setTimeout(r, 1400));
-      await confirm({
+      const res = await confirm({
         data: {
           bookingId: booking.id,
           plan,
@@ -272,10 +274,19 @@ export function BookingFlow() {
           time: slot.time,
         },
       });
+      setManageToken(res.manageToken ?? "");
       setPayOpen(false);
       setBooked(true);
     } catch (e) {
-      toast.error((e as Error).message);
+      const msg = (e as Error).message;
+      if (msg.startsWith("SLOT_FULL:")) {
+        // keep photo, preview and plan; drop only the slot and refresh the grid
+        setPayOpen(false);
+        setSlot(null);
+        setSlotsNonce((n) => n + 1);
+        setActiveStep(3);
+        toast.message(msg.replace("SLOT_FULL: ", ""));
+      } else toast.error(msg);
     } finally {
       setPaying(false);
     }
@@ -285,6 +296,7 @@ export function BookingFlow() {
     return (
       <BookedScreen
         bookingId={booking.id}
+        manageToken={manageToken}
         vehicle={booking.vehicle}
         planName={PLANS[plan].name}
         date={slot.date}

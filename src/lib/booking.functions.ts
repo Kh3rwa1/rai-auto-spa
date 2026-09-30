@@ -29,6 +29,24 @@ async function signed(path: string | null | undefined) {
   return data?.signedUrl ?? null;
 }
 
+const SLOT_ERRORS: Record<string, string> = {
+  invalid_slot: "That time isn't one of our slots. Please pick another.",
+  past_date: "That slot is already in the past. Please pick a later one.",
+  dry_window: "Water needed — pick a morning slot or provide water.",
+  blocked: "Rai has blocked that slot (water shortage). Please pick another.",
+  full: "SLOT_FULL: That slot just filled up — your photo and plan are saved, please pick another time.",
+  not_found: "Booking not found.",
+};
+
+async function bookSlot(id: string, date: string, time: string, mobile: boolean, water: boolean, days: number) {
+  const sb = await admin();
+  const { data, error } = await sb.rpc("book_slot", {
+    p_booking_id: id, p_date: date, p_time: time, p_mobile: mobile, p_water: water, p_days: days,
+  });
+  if (error) throw new Error("Could not reserve the slot. Please try again.");
+  if (data !== "ok") throw new Error(SLOT_ERRORS[data as string] ?? "That slot isn't available.");
+}
+
 export const uploadCar = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({ image: z.string().min(100).max(8_000_000), mime: z.string().regex(/^image\//) }).parse(d),
@@ -194,7 +212,8 @@ export const confirmBooking = createServerFn({ method: "POST" })
       throw new Error("Water needed — pick a morning slot or provide water.");
     const { data: existing } = await sb.from("bookings").select("*").eq("id", data.bookingId).single();
     if (!existing) throw new Error("Booking not found.");
-    if (existing.deposit_paid) return { ok: true };
+    if (existing.deposit_paid) return { ok: true, manageToken: existing.manage_token as string };
+    await bookSlot(data.bookingId, data.date, data.time, data.mobile, data.water, data.plan === "signature" ? 2 : 1);
     const waterFee = data.mobile && !data.water;
     const total = calcTotal(data.plan, data.mobile, waterFee);
     const { data: client, error: ce } = await sb
@@ -218,13 +237,10 @@ export const confirmBooking = createServerFn({ method: "POST" })
         plan: PLANS[data.plan].name,
         colour: data.colour ?? null,
         style: data.style ?? null,
-        location_type: data.mobile ? "mobile" : "studio",
         map_pin: data.mobile ? { ...data.pin, parking: data.parking ?? "" } : { lat: 27.3314, lng: 88.6138 },
         area: data.mobile && data.pin ? nearestArea(data.pin) : "MG Marg",
         guard_permission: data.guard,
         water_needed: waterFee,
-        date: data.date,
-        time: data.time,
         total,
         deposit_paid: true,
         status: data.plan === "signature" ? "consultation" : "confirmed",
@@ -272,7 +288,7 @@ export const confirmBooking = createServerFn({ method: "POST" })
           .eq("id", data.bookingId);
       }
     }
-    return { ok: true, total, deposit: depositOf(total) };
+    return { ok: true, total, deposit: depositOf(total), manageToken: existing.manage_token as string };
   });
 
 export const checkVideo = createServerFn({ method: "POST" })
@@ -356,6 +372,7 @@ export const rescheduleBooking = createServerFn({ method: "POST" })
     z
       .object({
         bookingId: z.string().uuid(),
+        token: z.string().min(16).max(64),
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         time: z.string().regex(/^\d{2}:\d{2}$/),
       })
@@ -363,11 +380,16 @@ export const rescheduleBooking = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await admin();
-    const { data: b } = await sb.from("bookings").select("date, time, water_needed, location_type").eq("id", data.bookingId).single();
-    if (!b?.date || !b.time) throw new Error("Booking not found");
+    const { data: b } = await sb
+      .from("bookings")
+      .select("date, time, water_needed, location_type, full_day, manage_token")
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (!b?.date || !b.time || b.manage_token !== data.token) throw new Error("Booking not found");
     const start = new Date(`${b.date}T${b.time}:00+05:30`).getTime();
     if (start - Date.now() < 12 * 3600 * 1000) throw new Error("Free reschedule closes 12 hours before your slot. Please WhatsApp Rai.");
-    await sb.from("bookings").update({ date: data.date, time: data.time }).eq("id", data.bookingId);
+    const mobile = b.location_type === "mobile";
+    await bookSlot(data.bookingId, data.date, data.time, mobile, !b.water_needed, b.full_day ? 2 : 1);
     return { ok: true };
   });
 

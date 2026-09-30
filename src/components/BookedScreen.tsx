@@ -10,6 +10,7 @@ import { addDays, todayIST } from "./BookingFlow";
 
 type Props = {
   bookingId: string;
+  manageToken: string;
   vehicle: string;
   planName: string;
   date: string;
@@ -69,7 +70,7 @@ export function BookedScreen(p: Props) {
 
   async function doResched() {
     try {
-      await resched({ data: { bookingId: p.bookingId, date: rsDate, time: rsTime } });
+      await resched({ data: { bookingId: p.bookingId, token: p.manageToken, date: rsDate, time: rsTime } });
       setDate(rsDate);
       setTime(rsTime);
       setRsOpen(false);
