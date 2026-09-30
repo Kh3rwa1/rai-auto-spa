@@ -60,10 +60,8 @@ export const Route = createFileRoute("/api/voice/stt")({
           }
           const parsed = pickTranscript(await res.json());
           if (!parsed.transcript) {
-            return Response.json(
-              { error: "I didn't catch that — tap and try again." },
-              { status: 200 },
-            );
+            // Empty capture is a normal no-speech case — let the client auto-retry.
+            return Response.json({ transcript: "", confidence: 0 });
           }
           return Response.json(parsed);
         } catch (err) {

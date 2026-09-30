@@ -13,20 +13,22 @@ type Options = {
 const MAX_RECORD_MS = 15_000;
 const MAX_SILENCE_MS = 1_800;
 const MIN_SPEECH_MS = 700;
-const SILENCE_RMS = 0.012;
+const NO_SPEECH_MS = 4_500;
+const SILENCE_RMS = 0.008;
+const MAX_EMPTY_TRIES = 3;
 /** Context-aware opener — Rai reacts to where the customer already is, never a canned line. */
 function greetingFor(ctx: VoiceContext): string {
   if (ctx.hasSlot && ctx.slotDate && ctx.slotTime && ctx.missing.length === 0)
-    return `Everything's ready for ${formatSlot(ctx.slotDate, ctx.slotTime)} — shall I open payment now?`;
+    return `All set for ${formatSlot(ctx.slotDate, ctx.slotTime)} — shall I open payment?`;
   if (!ctx.plan)
-    return "Hi! Let's book it in one go — tell me the service: Essential Wash, Full Detail, or a Signature wrap. Then a day and time, and your name with WhatsApp number. No photo needed!";
+    return "Hi! Tell me the service — wash, full detail or a wrap — then a day, a time, and your name with WhatsApp number. No photo needed!";
   if (!ctx.hasSlot)
-    return `${PLANS[ctx.plan].name} it is! What day and time suits you? Mornings are prime — van to your doorstep or the studio on MG Marg, your call.`;
+    return `${PLANS[ctx.plan].name} it is! Which day and time suits — van or studio?`;
   if (ctx.slotDate && ctx.slotTime) {
     const left = ctx.missing.length ? `Still need: ${ctx.missing.join(", ")}. ` : "";
-    return `${formatSlot(ctx.slotDate, ctx.slotTime)} looks good. ${left}Give me your name, WhatsApp number and email, and I'll take you straight to payment.`;
+    return `${formatSlot(ctx.slotDate, ctx.slotTime)} looks free. ${left}Name, WhatsApp and email, then I'll open payment.`;
   }
-  return "Welcome back! Tell me what's next — service, time or your details, any order.";
+  return "Welcome back! What's next?";
 }
 function pickMime(): string {
   if (typeof MediaRecorder === "undefined") return "";
@@ -163,6 +165,8 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
         }
         if (
           (spokeMs >= MIN_SPEECH_MS && quietMs >= MAX_SILENCE_MS) ||
+          // Nobody started talking — stop early instead of burning the full cap.
+          (spokeMs === 0 && Date.now() - started >= NO_SPEECH_MS) ||
           Date.now() - started >= MAX_RECORD_MS
         ) {
           if (rec.state === "recording") rec.stop();
@@ -177,7 +181,7 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
 
     await stopped;
     teardownMic();
-    if (chunks.length === 0) return null;
+    if (chunks.length === 0) return "";
     const blob = new Blob(chunks, { type: mime || "audio/webm" });
 
     const res = await fetch("/api/voice/stt", {
@@ -186,10 +190,8 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
       body: blob,
     });
     const j = (await res.json()) as { transcript?: string; error?: string };
-    if (j.error) {
-      setError(j.error);
-      return null;
-    }
+    // Server hiccups and empty captures are both retryable — the loop bounds the tries.
+    if (j.error) return "";
     return j.transcript ?? "";
   }, [teardownMic]);
 
@@ -199,15 +201,33 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
     await speak(greetingFor(ctx.current.getContext()), mySession);
     if (session.current !== mySession) return;
     // Loop: listen → think → speak → listen again, until stopped or unmounted.
+    // Nothing captured is retried automatically — the session never punts to a tap.
+    let emptyStreak = 0;
     for (;;) {
       if (session.current !== mySession) return;
       const said = await listen();
       if (session.current !== mySession) return;
-      if (said === null || !said.trim()) {
-        // Mic error or silence — pause the loop; the user taps to continue.
+      if (said === null) {
+        // Mic denied/hardware error — the only case that hands control back.
         setPhaseSafe("idle");
         return;
       }
+      if (!said.trim()) {
+        emptyStreak += 1;
+        if (emptyStreak >= MAX_EMPTY_TRIES) {
+          setReply("Couldn't hear you — tap the mic and speak a little louder.");
+          await speak(
+            "Sorry yaar, still can't hear you. Tap the mic and speak a little louder.",
+            mySession,
+          );
+          if (session.current !== mySession) return;
+          setPhaseSafe("idle");
+          return;
+        }
+        setPhaseSafe("listening");
+        continue;
+      }
+      emptyStreak = 0;
       setTranscript(said);
       setPhaseSafe("thinking");
       let replyText = "";
