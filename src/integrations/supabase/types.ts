@@ -419,6 +419,7 @@ export type Database = {
         }
         Returns: string
       }
+      check_cron_token: { Args: { p_token: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { MOBILE_FEE, PLANS, WATER_FEE, inr } from "@/lib/plans";
 import { DEMO_CONTACT, EMAIL_RE, PHONE_RE, formatSlot } from "@/lib/booking-rules";
 import { cn } from "@/lib/utils";
 import { BeforeAfter } from "../BeforeAfter";
 import type { Draft, SetDraft } from "./useBookingDraft";
+import { Field } from "./Field";
 
 type Props = {
   draft: Draft;
@@ -25,34 +25,6 @@ type Props = {
   onPay: () => void;
   onBack: () => void;
 };
-
-function Field({
-  id,
-  label,
-  error,
-  children,
-  hint,
-}: {
-  id: string;
-  label: string;
-  error?: string | null;
-  children: React.ReactNode;
-  hint?: string;
-}) {
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error ? (
-        <p role="alert" className="mt-1 text-xs font-medium text-destructive">
-          {error}
-        </p>
-      ) : hint ? (
-        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-      ) : null}
-    </div>
-  );
-}
 
 export function PayStep({
   draft,

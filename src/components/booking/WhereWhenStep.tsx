@@ -1,15 +1,10 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Droplets, MapPin, Store, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { MOBILE_FEE, PLANS, SLOTS, WATER_FEE, inr, isPrime } from "@/lib/plans";
+import { SLOTS, isPrime } from "@/lib/plans";
 import {
   addDays,
-  formatDateLong,
   formatSlot,
   nowISTHour,
   slotUnavailable,
@@ -18,8 +13,11 @@ import {
 } from "@/lib/booking-rules";
 import { getSlots } from "@/lib/booking.functions";
 import type { Draft, SetDraft } from "./useBookingDraft";
-
-const PinPicker = lazy(() => import("../PinPicker"));
+import { type SlotCheck, reasonFor } from "./slot-check";
+import { LocationPicker } from "./LocationPicker";
+import { DesktopWeekGrid } from "./DesktopWeekGrid";
+import { MobileDayPicker } from "./MobileDayPicker";
+import { PriceSummary } from "./PriceSummary";
 
 type Props = {
   draft: Draft;
@@ -29,20 +27,6 @@ type Props = {
   needsPin: boolean;
   onChooseSlot: (date: string, time: string) => void;
 };
-
-function reasonFor(args: {
-  dry: boolean;
-  full: boolean;
-  blocked: boolean;
-  past: boolean;
-  blockReason: string | null;
-}): string | null {
-  if (args.past) return "In the past";
-  if (args.blocked) return args.blockReason ?? "Blocked by studio (water shortage)";
-  if (args.full) return "Fully booked";
-  if (args.dry) return "Needs water — pick morning/evening or tick water available";
-  return null;
-}
 
 export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot }: Props) {
   const slotsFn = useServerFn(getSlots);
@@ -94,7 +78,7 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
     if (!days.includes(selectedDate)) setSelectedDate(days[0]!);
   }, [days, selectedDate]);
 
-  const check = (d: string, t: string) => {
+  const check: SlotCheck = (d, t) => {
     const st = grid.slots[`${d} ${t}`];
     const u = slotUnavailable({
       date: d,
@@ -122,20 +106,6 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
   }, [days, grid, loading, loadError, mobile, water, today, nowHour]);
 
   const selectedInfo = slot ? check(slot.date, slot.time) : null;
-
-  const field = (id: "building" | "floor" | "parking", label: string, ph: string) => (
-    <div>
-      <Label htmlFor={`f-${id}`}>{label}</Label>
-      <Input
-        id={`f-${id}`}
-        className="mt-1 min-h-[44px]"
-        autoComplete={id === "building" ? "street-address" : "off"}
-        value={draft[id]}
-        onChange={(e) => set({ [id]: e.target.value })}
-        placeholder={ph}
-      />
-    </div>
-  );
 
   const timeButton = (d: string, t: string) => {
     const { st, u, why } = check(d, t);
@@ -172,126 +142,7 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
 
   return (
     <div>
-      <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Service location">
-        {(
-          [
-            [false, Store, "Come to Studio", "MG Marg, Gangtok · Free · 2 bays"],
-            [true, Truck, "We Come To You", `+${inr(MOBILE_FEE)} · Mobile van`],
-          ] as const
-        ).map(([m, Icon, t, sub]) => {
-          const unavailable = m && studioOnly;
-          return (
-            <button
-              key={t}
-              type="button"
-              role="radio"
-              aria-checked={mobile === m}
-              aria-disabled={unavailable}
-              aria-label={`${t}. ${sub}${mobile === m ? ", selected" : ""}${unavailable ? ", unavailable: Signature needs the studio" : ""}`}
-              disabled={unavailable}
-              onClick={() => set({ mobile: m })}
-              className={cn(
-                "flex min-h-[44px] items-start gap-3 rounded-2xl border-2 p-4 text-left transition",
-                mobile === m
-                  ? "border-primary bg-accent/50"
-                  : "border-border hover:border-primary/40",
-                unavailable && "cursor-not-allowed opacity-60 hover:border-border",
-              )}
-            >
-              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-              <span>
-                <span className="block font-semibold">
-                  {t} {mobile === m && <span className="text-primary">✓</span>}
-                </span>
-                <span className="block text-sm text-muted-foreground">
-                  {unavailable ? "Not available for Signature — 2 studio days needed" : sub}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      {studioOnly && (
-        <p className="mt-3 rounded-xl bg-charcoal p-3 text-sm text-charcoal-foreground" role="note">
-          Signature Super Design reserves a studio bay for 2 full days, so the mobile van can&apos;t
-          do it — studio selected.
-        </p>
-      )}
-      {needsPin && (
-        <p
-          className="mt-3 rounded-xl bg-amber-400/15 p-3 text-sm font-medium text-amber-800 dark:text-amber-200"
-          role="status"
-        >
-          Pick a time below, then drop a map pin so the van can reach you — both are needed to
-          continue.
-        </p>
-      )}
-
-      {mobile ? (
-        <div className="mt-5 space-y-4">
-          <div>
-            <Label className="mb-2 flex min-h-[24px] items-center gap-1.5">
-              <MapPin className="h-4 w-4" aria-hidden /> Tap the map to drop your pin
-            </Label>
-            <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-muted" />}>
-              <PinPicker value={pin} onChange={(p) => set({ pin: p })} />
-            </Suspense>
-            {pin ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Pinned at {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)} — van route time is an
-                estimate.
-              </p>
-            ) : (
-              <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
-                Drop a pin so the van can reach you — required to continue.
-              </p>
-            )}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {field("building", "Building / Apartment", "Hilltop Residency")}
-            {field("floor", "Floor", "3")}
-            {field("parking", "Parking slot", "B-12")}
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:gap-8">
-            <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm">
-              <Checkbox checked={draft.guard} onCheckedChange={(v) => set({ guard: !!v })} /> Guard
-              permission taken?
-            </label>
-            <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm">
-              <Checkbox checked={water} onCheckedChange={(v) => set({ water: !!v })} /> Water
-              available at your place?
-            </label>
-          </div>
-          <div
-            className={cn(
-              "rounded-xl p-3 text-sm",
-              water ? "bg-muted text-muted-foreground" : "bg-accent text-accent-foreground",
-            )}
-          >
-            <p className="flex items-start gap-2">
-              <Droplets className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span>
-                {water ? (
-                  <>
-                    <strong>Water on site:</strong> all slots open. Gangtok municipal supply runs
-                    6–9am — morning slots are most reliable.
-                  </>
-                ) : (
-                  <>
-                    <strong>Without water on site</strong> we carry our own tank (+{inr(WATER_FEE)})
-                    and <strong>11am–4pm slots are blocked</strong> — please pick morning or
-                    evening. This charge is shown in your total before you confirm.
-                  </>
-                )}
-              </span>
-            </p>
-          </div>
-        </div>
-      ) : (
-        <p className="mt-4 text-sm text-muted-foreground">
-          Studio has 2 bays — free slots show below. No map pin needed.
-        </p>
-      )}
+      <LocationPicker draft={draft} set={set} needsPin={needsPin} studioOnly={studioOnly} />
 
       <div className="mt-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -362,168 +213,23 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
             )}
 
             {/* Mobile: date chips + time grid (no horizontal page scroll) */}
-            <div className="md:hidden">
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Choose a date">
-                {days.map((d) => {
-                  const dt = new Date(`${d}T00:00:00Z`);
-                  const dayName = dt.toLocaleDateString("en-IN", {
-                    weekday: "short",
-                    timeZone: "UTC",
-                  });
-                  const selected = selectedDate === d;
-                  const freeCount = loading
-                    ? -1
-                    : SLOTS.filter((t) => !check(d, t).u.disabled).length;
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      aria-label={`${dayName} ${dt.getUTCDate()}${freeCount >= 0 ? `, ${freeCount} slots free` : ""}`}
-                      onClick={() => setSelectedDate(d)}
-                      className={cn(
-                        "flex min-h-[44px] min-w-[64px] flex-col items-center justify-center rounded-xl border-2 px-3 py-1.5",
-                        selected
-                          ? "border-charcoal bg-charcoal text-charcoal-foreground"
-                          : "border-border bg-card",
-                      )}
-                    >
-                      <span className="text-[11px] font-medium opacity-80">{dayName}</span>
-                      <span className="text-base font-bold leading-none">{dt.getUTCDate()}</span>
-                      <span className="text-[10px] opacity-70">
-                        {loading ? "…" : freeCount === 0 ? "Full" : `${freeCount} free`}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="mt-4 text-sm font-semibold" aria-live="polite">
-                {formatDateLong(selectedDate)}
-                {slot?.date === selectedDate && slot ? ` · selected ${slot.time}` : " · tap a time"}
-              </p>
-              {loading ? (
-                <div
-                  className="mt-2 grid grid-cols-3 gap-2"
-                  aria-busy="true"
-                  aria-label="Loading slots"
-                >
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-[52px] animate-pulse rounded-xl bg-muted" />
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="mt-2 grid grid-cols-3 gap-2"
-                  role="group"
-                  aria-label={`Times for ${formatDateLong(selectedDate)}`}
-                >
-                  {SLOTS.map((t) => timeButton(selectedDate, t))}
-                </div>
-              )}
-              {/* Visible, non-hover explanation of why times are unavailable */}
-              {!loading && (
-                <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-                  {SLOTS.map((t) => {
-                    const { u, why } = check(selectedDate, t);
-                    if (!u.disabled) return null;
-                    return (
-                      <li key={t}>
-                        {t} — {why}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-
-            {/* Desktop: readable weekly calendar */}
-            <div className="hidden md:block">
-              {loading ? (
-                <div className="grid grid-cols-7 gap-2" aria-busy="true" aria-label="Loading slots">
-                  {Array.from({ length: 14 }).map((_, i) => (
-                    <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
-                  ))}
-                  <p className="col-span-7 mt-2 text-sm text-muted-foreground" aria-live="polite">
-                    Loading availability…
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <div
-                    className="grid min-w-[640px] grid-cols-7 gap-2"
-                    aria-labelledby="slot-grid-label"
-                  >
-                    {days.map((d) => {
-                      const dt = new Date(`${d}T00:00:00Z`);
-                      const dayName = dt.toLocaleDateString("en-IN", {
-                        weekday: "short",
-                        timeZone: "UTC",
-                      });
-                      return (
-                        <div key={d} className="space-y-1.5">
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">{dayName}</p>
-                            <p className="font-semibold">{dt.getUTCDate()}</p>
-                          </div>
-                          {SLOTS.map((t) => {
-                            const { st, u, why } = check(d, t);
-                            const sel = slot?.date === d && slot.time === t;
-                            return (
-                              <button
-                                key={t}
-                                type="button"
-                                disabled={u.disabled}
-                                aria-pressed={sel}
-                                aria-label={`${dayName} ${dt.getUTCDate()} at ${t}${u.disabled ? ` — unavailable: ${why}` : sel ? " — selected" : ""}`}
-                                title={why ?? (isPrime(t) ? "Prime slot" : "Available")}
-                                onClick={() => onChooseSlot(d, t)}
-                                className={cn(
-                                  "min-h-[44px] w-full rounded-lg px-1 py-1.5 text-xs font-medium transition",
-                                  sel
-                                    ? "bg-charcoal text-charcoal-foreground"
-                                    : u.disabled
-                                      ? "bg-muted/50 text-muted-foreground/60 line-through"
-                                      : isPrime(t)
-                                        ? "bg-primary/15 hover:bg-primary/25"
-                                        : "bg-muted hover:bg-muted/70",
-                                )}
-                              >
-                                {t}
-                                {mobile && st?.travelMin != null && !u.disabled && (
-                                  <span className="block text-[10px] opacity-70">
-                                    ~{st.travelMin}m van (est.)
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              {/* Visible reason list: desktop shows the selected week's blocked times in text,
-                  not hover-only tooltips (mobile has its own per-date list below). */}
-              {!loading && (
-                <details className="mt-3 rounded-xl border border-border p-3">
-                  <summary className="cursor-pointer text-xs font-semibold">
-                    Why are some times unavailable this week?
-                  </summary>
-                  <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-muted-foreground">
-                    {days.flatMap((d) =>
-                      SLOTS.filter((t) => check(d, t).u.disabled).map((t) => (
-                        <li key={`${d}-${t}`}>
-                          {formatSlot(d, t)} — {check(d, t).why}
-                        </li>
-                      )),
-                    )}
-                  </ul>
-                </details>
-              )}
-            </div>
+            <MobileDayPicker
+              days={days}
+              loading={loading}
+              check={check}
+              slot={slot}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              timeButton={timeButton}
+            />
+            <DesktopWeekGrid
+              days={days}
+              loading={loading}
+              check={check}
+              slot={slot}
+              mobile={mobile}
+              onChooseSlot={onChooseSlot}
+            />
           </>
         )}
 
@@ -552,33 +258,7 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
         )}
       </div>
 
-      {plan && (
-        <div className="mt-6 rounded-2xl bg-muted p-4 text-sm" aria-live="polite">
-          <div className="flex justify-between">
-            <span>{PLANS[plan].name}</span>
-            <span>{inr(PLANS[plan].price)}</span>
-          </div>
-          {mobile && (
-            <div className="flex justify-between">
-              <span>Mobile van</span>
-              <span>{inr(MOBILE_FEE)}</span>
-            </div>
-          )}
-          {mobile && !water && (
-            <div className="flex justify-between">
-              <span>Water tank (no water on site)</span>
-              <span>{inr(WATER_FEE)}</span>
-            </div>
-          )}
-          <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-semibold">
-            <span>Total</span>
-            <span>{inr(total)}</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            30% demo deposit due at confirmation — no real charge.
-          </p>
-        </div>
-      )}
+      {plan && <PriceSummary plan={plan} mobile={mobile} water={water} total={total} />}
     </div>
   );
 }
