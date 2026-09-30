@@ -242,7 +242,9 @@ test("mobile layout gates the van on a map pin before Details", async ({ page })
 
   // Studio needs no pin: switching advances normally.
   await page.getByRole("radio", { name: "Come to Studio" }).click();
-  const free = page.locator("#step-3-body button:not([disabled])").filter({ hasText: /^\d\d:00$/ });
+  const free = page
+    .locator("#step-3-body button:visible:not([disabled])")
+    .filter({ hasText: /^\d\d:00$/ });
   await expect
     .poll(
       async () => {
