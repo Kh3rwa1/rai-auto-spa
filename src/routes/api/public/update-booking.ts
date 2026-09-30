@@ -86,6 +86,7 @@ export const Route = createFileRoute("/api/public/update-booking")({
         if (!d) return new Response("Bad request", { status: 400 });
 
 
+
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: b } = await supabaseAdmin
           .from("bookings")
