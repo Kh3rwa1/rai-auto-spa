@@ -126,8 +126,16 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
-  html { scroll-behavior: smooth; }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
 
   /* Visible keyboard focus for custom buttons/cards that don't use the shadcn Button. */
   :focus-visible {
@@ -137,13 +145,23 @@
 }
 
 @keyframes reveal-curtain {
-  from { clip-path: inset(0 100% 0 0); opacity: 0.7; }
-  to { clip-path: inset(0 0 0 0); opacity: 1; }
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.7;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
 }
 
 @keyframes shine-shimmer {
-  from { transform: translateX(-140%); }
-  to { transform: translateX(340%); }
+  from {
+    transform: translateX(-140%);
+  }
+  to {
+    transform: translateX(340%);
+  }
 }
 
 @utility reveal-curtain {
@@ -155,7 +173,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal-curtain, .shine-shimmer { animation: none; }
-  html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .reveal-curtain,
+  .shine-shimmer {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
