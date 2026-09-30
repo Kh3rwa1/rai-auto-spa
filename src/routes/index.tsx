@@ -9,11 +9,13 @@ import {
   MapPin,
   ShieldCheck,
   MessageCircle,
+  Mic,
   Zap,
 } from "lucide-react";
 import { BookingFlow } from "@/components/BookingFlow";
 import { QuickBook } from "@/components/QuickBook";
 import { PLANS, inr } from "@/lib/plans";
+import { VOICE_START_EVENT } from "@/lib/voice";
 import heroImg from "@/assets/hero.jpg";
 
 /* ───────── config ───────── */
@@ -442,7 +444,22 @@ function Hero() {
           >
             ✦
           </span>
-          <Mascot />
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent(VOICE_START_EVENT));
+              document
+                .getElementById("book")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            aria-label="Talk to Rai — book your wash by voice"
+            className="group relative flex flex-col items-center transition focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-[#111]"
+          >
+            <Mascot />
+            <span className="ras-btn ras-white mt-1 inline-flex items-center gap-2 text-sm">
+              <Mic className="h-4 w-4" aria-hidden /> Tap to book by voice
+            </span>
+          </button>
         </div>
       </div>
     </section>

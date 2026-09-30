@@ -17,6 +17,9 @@ import { Route as OfferIdRouteImport } from './routes/offer.$id'
 import { Route as PayBookingIdRouteImport } from './routes/pay.$bookingId'
 import { Route as ApiPublicInitiateSarvamCallRouteImport } from './routes/api/public/initiate-sarvam-call'
 import { Route as ApiPublicUpdateBookingRouteImport } from './routes/api/public/update-booking'
+import { Route as ApiVoiceCommandRouteImport } from './routes/api/voice/command'
+import { Route as ApiVoiceSttRouteImport } from './routes/api/voice/stt'
+import { Route as ApiVoiceTtsRouteImport } from './routes/api/voice/tts'
 import { Route as ApiPublicHooksRunScheduleRouteImport } from './routes/api/public/hooks/run-schedule'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
@@ -62,6 +65,21 @@ const ApiPublicUpdateBookingRoute = ApiPublicUpdateBookingRouteImport.update({
   path: '/api/public/update-booking',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVoiceCommandRoute = ApiVoiceCommandRouteImport.update({
+  id: '/api/voice/command',
+  path: '/api/voice/command',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceSttRoute = ApiVoiceSttRouteImport.update({
+  id: '/api/voice/stt',
+  path: '/api/voice/stt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceTtsRoute = ApiVoiceTtsRouteImport.update({
+  id: '/api/voice/tts',
+  path: '/api/voice/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksRunScheduleRoute =
   ApiPublicHooksRunScheduleRouteImport.update({
     id: '/api/public/hooks/run-schedule',
@@ -84,6 +102,9 @@ export interface FileRoutesByFullPath {
   '/pay/$bookingId': typeof PayBookingIdRoute
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
   '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
+  '/api/voice/command': typeof ApiVoiceCommandRoute
+  '/api/voice/stt': typeof ApiVoiceSttRoute
+  '/api/voice/tts': typeof ApiVoiceTtsRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -96,6 +117,9 @@ export interface FileRoutesByTo {
   '/pay/$bookingId': typeof PayBookingIdRoute
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
   '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
+  '/api/voice/command': typeof ApiVoiceCommandRoute
+  '/api/voice/stt': typeof ApiVoiceSttRoute
+  '/api/voice/tts': typeof ApiVoiceTtsRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -109,6 +133,9 @@ export interface FileRoutesById {
   '/pay/$bookingId': typeof PayBookingIdRoute
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
   '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
+  '/api/voice/command': typeof ApiVoiceCommandRoute
+  '/api/voice/stt': typeof ApiVoiceSttRoute
+  '/api/voice/tts': typeof ApiVoiceTtsRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -123,6 +150,9 @@ export interface FileRouteTypes {
     | '/pay/$bookingId'
     | '/api/public/initiate-sarvam-call'
     | '/api/public/update-booking'
+    | '/api/voice/command'
+    | '/api/voice/stt'
+    | '/api/voice/tts'
     | '/api/public/hooks/run-schedule'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
@@ -135,6 +165,9 @@ export interface FileRouteTypes {
     | '/pay/$bookingId'
     | '/api/public/initiate-sarvam-call'
     | '/api/public/update-booking'
+    | '/api/voice/command'
+    | '/api/voice/stt'
+    | '/api/voice/tts'
     | '/api/public/hooks/run-schedule'
     | '/lovable/email/transactional/preview'
   id:
@@ -147,6 +180,9 @@ export interface FileRouteTypes {
     | '/pay/$bookingId'
     | '/api/public/initiate-sarvam-call'
     | '/api/public/update-booking'
+    | '/api/voice/command'
+    | '/api/voice/stt'
+    | '/api/voice/tts'
     | '/api/public/hooks/run-schedule'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
@@ -160,6 +196,9 @@ export interface RootRouteChildren {
   PayBookingIdRoute: typeof PayBookingIdRoute
   ApiPublicInitiateSarvamCallRoute: typeof ApiPublicInitiateSarvamCallRoute
   ApiPublicUpdateBookingRoute: typeof ApiPublicUpdateBookingRoute
+  ApiVoiceCommandRoute: typeof ApiVoiceCommandRoute
+  ApiVoiceSttRoute: typeof ApiVoiceSttRoute
+  ApiVoiceTtsRoute: typeof ApiVoiceTtsRoute
   ApiPublicHooksRunScheduleRoute: typeof ApiPublicHooksRunScheduleRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
@@ -222,6 +261,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicUpdateBookingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/voice/command': {
+      id: '/api/voice/command'
+      path: '/api/voice/command'
+      fullPath: '/api/voice/command'
+      preLoaderRoute: typeof ApiVoiceCommandRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice/stt': {
+      id: '/api/voice/stt'
+      path: '/api/voice/stt'
+      fullPath: '/api/voice/stt'
+      preLoaderRoute: typeof ApiVoiceSttRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice/tts': {
+      id: '/api/voice/tts'
+      path: '/api/voice/tts'
+      fullPath: '/api/voice/tts'
+      preLoaderRoute: typeof ApiVoiceTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/run-schedule': {
       id: '/api/public/hooks/run-schedule'
       path: '/api/public/hooks/run-schedule'
@@ -249,6 +309,9 @@ const rootRouteChildren: RootRouteChildren = {
   PayBookingIdRoute: PayBookingIdRoute,
   ApiPublicInitiateSarvamCallRoute: ApiPublicInitiateSarvamCallRoute,
   ApiPublicUpdateBookingRoute: ApiPublicUpdateBookingRoute,
+  ApiVoiceCommandRoute: ApiVoiceCommandRoute,
+  ApiVoiceSttRoute: ApiVoiceSttRoute,
+  ApiVoiceTtsRoute: ApiVoiceTtsRoute,
   ApiPublicHooksRunScheduleRoute: ApiPublicHooksRunScheduleRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }

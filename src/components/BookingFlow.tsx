@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { PLANS, calcTotal, depositOf, inr, isDryWindow, type PlanId } from "@/lib/plans";
 import { addDays, formatSlot, missingForPay, previewKey, todayIST } from "@/lib/booking-rules";
 import { countryLabel, flagEmoji } from "@/lib/phone";
+import type { VoiceContext, VoiceIntent } from "@/lib/voice";
+import { VOICE_START_EVENT } from "@/lib/voice";
 import { BookedScreen } from "./BookedScreen";
 import { ProgressBar, Step } from "./booking/Step";
 import { CaptureStep } from "./booking/CaptureStep";
@@ -15,7 +17,9 @@ import { RevealStep } from "./booking/RevealStep";
 import { PayStep } from "./booking/PayStep";
 import { CheckoutModal } from "./booking/CheckoutModal";
 import { SummarySidebar } from "./booking/SummarySidebar";
-import { useBookingDraft, usePreviews } from "./booking/useBookingDraft";
+import { useBookingDraft, usePreviews, type Draft } from "./booking/useBookingDraft";
+import { useVoiceAgent } from "./voice/useVoiceAgent";
+import { VoiceAgentOverlay } from "./voice/VoiceAgentOverlay";
 
 export type ResumeDraft = {
   id: string;
@@ -70,6 +74,107 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     setActiveStep(n);
     scrollTo(n);
   };
+
+  // Voice assistant: reads the freshest wizard state, applies intents through the
+  // exact same handlers the buttons use (selectPlan / chooseSlot / open).
+  const latest = useRef({
+    draft,
+    activeStep,
+    selectPlan: (p: PlanId) => {},
+    chooseSlot: (date: string, time: string) => {},
+    open,
+    set,
+    bumpSlots: setSlotsNonce,
+  });
+  const stopVoice = useRef<() => void>(() => {});
+  const startVoice = useRef<() => void>(() => {});
+  latest.current = {
+    draft,
+    activeStep,
+    selectPlan,
+    chooseSlot,
+    open,
+    set,
+    bumpSlots: setSlotsNonce,
+  };
+
+  const getContext = useCallback((): VoiceContext => {
+    const { draft: d, activeStep: step } = latest.current;
+    return {
+      today: todayIST(),
+      step,
+      hasPhoto: !!d.photo,
+      vehicle: d.booking?.vehicle ?? null,
+      plan: d.plan,
+      hasSlot: !!d.slot,
+      slotDate: d.slot?.date ?? null,
+      slotTime: d.slot?.time ?? null,
+      mobile: d.mobile,
+      water: d.water,
+      hasPin: !!d.pin,
+      missing: missingForPay({
+        hasBooking: !!d.booking,
+        plan: d.plan,
+        hasSlot: !!d.slot,
+        mobile: d.mobile,
+        hasPin: !!d.pin,
+        name: d.name,
+        phone: d.phone,
+        email: d.email,
+      }),
+    };
+  }, []);
+
+  const applyIntent = useCallback((intent: VoiceIntent) => {
+    const l = latest.current;
+    switch (intent.type) {
+      case "select_plan":
+        l.selectPlan(intent.plan);
+        l.open(2);
+        break;
+      case "select_slot":
+        l.chooseSlot(intent.date, intent.time);
+        break;
+      case "set_location": {
+        const prev = l.draft.mobile;
+        l.set({ mobile: intent.mobile, slot: null });
+        if (prev !== intent.mobile) l.bumpSlots((n) => n + 1);
+        break;
+      }
+      case "set_contact": {
+        const patch: Partial<Draft> = {};
+        if (intent.name) patch.name = intent.name;
+        if (intent.phone) patch.phone = intent.phone;
+        if (intent.email) patch.email = intent.email;
+        l.set(patch);
+        break;
+      }
+      case "go_to_step":
+        l.open(intent.step);
+        break;
+      case "stop":
+        stopVoice.current();
+        break;
+      case "none":
+        break;
+    }
+  }, []);
+
+  const voice = useVoiceAgent({ getContext, applyIntent });
+  stopVoice.current = voice.stop;
+  startVoice.current = voice.start;
+
+  // Mascot tap → toggle the voice session (stable listener via ref).
+  useEffect(() => {
+    const onStart = () => startVoice.current();
+    window.addEventListener(VOICE_START_EVENT, onStart);
+    return () => window.removeEventListener(VOICE_START_EVENT, onStart);
+  }, []);
+
+  // Booking done → wizard unmounts its steps; end the session too.
+  useEffect(() => {
+    if (booked) stopVoice.current();
+  }, [booked]);
 
   // Live grid: owner blocks/cancellations show up without a reload (poll + on tab focus).
   useEffect(() => {
@@ -487,6 +592,8 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
           }}
         />
       )}
+
+      <VoiceAgentOverlay voice={voice} />
     </div>
   );
 }

@@ -3,7 +3,7 @@
 const BASE = "https://ai.gateway.lovable.dev";
 const CHAT_MODEL = "openai/gpt-6-astra";
 
-function key() {
+export function key() {
   const k = process.env["LOVABLE_API_KEY"];
   if (!k) throw new Error("AI is not configured");
   return k;
