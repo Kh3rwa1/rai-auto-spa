@@ -57,17 +57,15 @@ async function pickStudioSlot(page: import("@playwright/test").Page) {
     .toBe(true);
 }
 
-test("landing is compact and leads straight to booking", async ({ page }) => {
+test("landing leads straight to booking", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
-  await expect(page.getByText("Car care · MG Marg, Gangtok").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your car, cared for." })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Book now" }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Services & prices" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Essential Wash.*book now/ }).first()).toBeVisible();
-  await page.getByRole("link", { name: "Book now" }).first().click();
-  await expect(page.getByRole("heading", { name: "Book in five quick steps." })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(
+    page.getByRole("heading", { name: "Hill-road cars deserve a clear booking" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Try a demo booking" }).click();
+  await expect(page).toHaveURL(/#book$/);
+  await expect(page.locator("#step-1-body")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("#step-2-body")).toBeHidden();
   // Skip link lets keyboard users jump straight to booking.
   await expect(page.getByRole("link", { name: "Skip to booking" })).toBeAttached();
 });

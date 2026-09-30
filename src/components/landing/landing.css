@@ -1,0 +1,160 @@
+/**
+ * Rai's Washbook — landing-page-only theme.
+ * Everything is scoped under .washbook so the booking flow, owner
+ * dashboard and global styles are untouched.
+ */
+
+.washbook {
+  --wb-paper: #faf5ea;
+  --wb-paper-deep: #f2e9d4;
+  --wb-ink: #2b333c;
+  --wb-ink-soft: #5b6672;
+  --wb-mint: #ddefe4;
+  --wb-sun: #f2c14e;
+  --wb-line: 2px solid var(--wb-ink);
+
+  background: var(--wb-paper);
+  color: var(--wb-ink);
+  font-family: var(--font-sans);
+  overflow-x: clip;
+}
+
+.washbook h1,
+.washbook h2,
+.washbook h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* Workshop label: small uppercase section tag. */
+.wb-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wb-ink);
+}
+.wb-tag::before {
+  content: "";
+  width: 1.75rem;
+  height: 0.55rem;
+  border: var(--wb-line);
+  border-radius: 999px;
+  background: var(--wb-sun);
+}
+
+/* Ink card with offset shadow. */
+.wb-card {
+  background: #fffdf7;
+  border: var(--wb-line);
+  border-radius: 1.25rem;
+  box-shadow: 6px 6px 0 rgba(43, 51, 60, 0.9);
+}
+
+.wb-mintwash {
+  background: var(--wb-mint);
+  border: var(--wb-line);
+  border-radius: 1.25rem;
+}
+
+/* Buttons: teal primary, paper secondary. Minimum 44px height. */
+.wb-btn {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: var(--wb-line);
+  padding: 0.7rem 1.6rem;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+.wb-btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 4px 4px 0 var(--wb-ink);
+}
+.wb-btn-primary:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--wb-ink);
+}
+.wb-btn-quiet {
+  background: #fffdf7;
+  color: var(--wb-ink);
+  box-shadow: 4px 4px 0 rgba(43, 51, 60, 0.25);
+}
+.wb-btn-quiet:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 rgba(43, 51, 60, 0.25);
+}
+
+.wb-link {
+  font-weight: 700;
+  color: var(--wb-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  border-radius: 0.25rem;
+}
+
+/* Visible keyboard focus for all landing controls. */
+.washbook a:focus-visible,
+.washbook button:focus-visible,
+.washbook select:focus-visible,
+.washbook input:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Doodle stage: static art always rendered; Lottie overlays on top. */
+.wb-stage {
+  position: relative;
+}
+.wb-stage > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.wb-lottie {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.wb-lottie > svg {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Numbered workshop steps. */
+.wb-stepnum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border: var(--wb-line);
+  border-radius: 999px;
+  background: var(--wb-sun);
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .washbook *,
+  .washbook *::before,
+  .washbook *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

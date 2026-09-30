@@ -7,7 +7,15 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist", ".output", ".vinxi", "src/integrations/supabase/**", "src/routeTree.gen.ts"],
+    ignores: [
+      "dist",
+      ".output",
+      ".vinxi",
+      "src/integrations/supabase/**",
+      "src/routeTree.gen.ts",
+      // Vendored third-party player: pinned, licensed, must not be reformatted.
+      "public/animations/vendor/**",
+    ],
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

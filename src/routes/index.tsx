@@ -1,226 +1,290 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Check, ChevronRight, Droplets, MapPin } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { BookingFlow } from "@/components/BookingFlow";
+import { DemoRibbon } from "@/components/DemoRibbon";
 import { MOBILE_FEE, PLANS, inr, type PlanId } from "@/lib/plans";
-import heroImg from "@/assets/hero.jpg";
+import {
+  DetailDoodle,
+  HeroCar,
+  OwnerDoodle,
+  WrapDoodle,
+  WashDoodle,
+} from "@/components/landing/DoodleArt";
+import {
+  LandingMotion,
+  setDoodlesPaused,
+  useDoodlesPaused,
+} from "@/components/landing/LandingMotion";
+import "@/components/landing/landing.css";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Rai's Auto Spa — Car Care on MG Marg, Gangtok" },
+      { title: "Rai's Auto Spa — Car Care Washbook, MG Marg Gangtok" },
       {
         name: "description",
         content:
-          "Wash, full detail or custom wrap in Gangtok — studio or doorstep, priced upfront. Book in five quick steps.",
+          "A fictional Gangtok car-care studio: two wash bays, one mobile van, and one clear booking flow. Try the interactive challenge demo.",
       },
-      {
-        property: "og:title",
-        content: "Rai's Auto Spa — Your car, cared for. Your booking, sorted.",
-      },
+      { property: "og:title", content: "Rai's Auto Spa — Gangtok Washbook" },
       {
         property: "og:description",
         content:
-          "Two-bay studio on MG Marg or mobile van to your doorstep. Clear prices, live slots.",
+          "Wash, full detail and custom wraps with honest prices and live slots — plus the owner's side of the day.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Rai's Auto Spa — MG Marg, Gangtok" },
+      { name: "twitter:title", content: "Rai's Auto Spa — Gangtok Washbook" },
     ],
   }),
   component: Index,
 });
 
-/**
- * "The wash line" — the single signature motif: one quiet wave, a reference
- * to water movement and a clean finish. Decorative only (aria-hidden).
- */
-function WashLine({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      width="30"
-      height="8"
-      viewBox="0 0 30 8"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-      className={className}
-    >
-      <path
-        d="M1.5 5.5C7 2.5 12.5 2.5 18 5.5C21 6.8 24 6.8 28.5 4.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function Wordmark() {
   return (
-    <span className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <Droplets className="h-4.5 w-4.5" aria-hidden />
-      </span>
+    <a
+      href="#top"
+      className="inline-flex min-h-[44px] items-center gap-2.5"
+      aria-label="Rai's Auto Spa — back to top"
+    >
+      <svg width="34" height="26" viewBox="0 0 34 26" aria-hidden="true" focusable="false">
+        <circle cx={9} cy={13} r={6} fill="none" stroke="#2b333c" strokeWidth={2.5} />
+        <circle cx={22} cy={8} r={4} fill="none" stroke="#0d9488" strokeWidth={2.5} />
+        <path
+          d="M2,21 C10,17 20,17 32,21"
+          fill="none"
+          stroke="#2b333c"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+        />
+      </svg>
       <span className="leading-none">
-        <span className="block font-display text-lg font-bold tracking-tight">
-          Rai&rsquo;s <span className="font-semibold text-primary">Auto Spa</span>
+        <span className="block font-display text-xl font-extrabold tracking-tight">
+          Rai&rsquo;s Auto Spa
         </span>
-        <span className="mt-1 block text-[11px] font-medium tracking-wide text-muted-foreground">
-          MG Marg, Gangtok
+        <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--wb-ink-soft)]">
+          Gangtok washbook · MG Marg
         </span>
       </span>
-    </span>
+    </a>
   );
 }
 
-const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
-
-function Nav() {
+function DoodleToggle() {
+  const paused = useDoodlesPaused();
   return (
-    <header className="fixed inset-x-0 top-0 z-40">
-      <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border/60 bg-background/85 py-2 pl-4 pr-2 backdrop-blur-xl sm:px-5">
-        <a href="#top" aria-label="Rai's Auto Spa — back to top">
-          <Wordmark />
-        </a>
-        <nav aria-label="Main" className="flex items-center gap-1 text-sm sm:gap-2">
+    <button
+      type="button"
+      aria-pressed={paused}
+      onClick={() => setDoodlesPaused(!paused)}
+      className="inline-flex min-h-[44px] items-center rounded-full border-2 border-[var(--wb-ink)] bg-[#fffdf7] px-4 text-sm font-bold"
+    >
+      {paused ? "Play doodles" : "Pause doodles"}
+    </button>
+  );
+}
+
+function Header() {
+  return (
+    <header className="border-b-2 border-[var(--wb-ink)] bg-[var(--wb-paper)]">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3">
+        <Wordmark />
+        <nav aria-label="Main" className="flex flex-wrap items-center gap-1.5 text-sm">
           <a
             href="#services"
-            className="hidden min-h-[44px] items-center rounded-full px-3 py-2 font-medium hover:bg-muted sm:flex"
+            className="inline-flex min-h-[44px] items-center rounded-full px-3 py-2 font-bold"
           >
             Services
           </a>
-          <Button asChild size="sm" className="min-h-[44px] rounded-full font-semibold">
-            <a href="#book">Book now</a>
-          </Button>
+          <a
+            href="#book"
+            className="inline-flex min-h-[44px] items-center rounded-full px-3 py-2 font-bold"
+          >
+            Booking
+          </a>
+          <Link
+            to="/owner"
+            className="inline-flex min-h-[44px] items-center rounded-full px-3 py-2 font-bold"
+          >
+            Admin demo
+          </Link>
+          <DoodleToggle />
         </nav>
       </div>
     </header>
   );
 }
 
-const ASSURANCES = ["2 studio bays", "1 mobile van", "No account needed"] as const;
-
 function Hero() {
   return (
-    <section aria-labelledby="hero-title" className="bg-background">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 pb-10 pt-28 sm:pt-32 md:grid-cols-[1.05fr_0.95fr] md:pb-14">
+    <section aria-labelledby="hero-title" className="bg-[var(--wb-paper)]">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-14 pt-10 sm:pt-14 md:grid-cols-[1.02fr_0.98fr]">
         <div>
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            <WashLine className="text-primary" /> Car care · MG Marg, Gangtok
-          </p>
+          <p className="wb-tag">Rai&rsquo;s washbook · Gangtok</p>
           <h1
             id="hero-title"
-            className="mt-3 font-display text-4xl font-bold leading-[1.02] tracking-tight sm:text-5xl"
+            className="mt-3 font-display text-4xl font-extrabold leading-[1.04] sm:text-6xl"
           >
-            Your car, cared for.
-            <span className="block">Your booking, sorted.</span>
+            Hill-road cars deserve a clear booking.
           </h1>
-          <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Wash, detail or custom wrap — studio or doorstep, priced upfront.
+          <p className="mt-4 max-w-xl text-base leading-relaxed sm:text-lg">
+            Rai&rsquo;s Auto Spa is a fictional Gangtok car-care studio: two wash bays on MG Marg,
+            one mobile van for the hill colonies, and one booking flow with honest prices and live
+            slots. This demo shows both sides — the customer booking and the owner&rsquo;s day.
           </p>
-          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <Button
-              asChild
-              size="lg"
-              className="min-h-[54px] rounded-full px-8 text-base font-bold"
-            >
-              <a href="#book">Book now</a>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="min-h-[54px] rounded-full px-7 text-base font-semibold"
-            >
-              <a href="#services">Services &amp; prices</a>
-            </Button>
+          <p
+            role="note"
+            className="mt-4 inline-block rounded-full border-2 border-[var(--wb-ink)] bg-[var(--wb-mint)] px-4 py-2 text-sm font-bold"
+          >
+            Challenge demo · Fictional business · No real charges
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a href="#book" className="wb-btn wb-btn-primary">
+              Try a demo booking
+            </a>
+            <Link to="/owner" className="wb-btn wb-btn-quiet">
+              Explore admin demo
+            </Link>
           </div>
-          <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-            {ASSURANCES.map((a) => (
-              <li key={a} className="flex items-center gap-1.5">
-                <Check className="h-4 w-4 text-primary" aria-hidden />
-                {a}
-              </li>
-            ))}
-          </ul>
         </div>
-        <a
-          href="#book"
-          aria-label="Book now — Essential Wash, 499 rupees, 45 minutes"
-          className="group relative block overflow-hidden rounded-3xl shadow-[var(--shadow-soft)]"
-        >
-          <img
-            src={heroImg}
-            alt="Freshly washed car at Rai's Auto Spa"
-            fetchPriority="high"
-            decoding="async"
-            className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] md:aspect-[5/4]"
-          />
-          <span className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 rounded-2xl bg-charcoal/85 px-4 py-3 text-charcoal-foreground backdrop-blur">
-            <span className="text-sm">
-              <span className="block font-display text-base font-bold">
-                Essential Wash · {inr(PLANS.wash.price)}
-              </span>
-              <span className="block text-xs opacity-75">45 min · studio or doorstep</span>
-            </span>
-            <span className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
-              <ChevronRight className="h-5 w-5" aria-hidden />
-            </span>
-          </span>
-        </a>
+        <LandingMotion art={<HeroCar />} animation="bubbles" />
       </div>
     </section>
   );
 }
+
+const FACTS = [
+  { title: "2 wash bays", body: "Studio on MG Marg with visible slot availability." },
+  { title: "1 mobile van", body: "Doorstep visits in Tadong, Deorali and Development Area." },
+  {
+    title: "Water-aware slots",
+    body: "Municipal supply runs 6–9am; midday van slots need water on site.",
+  },
+] as const;
+
+function Facts() {
+  return (
+    <section aria-label="How the studio operates" className="bg-[var(--wb-paper-deep)] py-3">
+      <dl className="mx-auto grid max-w-6xl gap-3 px-5 py-6 sm:grid-cols-3">
+        {FACTS.map((f, i) => (
+          <div key={f.title} className="wb-card flex gap-3.5 p-5">
+            <span className="wb-stepnum" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span>
+              <dt className="font-display text-lg font-extrabold">{f.title}</dt>
+              <dd className="mt-1 text-sm leading-relaxed">{f.body}</dd>
+            </span>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+const SERVICE_ART = { wash: WashDoodle, detail: DetailDoodle, signature: WrapDoodle } as const;
+const SERVICE_ANIMATION = { wash: "bubbles", detail: "sparkles", signature: "route" } as const;
 
 function Services() {
   return (
     <section
       id="services"
       aria-labelledby="services-title"
-      className="scroll-mt-24 border-y border-border bg-card"
+      className="scroll-mt-6 bg-[var(--wb-paper)]"
     >
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:py-12">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:py-20">
+        <p className="wb-tag">The washbook menu</p>
         <h2
           id="services-title"
-          className="font-display text-2xl font-bold tracking-tight sm:text-3xl"
+          className="mt-2 max-w-xl font-display text-3xl font-extrabold sm:text-4xl"
         >
-          Services &amp; prices
+          Wash, detail, or full custom wrap
         </h2>
-        <ul className="mt-5 divide-y divide-border overflow-hidden rounded-3xl border border-border">
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
           {(Object.keys(PLANS) as PlanId[]).map((id) => {
             const p = PLANS[id];
+            const Art = SERVICE_ART[id];
             return (
-              <li key={id}>
-                <a
-                  href="#book"
-                  aria-label={`${p.name}, ${inr(p.price)}, ${p.duration} — book now`}
-                  className="group flex min-h-[64px] items-center justify-between gap-3 bg-background px-4 py-3 transition-colors hover:bg-accent/50 sm:px-6"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-display text-lg font-bold tracking-tight">
-                      {p.name}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">{p.duration}</span>
+              <article
+                key={id}
+                aria-label={`${p.name}, ${inr(p.price)}, ${p.duration}`}
+                className="wb-card flex flex-col p-6"
+              >
+                <LandingMotion art={<Art />} animation={SERVICE_ANIMATION[id]} />
+                <p className="mt-4 text-xs font-bold uppercase tracking-[0.12em] text-[var(--wb-ink-soft)]">
+                  {p.badge}
+                </p>
+                <h3 className="mt-1 font-display text-xl font-extrabold">{p.name}</h3>
+                <p className="mt-1.5 font-display text-3xl font-extrabold">
+                  {inr(p.price)}
+                  <span className="ml-2 align-middle font-sans text-sm font-semibold text-[var(--wb-ink-soft)]">
+                    · {p.duration}
                   </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="font-display text-xl font-bold tracking-tight">
-                      {inr(p.price)}
-                    </span>
-                    <ChevronRight
-                      className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                      aria-hidden
-                    />
-                  </span>
-                </a>
-              </li>
+                </p>
+                <ul className="mt-3 space-y-1.5 text-sm">
+                  {p.features.slice(0, 3).map((f) => (
+                    <li key={f} className="flex items-start gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]"
+                      />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </article>
             );
           })}
-        </ul>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Van adds {inr(MOBILE_FEE)} · 30% deposit secures your slot.
+        </div>
+        <p className="mt-5 text-sm">
+          Mobile van adds {inr(MOBILE_FEE)}. A 30% deposit secures each slot at confirmation.
         </p>
+        <p className="mt-2">
+          <a href="#book" className="wb-link">
+            See available slots below
+          </a>
+        </p>
+      </div>
+    </section>
+  );
+}
+
+const HOW_STEPS = [
+  { title: "Show your car", body: "One photo — or a sample car. The studio detects the model." },
+  {
+    title: "Pick service + slot",
+    body: "Studio or van, with live availability and water rules built in.",
+  },
+  {
+    title: "Confirm details",
+    body: "Contact details plus a simulated deposit. Free reschedule till 12h before.",
+  },
+] as const;
+
+function HowItWorks() {
+  return (
+    <section aria-labelledby="how-title" className="bg-[var(--wb-paper-deep)]">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:py-16">
+        <p className="wb-tag">How the booking works</p>
+        <h2 id="how-title" className="mt-2 font-display text-3xl font-extrabold sm:text-4xl">
+          Three moves, five guided steps
+        </h2>
+        <p className="mt-3 max-w-2xl leading-relaxed">
+          The live booking below walks you through five guided steps. In short, it goes like this:
+        </p>
+        <ol className="mt-7 grid gap-4 md:grid-cols-3">
+          {HOW_STEPS.map((s, i) => (
+            <li key={s.title} className="wb-mintwash flex gap-3.5 p-5">
+              <span className="wb-stepnum" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span>
+                <h3 className="font-display text-lg font-extrabold">{s.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed">{s.body}</p>
+              </span>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
@@ -228,69 +292,104 @@ function Services() {
 
 function BookingEntrance() {
   return (
-    <section id="book" aria-labelledby="book-title" className="scroll-mt-20 bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14">
-        <div className="mb-6 max-w-2xl">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            <WashLine className="text-primary" /> Booking
+    <section id="book" aria-labelledby="book-title" className="scroll-mt-6 bg-[var(--wb-paper)]">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:py-20">
+        <div className="mx-auto mb-10 max-w-2xl text-center sm:mb-14">
+          <p className="wb-tag" style={{ justifyContent: "center" }}>
+            The customer booking
           </p>
-          <h2
-            id="book-title"
-            className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl"
-          >
-            Book in five quick steps.
+          <h2 id="book-title" className="mt-2 font-display text-3xl font-extrabold sm:text-4xl">
+            Try the booking below
           </h2>
-          <p className="mt-2 leading-relaxed text-muted-foreground">
-            Snap your car, pick a service, grab a slot — done.
+          <p className="mt-3 leading-relaxed">
+            Use a sample car inside the booking flow. Please use fictional contact details.
           </p>
         </div>
-        <BookingFlow />
+        <div className="mx-auto max-w-4xl">
+          <BookingFlow />
+        </div>
       </div>
     </section>
   );
 }
 
+function OwnerContext() {
+  return (
+    <section
+      aria-labelledby="owner-title"
+      className="border-y-2 border-[var(--wb-ink)] bg-[var(--wb-paper-deep)]"
+    >
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 sm:py-20 md:grid-cols-[0.95fr_1.05fr]">
+        <LandingMotion art={<OwnerDoodle />} animation="route" />
+        <div>
+          <p className="wb-tag">The owner&rsquo;s side</p>
+          <h2 id="owner-title" className="mt-2 font-display text-3xl font-extrabold sm:text-4xl">
+            One owner, two bays, one van
+          </h2>
+          <p className="mt-4 max-w-xl leading-relaxed">
+            Rai coordinates studio jobs, mobile visits and water-blocked slots from a single
+            dashboard: today&rsquo;s route, the availability calendar, subscriptions, the waitlist,
+            leads and wrap approvals. Open the guest admin demo to click through it — no sign-in
+            needed.
+          </p>
+          <div className="mt-6">
+            <Button asChild size="lg" className="min-h-[48px] rounded-full px-7 font-bold">
+              <Link to="/owner">Explore admin demo</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="bg-[var(--wb-ink)] py-10 text-[#faf5ea]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="font-display text-xl font-extrabold tracking-tight">Rai&rsquo;s Auto Spa</p>
+          <p className="mt-1 text-sm opacity-75">MG Marg, Gangtok · Sikkim 737101</p>
+        </div>
+        <nav aria-label="Footer" className="flex flex-col gap-1 text-sm">
+          <a href="#services" className="inline-flex min-h-[44px] items-center font-bold">
+            Services
+          </a>
+          <a href="#book" className="inline-flex min-h-[44px] items-center font-bold">
+            Booking
+          </a>
+          <Link to="/owner" className="inline-flex min-h-[44px] items-center font-bold">
+            Admin demo
+          </Link>
+        </nav>
+      </div>
+      <p className="mx-auto mt-6 max-w-6xl px-5 text-xs opacity-60">
+        Challenge demo · fictional business · no real charges.
+      </p>
+    </footer>
+  );
+}
+
 function Index() {
   return (
-    <div id="top" className="min-h-screen bg-background">
+    <div id="top" className="washbook min-h-screen">
       <a
         href="#book"
-        className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="sr-only z-50 rounded-full bg-[var(--color-primary)] px-4 py-2 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         Skip to booking
       </a>
-      <Nav />
+      <Header />
       <main>
         <Hero />
+        <Facts />
         <Services />
+        <HowItWorks />
         <BookingEntrance />
+        <OwnerContext />
       </main>
-      <footer className="border-t border-border bg-charcoal py-8 text-charcoal-foreground">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-display text-base font-bold">
-            Rai&rsquo;s <span className="font-semibold text-teal">Auto Spa</span>
-            <span className="ml-2 align-middle font-sans text-xs font-medium text-charcoal-foreground/60">
-              MG Marg, Gangtok
-            </span>
-          </p>
-          <nav aria-label="Footer" className="flex items-center gap-1 text-sm">
-            <a
-              href="#book"
-              className="flex min-h-[44px] items-center rounded-full px-3 font-semibold hover:underline"
-            >
-              Book now
-            </a>
-            <a
-              href={MAPS_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-[44px] items-center gap-1 rounded-full px-3 text-charcoal-foreground/70 hover:underline"
-            >
-              <MapPin className="h-4 w-4" aria-hidden /> Map
-            </a>
-          </nav>
-        </div>
-      </footer>
+      <Footer />
+      <DemoRibbon />
     </div>
   );
 }
