@@ -43,13 +43,10 @@ export async function seedDemo(sb: DB) {
 
   const all = (t: "waitlist_offers" | "waitlist" | "subscriptions" | "payments" | "bookings" | "clients" | "blocked_slots") =>
     sb.from(t).delete().not("id", "is", null);
-  await all("waitlist_offers");
-  await all("waitlist");
-  await all("subscriptions");
-  await all("payments");
+  // Children first (in parallel), then parents — respects foreign keys while staying fast.
+  await Promise.all([all("waitlist_offers"), all("waitlist"), all("subscriptions"), all("payments"), all("blocked_slots")]);
   await all("bookings");
   await all("clients");
-  await all("blocked_slots");
 
   const { data: listed } = await sb.storage.from(BUCKET).list("demo");
   const existing = new Set((listed ?? []).map((f) => f.name));
@@ -76,7 +73,7 @@ export async function seedDemo(sb: DB) {
   const subsClients = cRows.slice(0, 40);
   const bookClients = cRows.slice(40);
 
-  await sb.from("subscriptions").insert(
+  const subsP = sb.from("subscriptions").insert(
     subsClients.map((c, i) => ({ client_id: c.id, plan: "Daily Wash", active: i % 13 !== 12, preferred_time: TIMES[i % TIMES.length]!, skip_dates: [] })),
   );
 
@@ -109,13 +106,15 @@ export async function seedDemo(sb: DB) {
     mk(7, { vehicle_model: "Swift", plan: d, total: 0, status: "lead", photo_url: swift, client_id: null, area: null, map_pin: null }),
     mk(8, { vehicle_model: "Creta", plan: w, total: 0, status: "lead", photo_url: creta, client_id: null, area: null, map_pin: null }),
   ];
-  const { error: be } = await sb.from("bookings").insert(bookings, { defaultToNull: false });
+  const [{ error: be }] = await Promise.all([
+    sb.from("bookings").insert(bookings, { defaultToNull: false }),
+    subsP,
+    sb.from("waitlist").insert(
+      subsClients.slice(0, 6).map((c, i) => ({ client_id: c.id, area: c.area ?? "MG Marg", date: plusDays(today, i % 3) })),
+    ),
+  ]);
   if (be) console.error("seed bookings", be);
   if (be) throw new Error("Seeding bookings failed.");
-
-  await sb.from("waitlist").insert(
-    subsClients.slice(0, 6).map((c, i) => ({ client_id: c.id, area: c.area ?? "MG Marg", date: plusDays(today, i % 3) })),
-  );
 
   return { ok: true, ms: Date.now() - started };
 }
