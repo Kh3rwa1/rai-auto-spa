@@ -133,7 +133,9 @@ test("sample car books end to end with preview on the payment screen", async ({ 
   await pickStudioSlot(page);
 
   // Step 4 — preview lives on the payment screen; details + demo payment.
-  await expect(page.locator("#step-4-body").getByText("Your AI preview")).toBeVisible({
+  await expect(
+    page.locator("#step-4-body").getByText("Your AI preview", { exact: true }),
+  ).toBeVisible({
     timeout: 30_000,
   });
   await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
