@@ -1,0 +1,1 @@
+create policy "owner reads car media" on storage.objects for select to authenticated using (bucket_id = 'car-media' and public.has_role(auth.uid(),'admin'));

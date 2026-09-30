@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790726539677,
+      "tag": "0000_init_auto_spa",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790726712264,
+      "tag": "0001_car_media_owner_read",
+      "breakpoints": true
+    }
+  ]
+}
