@@ -47,5 +47,7 @@ export default function PinPicker({
     });
   }, [value]);
 
-  return <div ref={el} className="h-64 w-full overflow-hidden rounded-2xl border border-border z-0" />;
+  return (
+    <div ref={el} className="h-64 w-full overflow-hidden rounded-2xl border border-border z-0" />
+  );
 }

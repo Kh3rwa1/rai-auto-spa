@@ -14,9 +14,13 @@ async function gatewayError(res: Response, what: string): Promise<never> {
   try {
     const j = await res.json();
     msg = j?.error?.message ?? j?.message ?? "";
-  } catch {}
-  if (res.status === 429) throw new Error("Rai is busy with lots of cars right now — please try again in a minute.");
-  if (res.status === 402) throw new Error("AI previews are paused right now (credits). Please book without the preview.");
+  } catch {
+    /* non-JSON error body — fall back to the status code */
+  }
+  if (res.status === 429)
+    throw new Error("Rai is busy with lots of cars right now — please try again in a minute.");
+  if (res.status === 402)
+    throw new Error("AI previews are paused right now (credits). Please book without the preview.");
   throw new Error(`${what} failed${msg ? `: ${msg}` : ""}`);
 }
 
@@ -51,7 +55,11 @@ export async function detectVehicle(b64: string, mime: string) {
   const m = text.match(/\{[\s\S]*\}/);
   try {
     const parsed = JSON.parse(m?.[0] ?? "{}");
-    return { model: String(parsed.model || "Car").slice(0, 40), isCar: parsed.is_car !== false, plate: parsed.plate as unknown };
+    return {
+      model: String(parsed.model || "Car").slice(0, 40),
+      isCar: parsed.is_car !== false,
+      plate: parsed.plate as unknown,
+    };
   } catch {
     return { model: "Car", isCar: true, plate: null as unknown };
   }
@@ -76,7 +84,8 @@ export async function editCarImage(bytes: Uint8Array, mime: string, prompt: stri
 
 export async function createVideoJob(bytes: Uint8Array, mime: string, prompt: string) {
   let bin = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   const res = await fetch(`${BASE}/v1/videos`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
@@ -95,13 +104,17 @@ export async function createVideoJob(bytes: Uint8Array, mime: string, prompt: st
 }
 
 export async function getVideoJob(id: string) {
-  const res = await fetch(`${BASE}/v1/videos/${id}`, { headers: { Authorization: `Bearer ${key()}` } });
+  const res = await fetch(`${BASE}/v1/videos/${id}`, {
+    headers: { Authorization: `Bearer ${key()}` },
+  });
   if (!res.ok) await gatewayError(res, "Video status");
   return (await res.json()) as { status: string; error?: { message?: string } };
 }
 
 export async function downloadVideo(id: string) {
-  const res = await fetch(`${BASE}/v1/videos/${id}/content`, { headers: { Authorization: `Bearer ${key()}` } });
+  const res = await fetch(`${BASE}/v1/videos/${id}/content`, {
+    headers: { Authorization: `Bearer ${key()}` },
+  });
   if (!res.ok) await gatewayError(res, "Video download");
   return new Uint8Array(await res.arrayBuffer());
 }

@@ -33,14 +33,22 @@ export const claimOffer = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const sb = await admin();
-    const { data: o } = await sb.from("waitlist_offers").select("*").eq("id", data.id).maybeSingle();
+    const { data: o } = await sb
+      .from("waitlist_offers")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!o) return { result: "not_found" as const };
     if (o.status === "claimed") return { result: "claimed" as const };
     if (o.status !== "offered") return { result: "taken" as const };
     if (new Date(o.expires_at).getTime() < Date.now()) return { result: "expired" as const };
 
     const { data: orig } = o.cancelled_booking_id
-      ? await sb.from("bookings").select("plan, vehicle_model, map_pin, total, water_needed").eq("id", o.cancelled_booking_id).maybeSingle()
+      ? await sb
+          .from("bookings")
+          .select("plan, vehicle_model, map_pin, total, water_needed")
+          .eq("id", o.cancelled_booking_id)
+          .maybeSingle()
       : { data: null };
     // Placeholder row with no date: invisible to capacity counts until book_slot sets the date under lock.
     const { data: nb, error } = await sb
@@ -70,7 +78,11 @@ export const claimOffer = createServerFn({ method: "POST" })
     });
     if (code !== "ok") {
       await sb.from("bookings").delete().eq("id", nb.id);
-      await sb.from("waitlist_offers").update({ status: "taken" }).eq("id", o.id).eq("status", "offered");
+      await sb
+        .from("waitlist_offers")
+        .update({ status: "taken" })
+        .eq("id", o.id)
+        .eq("status", "offered");
       return { result: "taken" as const };
     }
     // Mark this one claimed; siblings for the same freed slot become "taken".
@@ -85,7 +97,11 @@ export const claimOffer = createServerFn({ method: "POST" })
       return { result: "taken" as const };
     }
     if (o.cancelled_booking_id) {
-      await sb.from("waitlist_offers").update({ status: "taken" }).eq("cancelled_booking_id", o.cancelled_booking_id).eq("status", "offered");
+      await sb
+        .from("waitlist_offers")
+        .update({ status: "taken" })
+        .eq("cancelled_booking_id", o.cancelled_booking_id)
+        .eq("status", "offered");
     }
     await sb.from("waitlist").delete().eq("client_id", o.client_id).eq("date", o.date);
     return { result: "ok" as const };

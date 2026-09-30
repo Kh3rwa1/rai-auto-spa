@@ -21,7 +21,12 @@ async function ownerDb() {
     const { data: u } = await supabaseAdmin.auth.getUser(token);
     const uid = u.user?.id;
     const { data: role } = uid
-      ? await supabaseAdmin.from("user_roles").select("id").eq("user_id", uid).eq("role", "admin").maybeSingle()
+      ? await supabaseAdmin
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", uid)
+          .eq("role", "admin")
+          .maybeSingle()
       : { data: null };
     if (!role) throw new Error("Owner access only.");
     return supabaseAdmin;
@@ -45,7 +50,15 @@ export const ownerData = createServerFn({ method: "POST" }).handler(async () => 
 });
 
 export const ownerSignedUrls = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ paths: z.array(z.string().regex(/^(uploads|previews|videos|demo|originals)\/[\w.-]+$/)).max(200) }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        paths: z
+          .array(z.string().regex(/^(uploads|previews|videos|demo|originals)\/[\w.-]+$/))
+          .max(200),
+      })
+      .parse(d),
+  )
   .handler(async ({ data }) => {
     if (!data.paths.length) return {} as Record<string, string>;
     const sb = await ownerDb();
@@ -60,23 +73,36 @@ export const listBlocked = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const sb = await ownerDb();
     const end = new Date(new Date(data.start).getTime() + 7 * 86400000).toISOString().slice(0, 10);
-    const { data: rows } = await sb.from("blocked_slots").select("date, time, reason").gte("date", data.start).lt("date", end);
+    const { data: rows } = await sb
+      .from("blocked_slots")
+      .select("date, time, reason")
+      .gte("date", data.start)
+      .lt("date", end);
     return rows ?? [];
   });
 
 export const setBlocked = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z.object({ mode: z.enum(["block", "unblock"]), keys: z.array(z.object({ date: z.string().regex(dateRe), time: z.string().regex(timeRe) })).max(100) }).parse(d),
+    z
+      .object({
+        mode: z.enum(["block", "unblock"]),
+        keys: z
+          .array(z.object({ date: z.string().regex(dateRe), time: z.string().regex(timeRe) }))
+          .max(100),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const sb = await ownerDb();
     if (data.mode === "block") {
-      const { error } = await sb
-        .from("blocked_slots")
-        .upsert(data.keys.map((k) => ({ ...k, reason: "Water shortage" })), { onConflict: "date,time" });
+      const { error } = await sb.from("blocked_slots").upsert(
+        data.keys.map((k) => ({ ...k, reason: "Water shortage" })),
+        { onConflict: "date,time" },
+      );
       if (error) throw new Error("Could not block those slots.");
     } else {
-      for (const k of data.keys) await sb.from("blocked_slots").delete().eq("date", k.date).eq("time", k.time);
+      for (const k of data.keys)
+        await sb.from("blocked_slots").delete().eq("date", k.date).eq("time", k.time);
     }
     return { ok: true };
   });
@@ -86,7 +112,11 @@ export const updateSubscription = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
-        patch: z.object({ preferred_time: z.string().regex(timeRe).optional(), active: z.boolean().optional(), skip_dates: z.array(z.string().regex(dateRe)).max(400).optional() }),
+        patch: z.object({
+          preferred_time: z.string().regex(timeRe).optional(),
+          active: z.boolean().optional(),
+          skip_dates: z.array(z.string().regex(dateRe)).max(400).optional(),
+        }),
       })
       .parse(d),
   )
@@ -105,7 +135,14 @@ export const updateSubscription = createServerFn({ method: "POST" })
   });
 
 export const setApproval = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ id: z.string().uuid(), status: z.enum(["approved", "changes_requested", "pending"]) }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["approved", "changes_requested", "pending"]),
+      })
+      .parse(d),
+  )
   .handler(async ({ data }) => {
     const sb = await ownerDb();
     await sb.from("bookings").update({ approval_status: data.status }).eq("id", data.id);
@@ -127,10 +164,16 @@ export const cancelBooking = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!b || !b.date || !b.time) throw new Error("That booking can't be cancelled.");
     const pick = async (sameDate: boolean, exclude: string[]) => {
-      let q = sb.from("waitlist").select("client_id").eq("area", b.area ?? "MG Marg").order("created_at");
+      let q = sb
+        .from("waitlist")
+        .select("client_id")
+        .eq("area", b.area ?? "MG Marg")
+        .order("created_at");
       if (sameDate) q = q.eq("date", b.date!);
       const { data: w } = await q.limit(10);
-      return (w ?? []).map((x) => x.client_id).filter((id) => !exclude.includes(id) && id !== b.client_id);
+      return (w ?? [])
+        .map((x) => x.client_id)
+        .filter((id) => !exclude.includes(id) && id !== b.client_id);
     };
     let ids = [...new Set(await pick(true, []))];
     if (ids.length < OPS.offerFanout) ids = [...new Set([...ids, ...(await pick(false, ids))])];
@@ -138,7 +181,15 @@ export const cancelBooking = createServerFn({ method: "POST" })
     const expires = new Date(Date.now() + OPS.offerMinutes * 60000).toISOString();
     if (ids.length) {
       const { error } = await sb.from("waitlist_offers").insert(
-        ids.map((client_id) => ({ cancelled_booking_id: b.id, client_id, date: b.date!, time: b.time!, location_type: b.location_type, area: b.area, expires_at: expires })),
+        ids.map((client_id) => ({
+          cancelled_booking_id: b.id,
+          client_id,
+          date: b.date!,
+          time: b.time!,
+          location_type: b.location_type,
+          area: b.area,
+          expires_at: expires,
+        })),
       );
       if (error) throw new Error("Could not create waitlist offers.");
     }
@@ -149,7 +200,9 @@ export const listOffers = createServerFn({ method: "POST" }).handler(async () =>
   const sb = await ownerDb();
   const { data } = await sb
     .from("waitlist_offers")
-    .select("id, date, time, area, status, expires_at, created_at, cancelled_booking_id, clients(name, phone)")
+    .select(
+      "id, date, time, area, status, expires_at, created_at, cancelled_booking_id, clients(name, phone)",
+    )
     .order("created_at", { ascending: false })
     .limit(30);
   return data ?? [];
@@ -172,7 +225,10 @@ export const resetDemo = createServerFn({ method: "POST" }).handler(async () => 
 export const ensureDemoData = createServerFn({ method: "POST" }).handler(async () => {
   const sb = await ownerDb();
   const today = new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
-  const { count } = await sb.from("bookings").select("id", { count: "exact", head: true }).gte("date", today);
+  const { count } = await sb
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .gte("date", today);
   if ((count ?? 0) > 0) return { seeded: false };
   const { seedDemo } = await import("./seed.server");
   await seedDemo(sb);

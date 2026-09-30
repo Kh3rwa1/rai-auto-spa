@@ -8,9 +8,13 @@ export const Route = createFileRoute("/api/public/hooks/run-schedule")({
       POST: async ({ request }) => {
         const secret = process.env["LOVABLE_CRON_SECRET"] ?? "";
         const got = (request.headers.get("authorization") ?? "").replace(/^Bearer /, "");
-        const ok = !!secret && got.length === secret.length && timingSafeEqual(Buffer.from(got), Buffer.from(secret));
+        const ok =
+          !!secret &&
+          got.length === secret.length &&
+          timingSafeEqual(Buffer.from(got), Buffer.from(secret));
         // pg_cron sends the project's publishable apikey; the job is idempotent (unique per subscription+day).
-        const pub = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"] ?? "";
+        const pub =
+          process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"] ?? "";
         const apikey = request.headers.get("apikey") ?? "";
         if (!ok && !(pub && apikey === pub)) return new Response("Unauthorized", { status: 401 });
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

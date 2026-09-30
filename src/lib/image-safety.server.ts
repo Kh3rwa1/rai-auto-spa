@@ -7,23 +7,36 @@ export const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 /** Sniff real image type from magic bytes (never trust the client's MIME). */
 export function sniffImage(b: Uint8Array): "image/jpeg" | "image/png" | "image/webp" | null {
   if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
-  if (b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
-  if (b.length > 12 && String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP") return "image/webp";
+  if (b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47)
+    return "image/png";
+  if (
+    b.length > 12 &&
+    String.fromCharCode(...b.slice(0, 4)) === "RIFF" &&
+    String.fromCharCode(...b.slice(8, 12)) === "WEBP"
+  )
+    return "image/webp";
   return null;
 }
 
 /** Validate a base64 upload: decodable, size-capped, real image bytes. Returns friendly errors. */
-export function decodeUpload(b64: string): { ok: true; bytes: Uint8Array; mime: "image/jpeg" | "image/png" | "image/webp" } | { ok: false; error: string } {
+export function decodeUpload(
+  b64: string,
+):
+  | { ok: true; bytes: Uint8Array; mime: "image/jpeg" | "image/png" | "image/webp" }
+  | { ok: false; error: string } {
   const clean = b64.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
-  if (!clean || clean.length % 4 === 1 || !/^[A-Za-z0-9+/]+={0,2}$/.test(clean)) return { ok: false, error: "That photo couldn't be read. Please try another one." };
-  if ((clean.length * 3) / 4 > MAX_UPLOAD_BYTES) return { ok: false, error: "That photo is too large (max 6 MB). Please try a smaller one." };
+  if (!clean || clean.length % 4 === 1 || !/^[A-Za-z0-9+/]+={0,2}$/.test(clean))
+    return { ok: false, error: "That photo couldn't be read. Please try another one." };
+  if ((clean.length * 3) / 4 > MAX_UPLOAD_BYTES)
+    return { ok: false, error: "That photo is too large (max 6 MB). Please try a smaller one." };
   let bytes: Uint8Array;
   try {
     bytes = Uint8Array.from(atob(clean), (c) => c.charCodeAt(0));
   } catch {
     return { ok: false, error: "That photo couldn't be read. Please try another one." };
   }
-  if (bytes.length < 1024) return { ok: false, error: "That photo looks empty. Please try another one." };
+  if (bytes.length < 1024)
+    return { ok: false, error: "That photo looks empty. Please try another one." };
   const mime = sniffImage(bytes);
   if (!mime) return { ok: false, error: "Please upload a JPG, PNG or WebP photo." };
   return { ok: true, bytes, mime };
@@ -50,17 +63,30 @@ export function blurRegion(jpegBytes: Uint8Array, box: Box): Uint8Array | null {
   const cell = Math.max(6, Math.round((x1 - x0) / 10));
   for (let by = y0; by < y1; by += cell) {
     for (let bx = x0; bx < x1; bx += cell) {
-      const ex = Math.min(bx + cell, x1), ey = Math.min(by + cell, y1);
-      let r = 0, g = 0, b = 0, n = 0;
-      for (let y = by; y < ey; y++) for (let x = bx; x < ex; x++) {
-        const i = (y * W + x) * 4;
-        r += data[i]!; g += data[i + 1]!; b += data[i + 2]!; n++;
-      }
-      r /= n; g /= n; b /= n;
-      for (let y = by; y < ey; y++) for (let x = bx; x < ex; x++) {
-        const i = (y * W + x) * 4;
-        data[i] = r; data[i + 1] = g; data[i + 2] = b;
-      }
+      const ex = Math.min(bx + cell, x1),
+        ey = Math.min(by + cell, y1);
+      let r = 0,
+        g = 0,
+        b = 0,
+        n = 0;
+      for (let y = by; y < ey; y++)
+        for (let x = bx; x < ex; x++) {
+          const i = (y * W + x) * 4;
+          r += data[i]!;
+          g += data[i + 1]!;
+          b += data[i + 2]!;
+          n++;
+        }
+      r /= n;
+      g /= n;
+      b /= n;
+      for (let y = by; y < ey; y++)
+        for (let x = bx; x < ex; x++) {
+          const i = (y * W + x) * 4;
+          data[i] = r;
+          data[i + 1] = g;
+          data[i + 2] = b;
+        }
     }
   }
   return new Uint8Array(jpeg.encode({ data, width: W, height: H }, 85).data);

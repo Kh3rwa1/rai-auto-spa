@@ -1,14 +1,14 @@
-import type { ComponentType } from 'react'
-import { template as bookingConfirmation } from './booking-confirmation'
-import { template as revealVideo } from './reveal-video'
+import type { ComponentType } from "react";
+import { template as bookingConfirmation } from "./booking-confirmation";
+import { template as revealVideo } from "./reveal-video";
 
 export interface TemplateEntry {
-  component: ComponentType<any>
-  subject: string | ((data: Record<string, any>) => string)
-  displayName?: string
-  previewData?: Record<string, any>
+  component: ComponentType<any>;
+  subject: string | ((data: Record<string, any>) => string);
+  displayName?: string;
+  previewData?: Record<string, any>;
   /** Fixed recipient — overrides caller-provided recipientEmail when set. */
-  to?: string
+  to?: string;
 }
 
 /**
@@ -16,6 +16,6 @@ export interface TemplateEntry {
  * Import and register new templates here after creating them in this directory.
  */
 export const TEMPLATES: Record<string, TemplateEntry> = {
-  'booking-confirmation': bookingConfirmation,
-  'reveal-video': revealVideo,
-}
+  "booking-confirmation": bookingConfirmation,
+  "reveal-video": revealVideo,
+};
