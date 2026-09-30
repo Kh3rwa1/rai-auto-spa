@@ -42,6 +42,9 @@ export default tseslint.config(
   {
     // Scaffolded email templates take arbitrary per-template props; shadcn ui files export variants.
     files: ["src/lib/email-templates/**", "src/components/ui/**"],
-    rules: { "@typescript-eslint/no-explicit-any": "off", "react-refresh/only-export-components": "off" },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "react-refresh/only-export-components": "off",
+    },
   },
 );
