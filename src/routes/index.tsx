@@ -137,7 +137,7 @@ function Index() {
             />
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase text-primary">Meet Rai</p>
+            <p className="text-sm font-semibold uppercase text-teal">Meet Rai</p>
             <h2 className="mt-2 font-display text-4xl font-bold sm:text-5xl">
               One founder. 200+ cars transformed.
             </h2>
