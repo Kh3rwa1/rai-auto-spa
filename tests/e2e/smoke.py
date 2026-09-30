@@ -28,7 +28,7 @@ async def main():
         await page.locator("#step-5-body").get_by_role("button", name="Deposit").click()
         await expect(page.get_by_text("Demo payment - no real money").first).to_be_visible()
         await page.get_by_role("dialog").get_by_role("button", name="Pay Rs.").click()
-        await expect(page.get_by_text("You're Booked")).to_be_visible(timeout=60000)
+        await expect(page.get_by_role("heading", name="You're Booked")).to_be_visible(timeout=60000)
         await page.screenshot(path=str(OUT / "booked.png"))
         await page.get_by_role("button", name="Preview your emails").click()
         await expect(page.locator("iframe")).to_be_visible(timeout=30000)
