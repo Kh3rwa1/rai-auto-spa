@@ -195,6 +195,8 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
       const { b64, url } = await compress(f);
       setLocalPhoto(url);
       const r = await upload({ data: { image: b64, mime: "image/jpeg" } });
+      if (!r.ok) throw new Error(r.error);
+      if (r.photoUrl) setLocalPhoto(r.photoUrl); // show the plate-blurred version
       setBooking({ id: r.bookingId, vehicle: r.vehicle });
       if (!r.isCar) toast.warning("Hmm, that doesn't look like a car — previews work best with a clear car photo.");
       setActiveStep(2);
