@@ -95,7 +95,10 @@ export function OwnerDashboard() {
     .filter((b) => b.location_type === "mobile" && b.map_pin)
     .map((b) => ({ lat: b.map_pin!.lat, lng: b.map_pin!.lng, label: `${b.time} ${b.vehicle_model} · ${b.clients?.name ?? ""}`, area: b.area ?? "" }));
   const route = useMemo(() => planRoute(stops), [JSON.stringify(stops)]); // eslint-disable-line react-hooks/exhaustive-deps
-  const atRisk = bookings.filter((b) => b.status === "pending_deposit" && !b.deposit_paid).reduce((a, b) => a + b.total, 0);
+  // Revenue at risk = full value of real bookings dated today or later whose deposit hasn't been paid.
+  const atRisk = bookings
+    .filter((b) => !b.deposit_paid && !!b.date && b.date >= todayIST() && ["pending_deposit", "confirmed", "consultation"].includes(b.status))
+    .reduce((a, b) => a + b.total, 0);
   const activeToday = subs.filter((s) => s.active && !s.skip_dates.includes(today));
   const liters = todays.reduce((a, b) => a + (b.plan.startsWith("Full") ? 60 : b.plan.startsWith("Signature") ? 20 : 40), 0) + activeToday.length * 30;
   const fuelSaved = Math.max(0, (route.naive - route.km) * 0.1);
@@ -362,14 +365,17 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
 function Leads({ bookings, onChange }: { bookings: Booking[]; onChange: () => void }) {
   const leads = bookings.filter((b) => b.status === "lead" || b.status === "link_sent").sort((a, b) => b.created_at.localeCompare(a.created_at));
   const signed = useSigned(leads.map((l) => l.photo_url));
+  const makeLink = useServerFn(createPaymentLink);
   async function send(b: Booking) {
-    const link = `${window.location.origin}/#book`;
-    const text = `Hi! Your ${b.vehicle_model} is one tap away from shining ✨ Book & pay your 30% deposit here: ${link} — Rai's Auto Spa`;
-    await navigator.clipboard?.writeText(text).catch(() => {});
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-    await supabase.from("bookings").update({ status: "link_sent" }).eq("id", b.id);
-    toast.success("Payment link copied & opened in WhatsApp");
-    onChange();
+    try {
+      const { text } = await makeLink({ data: { bookingId: b.id, origin: window.location.origin } });
+      await navigator.clipboard?.writeText(text).catch(() => {});
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+      toast.success("Payment link copied & opened in WhatsApp");
+      onChange();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
   return (
     <div className="rounded-2xl bg-card p-4">
