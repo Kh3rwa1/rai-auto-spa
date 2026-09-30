@@ -1,6 +1,20 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CalendarDays, CircleCheck, Droplets, Fuel, Hourglass, Images, Inbox, MapPinned, Palette, Repeat, Route as RouteIcon, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  CircleCheck,
+  Droplets,
+  Fuel,
+  Hourglass,
+  Images,
+  Inbox,
+  MapPinned,
+  Palette,
+  Repeat,
+  Route as RouteIcon,
+  Wallet,
+} from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { ensureDemoData, ownerData } from "@/lib/owner.functions";
 import { Button } from "@/components/ui/button";
@@ -340,6 +354,7 @@ export function OwnerDashboard() {
 
         <TabsContent value="route" className="mt-4 grid gap-4 lg:grid-cols-[2fr_1fr]">
           <RoutePanel route={route} liters={liters} />
+        </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">
           <WeekCalendar bookings={bookings} />
