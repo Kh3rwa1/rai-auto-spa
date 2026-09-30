@@ -19,13 +19,19 @@ function pinFor(area: string, i: number) {
   return { lat: a.lat + jitter(i), lng: a.lng + jitter(i + 13), parking: `P-${(i % 20) + 1}` };
 }
 
-async function uploadSample(sb: DB, origin: string, name: string) {
+/** Copies a bundled sample photo into private storage once; later resets reuse it. */
+async function uploadSample(sb: DB, origin: string, name: string, existing: Set<string>) {
   const path = `demo/${name}`;
-  const res = await fetch(`${origin}/samples/${name}`);
-  if (!res.ok) return null;
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  await sb.storage.from(BUCKET).upload(path, bytes, { contentType: "image/jpeg", upsert: true });
-  return path;
+  if (existing.has(name)) return path;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(`${origin}/samples/${name}`);
+    if (!res.ok) continue;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const up = await sb.storage.from(BUCKET).upload(path, bytes, { contentType: "image/jpeg", upsert: true });
+    if (!up.error) return path;
+  }
+  console.error("seed: sample upload failed", name);
+  return null;
 }
 
 /** Idempotent: wipes demo tables and recreates a fresh, today-relative dataset (IST). */
@@ -45,8 +51,10 @@ export async function seedDemo(sb: DB) {
   await all("clients");
   await all("blocked_slots");
 
+  const { data: listed } = await sb.storage.from(BUCKET).list("demo");
+  const existing = new Set((listed ?? []).map((f) => f.name));
   const imgs = await Promise.all(
-    ["swift.jpg", "thar.jpg", "creta.jpg", "thar-wrap.jpg", "creta-wrap.jpg"].map((n) => uploadSample(sb, origin, n)),
+    ["swift.jpg", "thar.jpg", "creta.jpg", "thar-wrap.jpg", "creta-wrap.jpg"].map((n) => uploadSample(sb, origin, n, existing)),
   );
   const [swift, thar, creta, tharWrap, cretaWrap] = imgs.map((x) => x ?? null) as [string | null, string | null, string | null, string | null, string | null];
 
