@@ -228,8 +228,6 @@ export function BookingFlow() {
     if (confettiKeyRef.current === revealKey) return;
     confettiKeyRef.current = revealKey;
     confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: ["#0D9488", "#2563EB", "#FFFFFF"] });
-    const timer = window.setTimeout(() => setActiveStep(5), 1800);
-    return () => window.clearTimeout(timer);
   }, [key, previewUrl, revealHold, slot]);
 
   const canPay =
@@ -309,17 +307,17 @@ export function BookingFlow() {
 
   return (
     <div className="space-y-4 pb-20 md:pb-0">
-      <div className="sticky top-20 z-30 -mx-4 overflow-x-auto border-y border-border bg-background/95 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border">
-        <div className="mx-auto flex min-w-[610px] items-center justify-between">
+      <div className="sticky top-20 z-30 -mx-4 border-y border-border bg-background/95 px-2 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:px-4">
+        <div className="mx-auto grid grid-cols-5 items-center">
           {PROGRESS.map((label, index) => {
             const n = index + 1;
             const complete = n === 1 ? !!booking : n === 2 ? !!plan : n === 3 ? !!slot : n === 4 ? !!slot && !!previewUrl && !revealHold : booked;
             return (
-              <div key={label} className="flex flex-1 items-center last:flex-none">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setActiveStep(n)} className={cn("h-8 shrink-0 rounded-full px-2.5 text-xs", activeStep === n && "bg-charcoal text-charcoal-foreground hover:bg-charcoal hover:text-charcoal-foreground")}>
-                  <span>{n}</span> {label} {complete ? <Check className="h-3.5 w-3.5" /> : activeStep === n ? <span aria-hidden>•</span> : null}
+              <div key={label} className="relative flex min-w-0 items-center justify-center">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setActiveStep(n)} className={cn("relative z-10 h-auto min-h-8 min-w-0 rounded-lg px-1 py-1 text-[10px] leading-tight sm:rounded-full sm:px-2.5 sm:text-xs", activeStep === n && "bg-charcoal text-charcoal-foreground hover:bg-charcoal hover:text-charcoal-foreground")}>
+                  <span className="shrink-0">{n}</span> <span className="text-center">{label}</span> {complete ? <Check className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" /> : activeStep === n ? <span aria-hidden>•</span> : null}
                 </Button>
-                {n < 5 && <span className={cn("mx-1 h-px flex-1", complete ? "bg-primary" : "bg-border")} />}
+                {n < 5 && <span className={cn("absolute left-1/2 top-1/2 h-px w-full", complete ? "bg-primary" : "bg-border")} />}
               </div>
             );
           })}
@@ -583,7 +581,7 @@ export function BookingFlow() {
             </div>
           </div>
         ) : previewUrl && localPhoto && !revealHold ? (
-          <div className="reveal-curtain"><BeforeAfter before={localPhoto} after={previewUrl} afterLabel={`After Rai's ${PLANS[plan!].name}`} /></div>
+          <div className="reveal-curtain"><BeforeAfter before={localPhoto} after={previewUrl} afterLabel={`After Rai's ${plan ? PLANS[plan].name : "service"}`} /></div>
         ) : previewError ? (
           <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-sm">
             <p className="font-medium text-destructive">{previewError}</p>
