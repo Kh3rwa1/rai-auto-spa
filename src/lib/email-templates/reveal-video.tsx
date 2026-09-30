@@ -5,6 +5,7 @@ import {
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Preview,
   Section,
@@ -22,32 +23,59 @@ interface Props {
   videoUrl?: string
 }
 
+const formatDate = (value?: string) => {
+  if (!value) return 'your booked date'
+  const parsed = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+}
+
+const formatTime = (value?: string) => {
+  if (!value) return 'your booked time'
+  const [hours = '', minutes = ''] = value.split(':')
+  const hour = Number(hours)
+  if (!Number.isFinite(hour)) return value
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${minutes || '00'} ${suffix}`
+}
+
 const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>{`Your ${vehicle ?? 'car'} is ready to shine ${date ?? ''} ${time ?? ''} — watch your reveal`}</Preview>
+    <Preview>{`See how Rai will transform your ${vehicle ?? 'car'} on ${formatDate(date)}`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>RAI&apos;S AUTO SPA · GANGTOK</Text>
-        <Heading style={h1}>Your {vehicle ?? 'car'} is ready to shine ✨</Heading>
+        <Section style={brandBlock}>
+          <Text style={brand}>RAI&apos;S AUTO SPA</Text>
+          <Text style={place}>MG MARG · GANGTOK</Text>
+        </Section>
+
+        <Heading style={h1}>Rai is coming to transform your {vehicle ?? 'car'}.</Heading>
         <Text style={text}>
-          Hi{name ? ` ${name}` : ''}, your cinematic reveal video is ready. {plan ?? 'Your booking'} · {date ?? ''} at {time ?? ''} · {location ?? ''}.
+          Hi{name ? ` ${name}` : ''}, here&apos;s a first look at the transformation Rai has planned for your car.
         </Text>
 
         {videoUrl ? (
           <Button href={videoUrl} style={button}>
-            ▶ Watch your 6-second reveal
+            See your car&apos;s transformation&nbsp; →
           </Button>
         ) : null}
 
         <Section style={card}>
-          <Text style={row}>
-            <strong>{location?.includes('van') ? "Rai's van is coming to you" : 'See you at the studio'}</strong> —{' '}
-            {date ?? ''} at {time ?? ''}. Water beading, glossy paint, the works.
-          </Text>
+          <Text style={cardLabel}>{location?.includes('van') ? 'RAI COMES TO YOU' : 'YOUR VISIT TO THE STUDIO'}</Text>
+          <Text style={cardTitle}>{plan ?? 'Your car care appointment'}</Text>
+          <Hr style={hr} />
+          <Text style={row}><strong>When</strong><br />{formatDate(date)} · {formatTime(time)}</Text>
+          <Text style={row}><strong>Where</strong><br />{location?.replace(/\s*\(Rai's van comes to you\)\s*/i, '') || 'Rai’s Auto Spa, MG Marg'}</Text>
         </Section>
 
-        <Text style={footer}>Rai&apos;s Auto Spa · MG Marg, Gangtok, Sikkim 737101</Text>
+        <Text style={note}>Rai will take care of the rest. See you soon.</Text>
+        <Text style={footer}>Rai&apos;s Auto Spa · MG Marg, Gangtok</Text>
       </Container>
     </Body>
   </Html>
@@ -55,7 +83,7 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) =
 
 export const template = {
   component: Email,
-  subject: (d: Record<string, any>) => `Your ${d['vehicle'] ?? 'car'} is ready to shine ${d['date'] ?? ''} ${d['time'] ?? ''} — Rai's Auto Spa`,
+  subject: (d: Record<string, any>) => `Rai is coming to transform your ${d['vehicle'] ?? 'car'} — ${formatDate(d['date'])}`,
   displayName: 'Reveal video ready',
   previewData: {
     name: 'Pema',
@@ -68,22 +96,27 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '24px', maxWidth: '560px' }
-const brand = { color: '#0D9488', fontSize: '12px', fontWeight: 700 as const, letterSpacing: '2px' }
-const h1 = { color: '#111827', fontSize: '28px', margin: '8px 0 12px' }
-const text = { color: '#374151', fontSize: '15px', lineHeight: '22px' }
-const card = { backgroundColor: '#F9FAFB', borderRadius: '12px', padding: '16px 20px', margin: '16px 0' }
-const row = { color: '#111827', fontSize: '14px', margin: '6px 0' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif', margin: '0' }
+const container = { padding: '36px 24px', maxWidth: '560px' }
+const brandBlock = { borderLeft: '4px solid #0D9488', paddingLeft: '14px', marginBottom: '32px' }
+const brand = { color: '#111827', fontSize: '13px', fontWeight: 700 as const, letterSpacing: '2px', margin: '0 0 4px' }
+const place = { color: '#0D9488', fontSize: '11px', fontWeight: 700 as const, letterSpacing: '2px', margin: '0' }
+const h1 = { color: '#111827', fontSize: '34px', lineHeight: '40px', margin: '0 0 18px' }
+const text = { color: '#4B5563', fontSize: '16px', lineHeight: '25px', margin: '0 0 24px' }
+const card = { backgroundColor: '#F3F7F6', borderRadius: '8px', padding: '22px', margin: '28px 0 22px' }
+const cardLabel = { color: '#0D9488', fontSize: '11px', fontWeight: 700 as const, letterSpacing: '2px', margin: '0 0 8px' }
+const cardTitle = { color: '#111827', fontSize: '20px', fontWeight: 700 as const, margin: '0' }
+const hr = { borderColor: '#D7E2DF', margin: '18px 0' }
+const row = { color: '#374151', fontSize: '14px', lineHeight: '21px', margin: '12px 0' }
 const button = {
   backgroundColor: '#2563EB',
   color: '#ffffff',
-  borderRadius: '10px',
-  padding: '12px 20px',
-  fontSize: '14px',
-  fontWeight: 600 as const,
+  borderRadius: '8px',
+  padding: '15px 22px',
+  fontSize: '15px',
+  fontWeight: 700 as const,
   textDecoration: 'none',
   display: 'inline-block',
-  marginTop: '8px',
 }
-const footer = { color: '#9CA3AF', fontSize: '12px', marginTop: '24px' }
+const note = { color: '#374151', fontSize: '14px', lineHeight: '21px', margin: '0 0 28px' }
+const footer = { color: '#9CA3AF', fontSize: '12px', borderTop: '1px solid #E5E7EB', paddingTop: '18px' }
