@@ -92,7 +92,10 @@ export const updateSubscription = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await ownerDb();
-    const patch = Object.fromEntries(Object.entries(data.patch).filter(([, v]) => v !== undefined));
+    const patch: { preferred_time?: string; active?: boolean; skip_dates?: string[] } = {};
+    if (data.patch.preferred_time !== undefined) patch.preferred_time = data.patch.preferred_time;
+    if (data.patch.active !== undefined) patch.active = data.patch.active;
+    if (data.patch.skip_dates !== undefined) patch.skip_dates = data.patch.skip_dates;
     const { error } = await sb.from("subscriptions").update(patch).eq("id", data.id);
     if (error) throw new Error("Could not update the subscription.");
     return { ok: true };

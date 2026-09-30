@@ -48,7 +48,7 @@ export async function seedDemo(sb: DB) {
   const imgs = await Promise.all(
     ["swift.jpg", "thar.jpg", "creta.jpg", "thar-wrap.jpg", "creta-wrap.jpg"].map((n) => uploadSample(sb, origin, n)),
   );
-  const [swift, thar, creta, tharWrap, cretaWrap] = imgs.map((x) => x ?? null) as (string | null)[];
+  const [swift, thar, creta, tharWrap, cretaWrap] = imgs.map((x) => x ?? null) as [string | null, string | null, string | null, string | null, string | null];
 
   // 40 daily-wash clients + 9 booking clients
   const clients = Array.from({ length: 49 }, (_, i) => {
