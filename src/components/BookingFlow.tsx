@@ -92,7 +92,18 @@ function Step({
 
 const PROGRESS = ["Snap", "Plan", "Where & When", "Preview", "Pay"] as const;
 
-export function BookingFlow() {
+export type ResumeDraft = {
+  id: string;
+  vehicle: string;
+  photoUrl: string | null;
+  previewUrl: string | null;
+  plan: PlanId;
+  colour: string | null;
+  style: string | null;
+  token: string;
+};
+
+export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   const upload = useServerFn(uploadCar);
   const preview = useServerFn(makePreview);
   const slotsFn = useServerFn(getSlots);
@@ -184,6 +195,26 @@ export function BookingFlow() {
       setUploading(false);
     }
   }
+
+  // Reopen a saved booking from a /pay deep link: keep photo, plan and preview, jump to Where & When.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (!resume || resumedRef.current) return;
+    resumedRef.current = true;
+    const c = resume.colour ?? COLOURS[0].name;
+    const st = resume.style ?? STYLES[0];
+    setBooking({ id: resume.id, vehicle: resume.vehicle });
+    setLocalPhoto(resume.photoUrl);
+    setPlan(resume.plan);
+    setColour(c);
+    setStyle(st);
+    setManageToken(resume.token);
+    const k = `${resume.plan}|${resume.plan === "signature" ? c + "|" + st : ""}`;
+    if (resume.previewUrl) setCache({ [k]: resume.previewUrl });
+    else if (resume.plan !== "signature") void runPreview(resume.plan);
+    setActiveStep(3);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume]);
 
   async function runPreview(p: PlanId, c?: string, s?: string) {
     if (!booking) return;
