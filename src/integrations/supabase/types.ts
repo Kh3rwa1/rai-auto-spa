@@ -46,9 +46,12 @@ export type Database = {
           date: string | null
           deposit_paid: boolean
           email_status: string | null
+          end_date: string | null
+          full_day: boolean
           guard_permission: boolean | null
           id: string
           location_type: string
+          manage_token: string
           map_pin: Json | null
           photo_url: string | null
           plan: string
@@ -72,9 +75,12 @@ export type Database = {
           date?: string | null
           deposit_paid?: boolean
           email_status?: string | null
+          end_date?: string | null
+          full_day?: boolean
           guard_permission?: boolean | null
           id?: string
           location_type?: string
+          manage_token?: string
           map_pin?: Json | null
           photo_url?: string | null
           plan: string
@@ -98,9 +104,12 @@ export type Database = {
           date?: string | null
           deposit_paid?: boolean
           email_status?: string | null
+          end_date?: string | null
+          full_day?: boolean
           guard_permission?: boolean | null
           id?: string
           location_type?: string
+          manage_token?: string
           map_pin?: Json | null
           photo_url?: string | null
           plan?: string
@@ -253,6 +262,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      book_slot: {
+        Args: {
+          p_booking_id: string
+          p_date: string
+          p_days?: number
+          p_mobile: boolean
+          p_time: string
+          p_water: boolean
+        }
+        Returns: string
+      }
       claim_owner: { Args: never; Returns: boolean }
       has_role: {
         Args: {
