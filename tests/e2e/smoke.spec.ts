@@ -20,11 +20,16 @@ test("sample car books end to end and previews the emails", async ({ page }) => 
 
   // Step 3 — studio, next week (never in the past, rarely full)
   await page.getByRole("radio", { name: "Come to Studio" }).click();
-  await page.getByRole("button", { name: "Next →" }).click();
-  await page.waitForLoadState("networkidle");
   const free = page
     .locator("#step-3-body button:not([disabled])")
     .filter({ hasText: /^\d\d:00$/ });
+  // Walk forward a week at a time until a week with free capacity shows up.
+  for (let week = 0; week < 8; week++) {
+    await page.getByRole("button", { name: "Next →" }).click();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1200);
+    if ((await free.count()) > 0) break;
+  }
   await expect(free.first()).toBeVisible({ timeout: 60_000 });
   // The grid re-renders when the availability query settles, so retry until a pick sticks.
   await expect
