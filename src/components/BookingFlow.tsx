@@ -234,8 +234,6 @@ export function BookingFlow() {
         total={total}
         deposit={deposit}
         phone={phone}
-        before={localPhoto ?? ""}
-        after={previewUrl ?? localPhoto ?? ""}
         onClose={() => {
           setBooked(false);
           setBooking(null);
@@ -293,7 +291,7 @@ export function BookingFlow() {
 
       {/* STEP 2 */}
       <div id="step-plans" className="scroll-mt-24">
-        <Step n={2} title="Pick your plan" done={!!previewUrl}>
+        <Step n={2} title="Pick your plan" done={!!plan}>
           <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
             {(Object.keys(PLANS) as PlanId[]).map((id) => {
               const p = PLANS[id];
@@ -371,17 +369,7 @@ export function BookingFlow() {
                   ))}
                 </div>
               </div>
-              <p className="flex items-center gap-2 text-sm text-charcoal-foreground/80">
-                <Sparkles className="h-4 w-4 text-electric" /> Your design is being made in the background — see it in step 4.
-              </p>
             </div>
-          )}
-
-          {plan && booking && (
-            <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              {previewUrl ? <Check className="h-4 w-4 text-primary" /> : <Loader2 className="h-4 w-4 animate-spin" />}
-              {previewUrl ? "Preview ready — scroll down to see it." : "Rai is preparing your preview while you pick a time…"}
-            </p>
           )}
         </Step>
       </div>
@@ -514,10 +502,8 @@ export function BookingFlow() {
         ) : previewing === key ? (
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
             {localPhoto && <img src={localPhoto} alt="" className="h-full w-full scale-105 object-cover blur-md" />}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-charcoal/40 text-charcoal-foreground">
-              <Droplets className="h-10 w-10 animate-bounce" />
-              <p className="font-display text-xl font-semibold">Rai is shining your car…</p>
-              <p className="text-sm opacity-80">Almost there — you can keep filling in your details</p>
+            <div className="absolute inset-0 flex items-center justify-center bg-charcoal/40 text-charcoal-foreground" aria-label="Loading">
+              <Loader2 className="h-10 w-10 animate-spin" />
             </div>
           </div>
         ) : previewError ? (

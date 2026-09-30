@@ -6,7 +6,6 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Preview,
   Section,
   Text,
@@ -21,10 +20,9 @@ interface Props {
   time?: string
   location?: string
   videoUrl?: string
-  previewUrl?: string
 }
 
-const Email = ({ name, vehicle, plan, date, time, location, videoUrl, previewUrl }: Props) => (
+const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>{`Your ${vehicle ?? 'car'} is ready to shine ${date ?? ''} ${time ?? ''} — watch your reveal`}</Preview>
@@ -35,8 +33,6 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl, previewUrl
         <Text style={text}>
           Hi{name ? ` ${name}` : ''}, your cinematic reveal video is ready. {plan ?? 'Your booking'} · {date ?? ''} at {time ?? ''} · {location ?? ''}.
         </Text>
-
-        {previewUrl ? <Img src={previewUrl} alt="Your car's after preview" style={img} /> : null}
 
         {videoUrl ? (
           <Button href={videoUrl} style={button}>
@@ -77,7 +73,6 @@ const container = { padding: '24px', maxWidth: '560px' }
 const brand = { color: '#0D9488', fontSize: '12px', fontWeight: 700 as const, letterSpacing: '2px' }
 const h1 = { color: '#111827', fontSize: '28px', margin: '8px 0 12px' }
 const text = { color: '#374151', fontSize: '15px', lineHeight: '22px' }
-const img = { width: '100%', borderRadius: '12px', margin: '12px 0' }
 const card = { backgroundColor: '#F9FAFB', borderRadius: '12px', padding: '16px 20px', margin: '16px 0' }
 const row = { color: '#111827', fontSize: '14px', margin: '6px 0' }
 const button = {

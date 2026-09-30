@@ -7,7 +7,6 @@ import {
   Heading,
   Hr,
   Html,
-  Img,
   Preview,
   Section,
   Text,
@@ -23,12 +22,11 @@ interface Props {
   location?: string
   total?: number
   deposit?: number
-  previewUrl?: string
 }
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
-const Email = ({ name, vehicle, plan, date, time, location, total, deposit, previewUrl }: Props) => (
+const Email = ({ name, vehicle, plan, date, time, location, total, deposit }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>{`You're booked — ${plan ?? 'your wash'} on ${date ?? ''} at ${time ?? ''}`}</Preview>
@@ -37,8 +35,6 @@ const Email = ({ name, vehicle, plan, date, time, location, total, deposit, prev
         <Text style={brand}>RAI&apos;S AUTO SPA · GANGTOK</Text>
         <Heading style={h1}>You&apos;re booked 🔥</Heading>
         <Text style={text}>Hi{name ? ` ${name}` : ''}, your slot is locked in. Here&apos;s everything:</Text>
-
-        {previewUrl ? <Img src={previewUrl} alt="Your car, cleaned by AI preview" style={img} /> : null}
 
         <Section style={card}>
           <Text style={row}><strong>Plan:</strong> {plan ?? '—'}</Text>
@@ -85,7 +81,6 @@ const container = { padding: '24px', maxWidth: '560px' }
 const brand = { color: '#0D9488', fontSize: '12px', fontWeight: 700 as const, letterSpacing: '2px' }
 const h1 = { color: '#111827', fontSize: '28px', margin: '8px 0 12px' }
 const text = { color: '#374151', fontSize: '15px', lineHeight: '22px' }
-const img = { width: '100%', borderRadius: '12px', margin: '12px 0' }
 const card = { backgroundColor: '#F9FAFB', borderRadius: '12px', padding: '16px 20px', margin: '16px 0' }
 const row = { color: '#111827', fontSize: '14px', margin: '6px 0' }
 const hr = { borderColor: '#E5E7EB', margin: '10px 0' }
