@@ -11,7 +11,6 @@ export type RevealEmail = {
   location: string;
   total: number;
   videoUrl: string;
-  previewUrl: string;
 };
 
 export async function sendRevealEmail(e: RevealEmail): Promise<string> {
@@ -24,7 +23,6 @@ export async function sendRevealEmail(e: RevealEmail): Promise<string> {
       time: e.time,
       location: e.location,
       videoUrl: e.videoUrl,
-      previewUrl: e.previewUrl,
     },
     idempotencyKey: `reveal-video-${e.bookingId}`,
   });

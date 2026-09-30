@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { CalendarPlus, Loader2, Mail, MessageCircle, RefreshCw, Video } from "lucide-react";
+import { CalendarPlus, MessageCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BeforeAfter } from "./BeforeAfter";
 import { checkVideo, rescheduleBooking } from "@/lib/booking.functions";
 import { SLOTS, inr } from "@/lib/plans";
 import { addDays, todayIST } from "./BookingFlow";
@@ -19,8 +18,6 @@ type Props = {
   total: number;
   deposit: number;
   phone: string;
-  before: string;
-  after: string;
   onClose: () => void;
 };
 
@@ -91,10 +88,6 @@ export function BookedScreen(p: Props) {
           {p.planName} for your {p.vehicle} · {date} at {time} · {p.location}
         </p>
 
-        <div className="mt-8">
-          <BeforeAfter before={p.before} after={p.after} afterLabel={`After Rai's ${p.planName}`} />
-        </div>
-
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <Button asChild size="lg" variant="outline">
             <a href={gcal} target="_blank" rel="noreferrer"><CalendarPlus /> Add to Google Calendar</a>
@@ -119,22 +112,9 @@ export function BookedScreen(p: Props) {
           <div className="max-w-sm whitespace-pre-line rounded-2xl rounded-tl-sm bg-card p-4 text-sm shadow-sm">{waText}</div>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-border p-5">
-          <p className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-electric" /> Your cinematic reveal video</p>
-          {video.status === "ready" && video.url ? (
-            <>
-              <video src={video.url} controls autoPlay muted loop playsInline className="mt-4 w-full rounded-2xl" />
-              <p className="mt-3 flex items-center gap-2 text-sm font-medium text-primary">
-                <Mail className="h-4 w-4" />
-                {video.email === "sent" ? "Video sent to email ✓" : video.email === "pending_domain" ? "Email goes out once Rai's email is set up — video saved here." : "Video saved to your booking."}
-              </p>
-            </>
-          ) : video.status.startsWith("failed") ? (
-            <p className="mt-3 text-sm text-muted-foreground">The video couldn't be made this time — your booking is safe and Rai will send photos on WhatsApp.</p>
-          ) : (
-            <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Rendering your 6-second reveal in the background (1–3 min). We'll email it too — feel free to close this.</p>
-          )}
-        </div>
+        {video.status === "ready" && video.url ? (
+          <video src={video.url} controls autoPlay muted loop playsInline className="mt-6 w-full rounded-2xl" />
+        ) : null}
 
         <Button className="mt-8" variant="ghost" onClick={p.onClose}>← Book another car</Button>
       </div>
