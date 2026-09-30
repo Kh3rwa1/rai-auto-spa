@@ -2,8 +2,6 @@ import { AlertTriangle, CircleCheck, MapPinned, Palette, Wallet } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { planRoute } from "@/lib/ops-config";
 import type { Stop } from "./RouteMap";
-import { planRoute } from "@/lib/ops-config";
-import type { Stop } from "./RouteMap";
 import type { Booking } from "./shared";
 import type { TabValue } from "./tabs";
 
