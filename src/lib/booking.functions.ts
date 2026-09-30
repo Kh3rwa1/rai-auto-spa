@@ -63,13 +63,45 @@ export const makePreview = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { editCarImage } = await import("./ai.server");
+    const { createVideoJob, editCarImage } = await import("./ai.server");
     const sb = await admin();
-    const { data: b } = await sb.from("bookings").select("photo_url, status").eq("id", data.bookingId).single();
+    const { data: b } = await sb
+      .from("bookings")
+      .select("photo_url, video_job_id, video_status")
+      .eq("id", data.bookingId)
+      .single();
     if (!b?.photo_url) throw new Error("Please upload your car photo first.");
     const file = await sb.storage.from(BUCKET).download(b.photo_url);
     if (file.error) throw new Error("Could not read your photo.");
     const bytes = new Uint8Array(await file.data.arrayBuffer());
+
+    // Start the reveal first, while the customer continues through the booking flow.
+    if (!b.video_job_id && !b.video_status?.startsWith("starting")) {
+      const generationKey = `${data.plan}-${data.colour ?? ""}-${data.style ?? ""}`.replace(/[^a-zA-Z0-9-]/g, "");
+      const { data: locked } = await sb
+        .from("bookings")
+        .update({ video_status: `starting:${generationKey}` })
+        .eq("id", data.bookingId)
+        .is("video_job_id", null)
+        .or("video_status.is.null,video_status.not.like.starting:%")
+        .select("id")
+        .maybeSingle();
+      if (locked) {
+        try {
+          const jobId = await createVideoJob(bytes, "image/jpeg", videoPrompt(data.plan, data.colour, data.style));
+          await sb
+            .from("bookings")
+            .update({ video_job_id: jobId, video_status: "rendering" })
+            .eq("id", data.bookingId);
+        } catch (error) {
+          await sb
+            .from("bookings")
+            .update({ video_status: `failed: ${(error as Error).message.slice(0, 120)}` })
+            .eq("id", data.bookingId);
+        }
+      }
+    }
+
     const out = await editCarImage(bytes, "image/jpeg", imagePrompt(data.plan, data.colour, data.style));
     const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.png`;
     await sb.storage.from(BUCKET).upload(path, out, { contentType: "image/png", upsert: true });
@@ -196,14 +228,12 @@ export const confirmBooking = createServerFn({ method: "POST" })
         deposit_paid: true,
         status: data.plan === "signature" ? "consultation" : "confirmed",
         approval_status: data.plan === "signature" ? "pending" : null,
-        video_status: "queued",
       })
       .eq("id", data.bookingId);
     if (error) throw new Error("Could not confirm the booking.");
     // send the booking confirmation email (non-blocking for the booking itself)
     try {
       const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
-      const previewUrl = await signed(existing.clean_preview_url);
       await sendTemplateEmail("booking-confirmation", data.email, {
         templateData: {
           name: data.name,
@@ -214,29 +244,32 @@ export const confirmBooking = createServerFn({ method: "POST" })
           location: data.mobile ? `${nearestArea(data.pin!)} (Rai's van comes to you)` : "Studio, MG Marg, Gangtok",
           total,
           deposit: depositOf(total),
-          previewUrl: previewUrl ?? undefined,
         },
         idempotencyKey: `booking-confirmation-${data.bookingId}`,
       });
     } catch (e) {
       console.error("confirmation email failed", e);
     }
-    // kick off the reveal video in the background
-    try {
-      const { createVideoJob } = await import("./ai.server");
-      const src = existing.clean_preview_url ?? existing.photo_url;
-      const file = await sb.storage.from(BUCKET).download(src!);
-      if (!file.error) {
-        const bytes = new Uint8Array(await file.data.arrayBuffer());
-        const mime = src!.endsWith(".png") ? "image/png" : "image/jpeg";
-        const jobId = await createVideoJob(bytes, mime, videoPrompt(data.plan, data.colour, data.style));
-        await sb.from("bookings").update({ video_job_id: jobId, video_status: "rendering" }).eq("id", data.bookingId);
+    // Older or interrupted bookings may not have started their reveal before payment.
+    if (!existing.video_job_id && !existing.video_status?.startsWith("starting")) {
+      try {
+        const { createVideoJob } = await import("./ai.server");
+        const src = existing.clean_preview_url ?? existing.photo_url;
+        if (src) {
+          const file = await sb.storage.from(BUCKET).download(src);
+          if (!file.error) {
+            const bytes = new Uint8Array(await file.data.arrayBuffer());
+            const mime = src.endsWith(".png") ? "image/png" : "image/jpeg";
+            const jobId = await createVideoJob(bytes, mime, videoPrompt(data.plan, data.colour, data.style));
+            await sb.from("bookings").update({ video_job_id: jobId, video_status: "rendering" }).eq("id", data.bookingId);
+          }
+        }
+      } catch (e) {
+        await sb
+          .from("bookings")
+          .update({ video_status: "failed: " + (e as Error).message.slice(0, 120) })
+          .eq("id", data.bookingId);
       }
-    } catch (e) {
-      await sb
-        .from("bookings")
-        .update({ video_status: "failed: " + (e as Error).message.slice(0, 120) })
-        .eq("id", data.bookingId);
     }
     return { ok: true, total, deposit: depositOf(total) };
   });
@@ -251,7 +284,33 @@ export const checkVideo = createServerFn({ method: "POST" })
       .eq("id", data.bookingId)
       .single();
     if (!b) throw new Error("Booking not found");
-    if (b.video_url) return { status: "ready", videoUrl: await signed(b.video_url), emailStatus: b.email_status };
+    if (b.video_url) {
+      const videoUrl = await signed(b.video_url);
+      let emailStatus = b.email_status;
+      const client = b.clients as { name: string; email: string | null } | null;
+      if (client?.email && videoUrl && emailStatus !== "sent" && emailStatus !== "suppressed") {
+        try {
+          const { sendRevealEmail } = await import("./reveal-email.server");
+          emailStatus = await sendRevealEmail({
+            to: client.email,
+            bookingId: b.id,
+            name: client.name,
+            vehicle: b.vehicle_model ?? "car",
+            plan: b.plan,
+            date: b.date ?? "",
+            time: b.time ?? "",
+            location: b.location_type === "mobile" ? `${b.area} (Rai's van comes to you)` : "Studio, MG Marg, Gangtok",
+            total: b.total,
+            videoUrl,
+          });
+          await sb.from("bookings").update({ email_status: emailStatus }).eq("id", b.id);
+        } catch (e) {
+          console.error("email failed", e);
+          emailStatus = "failed";
+        }
+      }
+      return { status: "ready", videoUrl, emailStatus };
+    }
     if (!b.video_job_id) return { status: b.video_status ?? "queued", videoUrl: null, emailStatus: b.email_status };
     const { getVideoJob, downloadVideo } = await import("./ai.server");
     const job = await getVideoJob(b.video_job_id);
@@ -280,7 +339,6 @@ export const checkVideo = createServerFn({ method: "POST" })
           location: b.location_type === "mobile" ? `${b.area} (Rai's van comes to you)` : "Studio, MG Marg, Gangtok",
           total: b.total,
           videoUrl: videoUrl ?? "",
-          previewUrl: (await signed(b.clean_preview_url)) ?? "",
         });
         emailStatus = r;
       } else emailStatus = "no_email";
