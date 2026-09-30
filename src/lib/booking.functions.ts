@@ -154,8 +154,8 @@ export const getSlots = createServerFn({ method: "POST" })
     const [{ data: bookings }, { data: blocked }] = await Promise.all([
       sb
         .from("bookings")
-        .select("date, time, location_type, map_pin")
-        .gte("date", data.start)
+        .select("date, end_date, full_day, time, location_type, map_pin")
+        .gte("date", new Date(new Date(data.start).getTime() - 86400000).toISOString().slice(0, 10))
         .lt("date", endStr)
         .in("status", ["confirmed", "pending_deposit", "consultation"]),
       sb.from("blocked_slots").select("date, time, reason").gte("date", data.start).lt("date", endStr),
@@ -168,7 +168,12 @@ export const getSlots = createServerFn({ method: "POST" })
       const dayMobile = (bookings ?? []).filter((b) => b.date === ds && b.location_type === "mobile");
       for (const t of SLOTS) {
         const here = (bookings ?? []).filter(
-          (b) => b.date === ds && b.time === t && (b.location_type === "mobile") === data.mobile,
+          (b) =>
+            !!b.date &&
+            ds >= b.date &&
+            ds <= (b.end_date ?? b.date) &&
+            (b.time === t || b.full_day) &&
+            (b.location_type === "mobile") === data.mobile,
         );
         const block = (blocked ?? []).find((b) => b.date === ds && b.time === t);
         let travelMin: number | null = null;
