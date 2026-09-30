@@ -126,7 +126,10 @@ export function BookingFlow() {
 
   async function onFile(f?: File) {
     if (!f) return;
-    if (!f.type.startsWith("image/")) return toast.error("Please choose a photo");
+    if (!f.type.startsWith("image/")) {
+      toast.error("Please choose a photo");
+      return;
+    }
     setUploading(true);
     setCache({});
     setPlan(null);

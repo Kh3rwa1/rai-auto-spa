@@ -306,7 +306,10 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
   const upcoming = bookings.filter((b) => b.date && b.date >= todayIST() && ["confirmed", "pending_deposit"].includes(b.status));
   async function cancel(b: Booking) {
     const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", b.id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     const { data } = await supabase.from("waitlist").select("clients(name, phone)").eq("area", b.area ?? "MG Marg").limit(3);
     let people = (data ?? []).map((w) => w.clients as unknown as { name: string; phone: string }).filter(Boolean);
     if (people.length < 3) {
