@@ -63,33 +63,4 @@ do $$ declare t text; begin
   end loop;
 end $$;
 
-insert into public.clients (name, phone, building, floor, area, water_access)
-select n.name, '+91 98' || lpad((32000000 + n.i*7919)::text, 8, '0'),
-  (array['Hilltop Residency','Namnang Heights','Tibet Road Apts','Deorali Greens','Zero Point View','Paljor Enclave','Rinzing Towers','Tashiling Court'])[1 + (n.i % 8)],
-  ((n.i % 6) + 1)::text,
-  (array['Tadong','MG Marg','Deorali','Development Area'])[1 + (n.i % 4)],
-  (n.i % 5) <> 0
-from (select ord::int as i, name from unnest(array[
- 'Pema Bhutia','Karma Lepcha','Sonam Tamang','Anjali Pradhan','Tenzing Sherpa','Rohan Chettri','Dechen Wangmo','Bikash Rai','Priya Gurung','Nima Lama',
- 'Suraj Subba','Mingma Sherpa','Kavita Sharma','Pasang Doma','Rajesh Thapa','Yangchen Bhutia','Arjun Limbu','Diki Tshering','Samir Mukhia','Ongmu Lepcha',
- 'Dawa Norbu','Neha Agarwal','Phurba Tamang','Ritu Pradhan','Ugen Lachenpa','Manish Chettri','Sangay Bhutia','Asha Rai','Tashi Namgyal','Deepak Gurung',
- 'Lhamu Sherpa','Vikram Basnet','Choden Lepcha','Nirmal Subba','Pooja Tamang','Jigme Dorjee','Sunita Thapa','Lobsang Tenzin','Ravi Sharma','Kinzang Wangdi']) with ordinality as u(name, ord)) n;
-
-insert into public.subscriptions (client_id, plan, preferred_time)
-select id, 'Daily Wash', (array['06:30','07:00','07:30','08:00','08:30'])[1 + (abs(hashtext(name)) % 5)] from public.clients;
-
-with c as (select id, name, area, row_number() over (order by name) rn from public.clients)
-insert into public.bookings (client_id, vehicle_model, plan, location_type, area, map_pin, date, time, total, deposit_paid, status, colour, style, approval_status, water_needed, guard_permission)
-select c.id, v.model, v.plan, v.loc, c.area, v.pin::jsonb, current_date + v.d, v.t, v.total, v.dep, v.st, v.colour, v.style, v.appr, false, true
-from c join (values
- (1,'Swift','Essential Wash','mobile','{"lat":27.3082,"lng":88.5976}',0,'07:00',699,true,'confirmed',null,null,null),
- (2,'Baleno','Full Detail','studio','{"lat":27.3314,"lng":88.6138}',0,'08:00',1999,true,'confirmed',null,null,null),
- (3,'Thar','Essential Wash','mobile','{"lat":27.3219,"lng":88.6108}',0,'17:00',699,false,'pending_deposit',null,null,null),
- (4,'Innova','Full Detail','mobile','{"lat":27.3172,"lng":88.6040}',1,'09:00',2199,true,'confirmed',null,null,null),
- (5,'Creta','Essential Wash','studio','{"lat":27.3314,"lng":88.6138}',2,'18:00',499,false,'pending_deposit',null,null,null),
- (6,'Thar','Signature Super Design','studio','{"lat":27.3314,"lng":88.6138}',3,'10:00',25000,true,'consultation','Matte Black','Blacked Out','pending'),
- (7,'Creta','Signature Super Design','studio','{"lat":27.3314,"lng":88.6138}',5,'09:00',25000,true,'consultation','Electric Blue','Racing Stripes','pending')
-) as v(rn,model,plan,loc,pin,d,t,total,dep,st,colour,style,appr) on v.rn = c.rn;
-
-insert into public.waitlist (client_id, area, date)
-select id, area, current_date from public.clients order by name offset 10 limit 6;
+-- Demo data is created by the seedDemo() server function (src/lib/seed.server.ts), not by migrations.
