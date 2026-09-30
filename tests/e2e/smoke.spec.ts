@@ -67,14 +67,22 @@ async function continuePastPreview(page: import("@playwright/test").Page) {
   await expect(page.locator("#step-5-body")).toBeVisible({ timeout: 30_000 });
 }
 
-test("demo entry points are obvious and need no personal info", async ({ page }) => {
+test("landing reads as a real business and leads to booking", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
-  await expect(page.getByText("Interactive challenge demo").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Try a sample booking" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Explore admin demo" }).first()).toBeVisible();
-  await page.goto("/#book", { waitUntil: "networkidle" });
+  await expect(page.getByText("Car care on MG Marg, Gangtok").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your car, cared for." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Book now" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "See services & prices" })).toBeVisible();
+  await expect(page.getByText("Interactive challenge demo")).toBeHidden();
+  await expect(page.getByText("Three services, honest prices")).toBeVisible();
+  await expect(page.getByText("Find us on MG Marg.")).toBeVisible();
+  await page.getByRole("link", { name: "Book now" }).first().click();
+  await expect(
+    page.getByRole("heading", { name: "Choose your service. Find your slot." }),
+  ).toBeVisible({
+    timeout: 30_000,
+  });
   await expect(page.getByText("sample car or your own photo").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Maruti Swift" })).toBeVisible();
   // Skip link lets keyboard users jump straight to booking.
   await expect(page.getByRole("link", { name: "Skip to booking" })).toBeAttached();
 });

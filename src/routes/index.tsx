@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Droplets, MapPin, Sparkles, Store, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookingFlow } from "@/components/BookingFlow";
-import { DemoRibbon } from "@/components/DemoRibbon";
 import { HeroMedia } from "@/components/HeroMedia";
 import { MOBILE_FEE, PLANS, inr, type PlanId } from "@/lib/plans";
 import heroImg from "@/assets/hero.jpg";
@@ -15,7 +14,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Studio and doorstep car care in Gangtok with clear choices, transparent pricing, and availability-aware booking. Try the interactive demo — no real charges.",
+          "Studio and doorstep car care in Gangtok. Choose a wash, a full detail, or a custom wrap — with clear prices and available slots in one booking flow.",
       },
       {
         property: "og:title",
@@ -60,7 +59,7 @@ function WashLine({ className = "" }: { className?: string }) {
   );
 }
 
-function Wordmark({ dark = false }: { dark?: boolean }) {
+function Wordmark() {
   return (
     <span className="flex items-center gap-2.5">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -70,15 +69,15 @@ function Wordmark({ dark = false }: { dark?: boolean }) {
         <span className="block font-display text-lg font-bold tracking-tight">
           Rai&rsquo;s <span className="font-semibold text-primary">Auto Spa</span>
         </span>
-        <span
-          className={`mt-1 block text-[11px] font-medium tracking-wide ${dark ? "text-charcoal-foreground/70" : "text-muted-foreground"}`}
-        >
+        <span className="mt-1 block text-[11px] font-medium tracking-wide text-muted-foreground">
           MG Marg, Gangtok
         </span>
       </span>
     </span>
   );
 }
+
+const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
 
 function Nav() {
   return (
@@ -95,23 +94,15 @@ function Nav() {
             Services
           </a>
           <a
-            href="https://maps.google.com/?q=MG+Marg+Gangtok+737101"
+            href={MAPS_URL}
             target="_blank"
             rel="noreferrer"
             className="hidden min-h-[44px] items-center gap-1 rounded-full px-3 py-2 font-medium hover:bg-muted md:flex"
           >
             <MapPin className="h-4 w-4" aria-hidden /> MG Marg
           </a>
-          <Button
-            asChild
-            size="sm"
-            variant="ghost"
-            className="min-h-[44px] rounded-full font-semibold"
-          >
-            <Link to="/owner">Explore admin demo</Link>
-          </Button>
           <Button asChild size="sm" className="min-h-[44px] rounded-full font-semibold">
-            <a href="#book">Try a sample booking</a>
+            <a href="#book">Book now</a>
           </Button>
         </nav>
       </div>
@@ -214,8 +205,8 @@ function Services() {
           })}
         </div>
         <p className="mt-5 text-sm text-muted-foreground">
-          Mobile van adds {inr(MOBILE_FEE)}. A 30% demo deposit is taken at confirmation —
-          simulated, no real charge.
+          Mobile van adds {inr(MOBILE_FEE)}. A 30% deposit is taken at confirmation to secure your
+          slot.
         </p>
       </div>
     </section>
@@ -228,7 +219,7 @@ function BookingEntrance() {
       <div className="mx-auto max-w-4xl px-4 py-14 sm:px-5 sm:py-20">
         <div className="mb-8 max-w-2xl">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            <WashLine className="text-primary" /> Try the customer experience
+            <WashLine className="text-primary" /> Booking
           </p>
           <h2
             id="book-title"
@@ -237,8 +228,8 @@ function BookingEntrance() {
             Choose your service. Find your slot.
           </h2>
           <p className="mt-3 leading-relaxed text-muted-foreground">
-            Start with a sample car or your own photo. Choose studio or doorstep service, then
-            complete a simulated booking.
+            Start with a sample car or your own photo. Choose studio or doorstep service, then pick
+            your slot.
           </p>
           <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-electric" aria-hidden />
@@ -256,62 +247,62 @@ function BookingEntrance() {
   );
 }
 
-const BEFORE_STEPS = ["Inquiry", "service questions", "availability messages", "booking details"];
-const WITH_STEPS = ["Service selection", "available slot", "details", "simulated confirmation"];
-
-function ClientBrief() {
+function Visit() {
   return (
     <section
-      aria-labelledby="brief-title"
-      className="border-y border-border bg-charcoal text-charcoal-foreground"
+      aria-labelledby="visit-title"
+      className="border-t border-border bg-charcoal text-charcoal-foreground"
     >
-      <div className="mx-auto max-w-6xl px-5 py-14 sm:py-20">
-        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-teal">
-          <WashLine className="text-teal" /> The client brief
-        </p>
-        <h2
-          id="brief-title"
-          className="mt-2 max-w-xl font-display text-3xl font-bold tracking-tight sm:text-4xl"
-        >
-          One owner. Two bays. One van.
-        </h2>
-        <p className="mt-4 max-w-2xl leading-relaxed text-charcoal-foreground/80">
-          Rai&rsquo;s Auto Spa is our hypothetical Gangtok client: a solo owner coordinating studio
-          jobs, mobile visits, and appointments affected by water access. This build brings service
-          selection, availability, and booking details into one customer flow, with an owner
-          dashboard for follow-through.
-        </p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-3xl bg-charcoal-foreground/10 p-6">
-            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-charcoal-foreground/60">
-              Before
-            </h3>
-            <ol className="mt-3 space-y-2 text-sm">
-              {BEFORE_STEPS.map((s, i) => (
-                <li key={s} className="flex items-baseline gap-2.5">
-                  <span aria-hidden className="font-display font-bold text-charcoal-foreground/40">
-                    {i + 1}
-                  </span>
-                  {s}
-                </li>
-              ))}
-            </ol>
+      <div className="mx-auto grid max-w-6xl gap-8 px-5 py-14 sm:py-20 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal">
+            Visit the studio
+          </p>
+          <h2
+            id="visit-title"
+            className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl"
+          >
+            Find us on MG Marg.
+          </h2>
+          <p className="mt-4 max-w-xl leading-relaxed text-charcoal-foreground/80">
+            Rai&rsquo;s Auto Spa, MG Marg, Gangtok, Sikkim 737101. Prefer doorstep service? The van
+            serves Tadong, Deorali and Development Area — pick your area when you book and drop a
+            pin so the van can reach you.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg" className="min-h-[52px] rounded-full px-7 font-bold">
+              <a href="#book">Book now</a>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="min-h-[52px] rounded-full border-charcoal-foreground/30 bg-transparent px-7 font-semibold text-charcoal-foreground hover:bg-charcoal-foreground/10 hover:text-charcoal-foreground"
+            >
+              <a href={MAPS_URL} target="_blank" rel="noreferrer">
+                <MapPin /> Open in Google Maps
+              </a>
+            </Button>
           </div>
-          <div className="rounded-3xl bg-primary/25 p-6">
-            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-teal">
-              With this demo
-            </h3>
-            <ol className="mt-3 space-y-2 text-sm">
-              {WITH_STEPS.map((s, i) => (
-                <li key={s} className="flex items-baseline gap-2.5">
-                  <span aria-hidden className="font-display font-bold text-teal">
-                    {i + 1}
-                  </span>
-                  {s}
-                </li>
-              ))}
-            </ol>
-          </div>
+        </div>
+        <div className="rounded-3xl bg-charcoal-foreground/10 p-6">
+          <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-charcoal-foreground/60">
+            Good to know
+          </h3>
+          <ul className="mt-3 space-y-2.5 text-sm leading-relaxed">
+            <li className="flex items-start gap-2.5">
+              <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
+              Morning slots are most reliable — municipal water runs 6–9am.
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
+              Midday van visits need water available at your place.
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
+              Rescheduling is free until 12 hours before your slot.
+            </li>
+          </ul>
         </div>
       </div>
     </section>
@@ -356,7 +347,7 @@ function Index() {
                 size="lg"
                 className="min-h-[56px] rounded-full px-8 text-base font-bold shadow-[var(--shadow-glow)]"
               >
-                <a href="#book">Try a sample booking</a>
+                <a href="#book">Book now</a>
               </Button>
               <Button
                 asChild
@@ -364,24 +355,33 @@ function Index() {
                 variant="outline"
                 className="min-h-[56px] rounded-full border-charcoal-foreground/30 bg-transparent px-8 text-base font-semibold text-charcoal-foreground hover:bg-charcoal-foreground/10 hover:text-charcoal-foreground"
               >
-                <Link to="/owner">Explore admin demo</Link>
+                <a href="#services">See services &amp; prices</a>
               </Button>
             </div>
-            <p className="mt-4 inline-block rounded-full bg-charcoal-foreground/15 px-4 py-2 text-sm font-semibold text-charcoal-foreground backdrop-blur">
-              Interactive challenge demo · No real charges · No personal details needed
-            </p>
           </div>
         </section>
 
         <Facts />
         <Services />
         <BookingEntrance />
-        <ClientBrief />
+        <Visit />
       </main>
       <footer className="bg-charcoal py-12 text-charcoal-foreground">
         <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Wordmark dark />
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Droplets className="h-4.5 w-4.5" aria-hidden />
+              </span>
+              <span className="leading-none">
+                <span className="block font-display text-lg font-bold tracking-tight">
+                  Rai&rsquo;s <span className="font-semibold text-teal">Auto Spa</span>
+                </span>
+                <span className="mt-1 block text-[11px] font-medium tracking-wide text-charcoal-foreground/70">
+                  MG Marg, Gangtok
+                </span>
+              </span>
+            </span>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-charcoal-foreground/70">
               Studio and doorstep car care with clear choices, transparent pricing, and
               availability-aware booking.
@@ -392,7 +392,7 @@ function Index() {
               href="#book"
               className="flex min-h-[44px] items-center font-semibold hover:underline"
             >
-              Try a sample booking
+              Book now
             </a>
             <a
               href="#services"
@@ -400,25 +400,23 @@ function Index() {
             >
               Services and prices
             </a>
-            <Link
-              to="/owner"
+            <a
+              href={MAPS_URL}
+              target="_blank"
+              rel="noreferrer"
               className="flex min-h-[44px] items-center text-charcoal-foreground/70 hover:underline"
             >
-              Explore admin demo
-            </Link>
+              Find us on the map
+            </a>
           </nav>
           <div className="sm:text-right">
             <WashLine className="text-teal sm:ml-auto" />
             <p className="mt-2 text-sm text-charcoal-foreground/70">
               MG Marg, Gangtok, Sikkim 737101
             </p>
-            <p className="mt-1 text-xs text-charcoal-foreground/50">
-              Challenge demo · Simulated payments only
-            </p>
           </div>
         </div>
       </footer>
-      <DemoRibbon />
     </div>
   );
 }
