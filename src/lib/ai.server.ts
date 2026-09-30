@@ -14,7 +14,9 @@ async function gatewayError(res: Response, what: string): Promise<never> {
   try {
     const j = await res.json();
     msg = j?.error?.message ?? j?.message ?? "";
-  } catch {}
+  } catch {
+    /* non-JSON error body — fall back to the status code */
+  }
   if (res.status === 429)
     throw new Error("Rai is busy with lots of cars right now — please try again in a minute.");
   if (res.status === 402)
