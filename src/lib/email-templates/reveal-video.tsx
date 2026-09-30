@@ -1,16 +1,5 @@
 import React from "react";
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Text } from "@react-email/components";
 import type { TemplateEntry } from "./registry";
 
 interface Props {
@@ -44,62 +33,72 @@ const formatTime = (value?: string) => {
   return `${displayHour}:${minutes || "00"} ${suffix}`;
 };
 
-const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>
-      {location?.includes("van")
-        ? `Rai is coming to transform your ${vehicle ?? "car"}`
-        : `See how Rai will transform your ${vehicle ?? "car"}`}
-    </Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Section style={brandBlock}>
-          <Text style={brand}>RAI&apos;S AUTO SPA</Text>
-          <Text style={place}>MG MARG · GANGTOK</Text>
-        </Section>
+const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) => {
+  const isVan = !!location?.includes("van");
+  const car = vehicle ?? "car";
+  return (
+    <Html lang="en" dir="ltr">
+      <Head />
+      <Preview>{isVan ? `Rai is coming to transform your ${car}` : `See how Rai will transform your ${car}`}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          {/* brand bar */}
+          <Section style={brandBar}>
+            <Text style={brand}>
+              RAI&apos;S <span style={{ color: PINK }}>✦</span> AUTO SPA
+            </Text>
+            <Text style={brandSub}>MG MARG · GANGTOK</Text>
+          </Section>
 
-        <Heading style={h1}>
-          {location?.includes("van")
-            ? `Rai is coming to transform your ${vehicle ?? "car"}.`
-            : `Here’s what Rai has planned for your ${vehicle ?? "car"}.`}
-        </Heading>
-        <Text style={text}>
-          Hi{name ? ` ${name}` : ""}, here&apos;s a first look at the transformation Rai has planned
-          for your car.
-        </Text>
+          {/* hero */}
+          <Section style={hero}>
+            <Text style={pill}>{isVan ? "BORING → BEAST · VAN" : "BORING → BEAST"}</Text>
+            <Heading style={h1}>
+              {isVan ? `Rai is coming to transform your ${car}.` : `Here’s what Rai has planned for your ${car}.`}
+            </Heading>
+            <Text style={heroText}>
+              Hi{name ? ` ${name}` : ""}, here&apos;s a first look at the transformation Rai has planned for your car.
+            </Text>
+            {videoUrl ? (
+              <Button href={videoUrl} style={button}>
+                See your car&apos;s transformation&nbsp; →
+              </Button>
+            ) : null}
+          </Section>
 
-        {videoUrl ? (
-          <Button href={videoUrl} style={button}>
-            See your car&apos;s transformation&nbsp; →
-          </Button>
-        ) : null}
+          {/* appointment */}
+          <Section style={card}>
+            <Text style={cardLabel}>
+              <span style={isVan ? mintTag : yellowTag}>{isVan ? "RAI COMES TO YOU" : "YOUR VISIT TO THE STUDIO"}</span>
+            </Text>
+            <Text style={cardTitle}>{plan ?? "Your car care appointment"}</Text>
+            <Hr style={hr} />
+            <Text style={label}>WHEN</Text>
+            <Text style={value}>
+              {formatDate(date)} · {formatTime(time)}
+            </Text>
+            <Text style={label}>WHERE</Text>
+            <Text style={value}>
+              {location?.replace(/\s*\(Rai's van comes to you\)\s*/i, "") || "Rai’s Auto Spa, MG Marg"}
+            </Text>
+          </Section>
 
-        <Section style={card}>
-          <Text style={cardLabel}>
-            {location?.includes("van") ? "RAI COMES TO YOU" : "YOUR VISIT TO THE STUDIO"}
+          <Text style={note}>
+            Rai will take care of the rest. See you soon <span style={{ color: PINK }}>✦</span>
           </Text>
-          <Text style={cardTitle}>{plan ?? "Your car care appointment"}</Text>
-          <Hr style={hr} />
-          <Text style={row}>
-            <strong>When</strong>
-            <br />
-            {formatDate(date)} · {formatTime(time)}
-          </Text>
-          <Text style={row}>
-            <strong>Where</strong>
-            <br />
-            {location?.replace(/\s*\(Rai's van comes to you\)\s*/i, "") ||
-              "Rai’s Auto Spa, MG Marg"}
-          </Text>
-        </Section>
 
-        <Text style={note}>Rai will take care of the rest. See you soon.</Text>
-        <Text style={footer}>Rai&apos;s Auto Spa · MG Marg, Gangtok</Text>
-      </Container>
-    </Body>
-  </Html>
-);
+          {/* footer */}
+          <Section style={footerBar}>
+            <Text style={footerBrand}>
+              RAI&apos;S <span style={{ color: YELLOW }}>✦</span> AUTO SPA
+            </Text>
+            <Text style={footerText}>MG Marg, Gangtok</Text>
+          </Section>
+        </Container>
+      </Body>
+    </Html>
+  );
+};
 
 export const template = {
   component: Email,
@@ -119,55 +118,115 @@ export const template = {
   },
 } satisfies TemplateEntry;
 
-const main = { backgroundColor: "#ffffff", fontFamily: "Arial, sans-serif", margin: "0" };
-const container = { padding: "36px 24px", maxWidth: "560px" };
-const brandBlock = { borderLeft: "4px solid #0D9488", paddingLeft: "14px", marginBottom: "32px" };
+/* ───────── theme (matches the website) ───────── */
+const INK = "#111111";
+const CREAM = "#FFF8EC";
+const PINK = "#FF5FA2";
+const YELLOW = "#FFD84D";
+const LILAC = "#B9A7FF";
+const MINT = "#9EE6C4";
+const DISPLAY = "'Arial Black', 'Helvetica Neue', Arial, sans-serif";
+const BODY = "Arial, 'Helvetica Neue', sans-serif";
+/** Thick border + heavier right/bottom = the site's hard offset shadow, email-safe. */
+const boxed = (bg: string) => ({
+  backgroundColor: bg,
+  border: `3px solid ${INK}`,
+  borderRightWidth: "7px",
+  borderBottomWidth: "7px",
+  borderRadius: "18px",
+});
+
+const main = { backgroundColor: CREAM, fontFamily: BODY, margin: "0", padding: "0" };
+const container = { padding: "24px 16px", maxWidth: "560px" };
+const brandBar = { ...boxed(YELLOW), padding: "14px 20px", marginBottom: "16px" };
 const brand = {
-  color: "#111827",
-  fontSize: "13px",
-  fontWeight: 700 as const,
-  letterSpacing: "2px",
-  margin: "0 0 4px",
-};
-const place = {
-  color: "#0D9488",
-  fontSize: "11px",
-  fontWeight: 700 as const,
-  letterSpacing: "2px",
+  color: INK,
+  fontFamily: DISPLAY,
+  fontSize: "20px",
+  letterSpacing: "-0.5px",
   margin: "0",
 };
-const h1 = { color: "#111827", fontSize: "34px", lineHeight: "40px", margin: "0 0 18px" };
-const text = { color: "#4B5563", fontSize: "16px", lineHeight: "25px", margin: "0 0 24px" };
-const card = {
-  backgroundColor: "#F3F7F6",
-  borderRadius: "8px",
-  padding: "22px",
-  margin: "28px 0 22px",
+const brandSub = {
+  color: INK,
+  fontSize: "10px",
+  fontWeight: 700 as const,
+  letterSpacing: "3px",
+  margin: "2px 0 0",
 };
-const cardLabel = {
-  color: "#0D9488",
-  fontSize: "11px",
+const hero = { ...boxed(LILAC), padding: "22px 20px", marginBottom: "16px" };
+const pill = {
+  display: "inline-block",
+  backgroundColor: "#ffffff",
+  border: `2px solid ${INK}`,
+  borderRadius: "999px",
+  color: INK,
+  fontSize: "10px",
   fontWeight: 700 as const,
   letterSpacing: "2px",
-  margin: "0 0 8px",
+  padding: "3px 10px",
+  margin: "0 0 10px",
 };
-const cardTitle = { color: "#111827", fontSize: "20px", fontWeight: 700 as const, margin: "0" };
-const hr = { borderColor: "#D7E2DF", margin: "18px 0" };
-const row = { color: "#374151", fontSize: "14px", lineHeight: "21px", margin: "12px 0" };
+const h1 = {
+  color: INK,
+  fontFamily: DISPLAY,
+  fontSize: "30px",
+  lineHeight: "34px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "-1px",
+  margin: "0 0 12px",
+};
+const heroText = { color: INK, fontSize: "15px", lineHeight: "23px", margin: "0 0 18px" };
 const button = {
-  backgroundColor: "#2563EB",
-  color: "#ffffff",
-  borderRadius: "8px",
+  backgroundColor: YELLOW,
+  color: INK,
+  border: `3px solid ${INK}`,
+  borderRightWidth: "6px",
+  borderBottomWidth: "6px",
+  borderRadius: "14px",
   padding: "15px 22px",
-  fontSize: "15px",
-  fontWeight: 700 as const,
+  fontFamily: DISPLAY,
+  fontSize: "14px",
+  letterSpacing: "0.5px",
+  textTransform: "uppercase" as const,
   textDecoration: "none",
   display: "inline-block",
 };
-const note = { color: "#374151", fontSize: "14px", lineHeight: "21px", margin: "0 0 28px" };
-const footer = {
-  color: "#9CA3AF",
-  fontSize: "12px",
-  borderTop: "1px solid #E5E7EB",
-  paddingTop: "18px",
+const card = { ...boxed("#ffffff"), padding: "18px 20px", marginBottom: "16px" };
+const tag = {
+  display: "inline-block",
+  border: `2px solid ${INK}`,
+  borderRadius: "999px",
+  color: INK,
+  fontSize: "10px",
+  fontWeight: 700 as const,
+  letterSpacing: "1.5px",
+  padding: "2px 8px",
 };
+const mintTag = { ...tag, backgroundColor: MINT };
+const yellowTag = { ...tag, backgroundColor: YELLOW };
+const cardLabel = { margin: "0 0 10px" };
+const cardTitle = {
+  color: INK,
+  fontFamily: DISPLAY,
+  fontSize: "22px",
+  textTransform: "uppercase" as const,
+  margin: "0",
+};
+const hr = { borderColor: INK, borderWidth: "2px 0 0", margin: "16px 0 6px" };
+const label = {
+  color: "#555555",
+  fontSize: "10px",
+  fontWeight: 700 as const,
+  letterSpacing: "2px",
+  margin: "10px 0 2px",
+};
+const value = { color: INK, fontSize: "15px", fontWeight: 700 as const, margin: "0" };
+const note = { color: INK, fontSize: "14px", lineHeight: "21px", margin: "4px 4px 0" };
+const footerBar = {
+  backgroundColor: INK,
+  borderRadius: "18px",
+  padding: "16px 20px",
+  marginTop: "24px",
+};
+const footerBrand = { color: CREAM, fontFamily: DISPLAY, fontSize: "16px", margin: "0" };
+const footerText = { color: "#BBBBBB", fontSize: "12px", margin: "4px 0 0" };
