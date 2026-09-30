@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { Camera, Check, Droplets, Loader2, MapPin, Sparkles, Store, Truck, Upload } from "lucide-react";
+import { Camera, Check, ChevronDown, Droplets, Loader2, MapPin, Sparkles, Store, Truck, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,24 +47,50 @@ async function compress(file: File): Promise<{ b64: string; url: string }> {
   return { b64: url.split(",")[1] ?? "", url };
 }
 
-function Step({ n, title, children, done }: { n: number; title: string; children: React.ReactNode; done?: boolean }) {
+function Step({
+  n,
+  title,
+  summary,
+  children,
+  done,
+  active,
+  onOpen,
+}: {
+  n: number;
+  title: string;
+  summary?: string;
+  children: React.ReactNode;
+  done?: boolean;
+  active: boolean;
+  onOpen: () => void;
+}) {
   return (
-    <section className="rounded-3xl border border-border bg-card p-5 sm:p-8 shadow-[var(--shadow-soft)]">
-      <div className="mb-5 flex items-center gap-3">
-        <span
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold",
-            done ? "bg-primary text-primary-foreground" : "bg-charcoal text-charcoal-foreground",
-          )}
-        >
+    <section id={`step-${n}`} className={cn("scroll-mt-36 overflow-hidden rounded-3xl border bg-card shadow-[var(--shadow-soft)] transition-colors", active ? "border-primary/50" : "border-border")}>
+      <Button
+        type="button"
+        variant="ghost"
+        className="grid h-auto w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-none px-5 py-5 text-left hover:bg-muted/50 sm:px-8"
+        onClick={onOpen}
+        aria-expanded={active}
+      >
+        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold", done ? "bg-primary text-primary-foreground" : active ? "bg-charcoal text-charcoal-foreground" : "bg-muted text-muted-foreground")}>
           {done ? <Check className="h-4 w-4" /> : n}
         </span>
-        <h3 className="text-xl sm:text-2xl font-semibold">{title}</h3>
-      </div>
-      {children}
+        <span className="min-w-0">
+          <span className="block truncate font-display text-xl font-semibold sm:text-2xl">{title}</span>
+          {!active && summary && <span className="mt-0.5 block truncate text-sm font-normal text-muted-foreground">{summary}</span>}
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-primary">
+          {!active && done ? "Change" : ""}
+          <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", active && "rotate-180")} />
+        </span>
+      </Button>
+      {active && <div className="animate-fade-in px-5 pb-5 sm:px-8 sm:pb-8">{children}</div>}
     </section>
   );
 }
+
+const PROGRESS = ["Snap", "Plan", "Where & When", "Preview", "Pay"] as const;
 
 export function BookingFlow() {
   const upload = useServerFn(uploadCar);
@@ -73,6 +100,9 @@ export function BookingFlow() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
+  const revealRef = useRef<HTMLDivElement>(null);
+  const confettiKeyRef = useRef("");
+  const [activeStep, setActiveStep] = useState(1);
   const [localPhoto, setLocalPhoto] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [booking, setBooking] = useState<{ id: string; vehicle: string } | null>(null);
@@ -103,6 +133,7 @@ export function BookingFlow() {
   const [payOpen, setPayOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [booked, setBooked] = useState(false);
+  const [revealHold, setRevealHold] = useState(false);
 
   const key = plan ? `${plan}|${plan === "signature" ? colour + "|" + style : ""}` : "";
   const previewUrl = key ? cache[key] : undefined;
@@ -139,7 +170,8 @@ export function BookingFlow() {
       const r = await upload({ data: { image: b64, mime: "image/jpeg" } });
       setBooking({ id: r.bookingId, vehicle: r.vehicle });
       if (!r.isCar) toast.warning("Hmm, that doesn't look like a car — previews work best with a clear car photo.");
-      document.getElementById("step-plans")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveStep(2);
+      requestAnimationFrame(() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     } catch (e) {
       toast.error((e as Error).message);
       setLocalPhoto(null);
@@ -149,11 +181,7 @@ export function BookingFlow() {
   }
 
   async function runPreview(p: PlanId, c?: string, s?: string) {
-    if (!booking) {
-      toast.info("Snap your car first so Rai can preview it");
-      document.getElementById("book")?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
+    if (!booking) return;
     const k = `${p}|${p === "signature" ? c + "|" + s : ""}`;
     if (cache[k]) return;
     setPreviewing(k);
@@ -171,6 +199,8 @@ export function BookingFlow() {
   function choosePlan(p: PlanId) {
     setPlan(p);
     if (p !== "signature") runPreview(p);
+    setActiveStep(3);
+    requestAnimationFrame(() => document.getElementById("step-3")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   // Signature: generate in background whenever colour/style settle
@@ -184,9 +214,40 @@ export function BookingFlow() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const today = todayIST();
 
+  function chooseSlot(date: string, time: string) {
+    setSlot({ date, time });
+    setRevealHold(true);
+    setActiveStep(4);
+    window.setTimeout(() => setRevealHold(false), 2000);
+    requestAnimationFrame(() => revealRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  useEffect(() => {
+    if (!slot || !previewUrl || revealHold) return;
+    const revealKey = `${slot.date}|${slot.time}|${key}`;
+    if (confettiKeyRef.current === revealKey) return;
+    confettiKeyRef.current = revealKey;
+    confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: ["#0D9488", "#2563EB", "#FFFFFF"] });
+    const timer = window.setTimeout(() => setActiveStep(5), 1800);
+    return () => window.clearTimeout(timer);
+  }, [key, previewUrl, revealHold, slot]);
+
   const canPay =
     !!booking && !!plan && !!slot && name.trim().length >= 2 && /^[+\d][\d\s-]{8,15}$/.test(phone.trim()) &&
-    /\S+@\S+\.\S+/.test(email) && (!mobile || (!!pin && building.trim().length > 0));
+    /\S+@\S+\.\S+/.test(email) && (!mobile || !!pin);
+
+  const slotLabel = slot
+    ? `${slot.date === addDays(today, 1) ? "Tomorrow" : new Date(slot.date + "T00:00:00Z").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} ${slot.time}`
+    : "Choose time";
+
+  function openPay() {
+    if (!canPay) {
+      setActiveStep(5);
+      requestAnimationFrame(() => document.getElementById("step-5")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      return;
+    }
+    setPayOpen(true);
+  }
 
   async function pay() {
     if (!booking || !plan || !slot) return;
@@ -247,9 +308,26 @@ export function BookingFlow() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 pb-20 md:pb-0">
+      <div className="sticky top-20 z-30 -mx-4 overflow-x-auto border-y border-border bg-background/95 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border">
+        <div className="mx-auto flex min-w-[610px] items-center justify-between">
+          {PROGRESS.map((label, index) => {
+            const n = index + 1;
+            const complete = n === 1 ? !!booking : n === 2 ? !!plan : n === 3 ? !!slot : n === 4 ? !!slot && !!previewUrl && !revealHold : booked;
+            return (
+              <div key={label} className="flex flex-1 items-center last:flex-none">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setActiveStep(n)} className={cn("h-8 shrink-0 rounded-full px-2.5 text-xs", activeStep === n && "bg-charcoal text-charcoal-foreground hover:bg-charcoal hover:text-charcoal-foreground")}>
+                  <span>{n}</span> {label} {complete ? <Check className="h-3.5 w-3.5" /> : activeStep === n ? <span aria-hidden>•</span> : null}
+                </Button>
+                {n < 5 && <span className={cn("mx-1 h-px flex-1", complete ? "bg-primary" : "bg-border")} />}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* STEP 1 */}
-      <Step n={1} title="Snap your dirty / boring car" done={!!booking}>
+      <Step n={1} title="Snap your dirty / boring car" done={!!booking} active={activeStep === 1} onOpen={() => setActiveStep(1)} summary={booking ? `${booking.vehicle} uploaded ✓` : "Add one clear car photo"}>
         <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
         {!localPhoto ? (
@@ -290,8 +368,8 @@ export function BookingFlow() {
       </Step>
 
       {/* STEP 2 */}
-      <div id="step-plans" className="scroll-mt-24">
-        <Step n={2} title="Pick your plan" done={!!plan}>
+      <div>
+        <Step n={2} title="Pick your plan" done={!!plan} active={activeStep === 2} onOpen={() => setActiveStep(2)} summary={plan ? `${PLANS[plan].name} ✓` : "Choose your finish"}>
           <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
             {(Object.keys(PLANS) as PlanId[]).map((id) => {
               const p = PLANS[id];
@@ -375,7 +453,7 @@ export function BookingFlow() {
       </div>
 
       {/* STEP 3 */}
-      <Step n={3} title="Where & when" done={!!slot}>
+      <Step n={3} title="Where & when" done={!!slot} active={activeStep === 3} onOpen={() => setActiveStep(3)} summary={slot ? `${mobile ? "Mobile van" : "MG Marg studio"} · ${slotLabel} ✓` : "Choose location and slot"}>
         <div className="grid gap-3 sm:grid-cols-2">
           <button onClick={() => setMobile(false)} className={cn("flex items-start gap-3 rounded-2xl border-2 p-4 text-left", !mobile ? "border-primary bg-accent/50" : "border-border")}>
             <Store className="mt-0.5 h-5 w-5 text-primary" />
@@ -451,7 +529,7 @@ export function BookingFlow() {
                           key={t}
                           disabled={disabled}
                           title={dry ? "Water needed, pick morning or provide water" : s?.blocked ?? (full ? "Fully booked" : isPrime(t) ? "Prime slot" : "")}
-                          onClick={() => setSlot({ date: d, time: t })}
+                          onClick={() => chooseSlot(d, t)}
                           className={cn(
                             "w-full rounded-lg px-1 py-1.5 text-xs font-medium transition",
                             sel
@@ -494,32 +572,37 @@ export function BookingFlow() {
       </Step>
 
       {/* STEP 4 — PREVIEW (generated in the background since step 2) */}
-      <Step n={4} title="Your car, after Rai" done={!!previewUrl}>
-        {!plan ? (
-          <p className="rounded-2xl bg-muted p-5 text-sm text-muted-foreground">Pick a plan in step 2 — your preview gets ready while you choose a time.</p>
-        ) : previewUrl && localPhoto ? (
-          <BeforeAfter before={localPhoto} after={previewUrl} afterLabel={`After Rai's ${PLANS[plan].name}`} />
-        ) : previewing === key ? (
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
-            {localPhoto && <img src={localPhoto} alt="" className="h-full w-full scale-105 object-cover blur-md" />}
-            <div className="absolute inset-0 flex items-center justify-center bg-charcoal/40 text-charcoal-foreground" aria-label="Loading">
-              <Loader2 className="h-10 w-10 animate-spin" />
+      <div ref={revealRef}>
+      <Step n={4} title="Your car, after Rai" done={!!slot && !!previewUrl && !revealHold} active={activeStep === 4} onOpen={() => setActiveStep(4)} summary={slot && previewUrl ? "Surprise revealed ✓" : "Your surprise is waiting"}>
+        {!slot ? (
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-charcoal">
+            {localPhoto && <img src={localPhoto} alt="Hidden car preview" className="h-full w-full scale-110 object-cover opacity-45 blur-2xl" />}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-charcoal/35 px-5 text-center text-charcoal-foreground">
+              <Sparkles className="h-9 w-9 text-electric" />
+              <p className="font-display text-xl font-semibold">Pick your slot in Step 3 to reveal your car ✨</p>
             </div>
           </div>
+        ) : previewUrl && localPhoto && !revealHold ? (
+          <div className="reveal-curtain"><BeforeAfter before={localPhoto} after={previewUrl} afterLabel={`After Rai's ${PLANS[plan!].name}`} /></div>
         ) : previewError ? (
           <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-sm">
             <p className="font-medium text-destructive">{previewError}</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => runPreview(plan, colour, style)}>Try again</Button>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => plan && runPreview(plan, colour, style)}>Try again</Button>
           </div>
-        ) : !booking ? (
-          <p className="rounded-2xl bg-muted p-5 text-sm text-muted-foreground">Snap your car in step 1 to see the AI preview. You can still book without it.</p>
         ) : (
-          <Button variant="outline" onClick={() => runPreview(plan, colour, style)}><Sparkles /> Show my preview</Button>
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-muted">
+            {localPhoto && <img src={localPhoto} alt="" className="h-full w-full scale-105 object-cover opacity-50 blur-lg" />}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/40 backdrop-blur-sm">
+              <div className="h-2 w-2/3 overflow-hidden rounded-full bg-muted"><span className="shine-shimmer block h-full w-1/3 rounded-full bg-primary" /></div>
+              <p className="font-display text-lg font-semibold">Adding final shine...</p>
+            </div>
+          </div>
         )}
       </Step>
+      </div>
 
       {/* STEP 5 */}
-      <Step n={5} title="Pay & confirm">
+      <Step n={5} title="Pay & confirm" active={activeStep === 5} onOpen={() => setActiveStep(5)} summary={canPay ? `${inr(deposit)} deposit ready` : "Add your contact details"}>
         <div className="grid gap-3 sm:grid-cols-3">
           <div><Label htmlFor="nm">Your name</Label><Input id="nm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Pema Bhutia" /></div>
           <div><Label htmlFor="ph">WhatsApp number</Label><Input id="ph" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98320 12345" /></div>
@@ -535,13 +618,23 @@ export function BookingFlow() {
         </dl>
         {!canPay && (
           <p className="mt-3 text-xs text-muted-foreground">
-            To pay: {[!booking && "snap your car", !plan && "pick a plan", !slot && "pick a slot", mobile && !pin && "drop a map pin", mobile && !building.trim() && "add your building", name.trim().length < 2 && "add your name", !/^[+\d][\d\s-]{8,15}$/.test(phone.trim()) && "add WhatsApp number", !/\S+@\S+\.\S+/.test(email) && "add email"].filter(Boolean).join(", ")}.
+             To pay: {[!booking && "snap your car", !plan && "pick a plan", !slot && "pick a slot", mobile && !pin && "drop a map pin", name.trim().length < 2 && "add your name", !/^[+\d][\d\s-]{8,15}$/.test(phone.trim()) && "add WhatsApp number", !/\S+@\S+\.\S+/.test(email) && "add email"].filter(Boolean).join(", ")}.
           </p>
         )}
         <Button size="lg" className="mt-5 w-full text-base" disabled={!canPay} onClick={() => setPayOpen(true)}>
           Pay {plan ? inr(deposit) : ""} Deposit
         </Button>
       </Step>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-15px_var(--foreground)] backdrop-blur-xl md:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <p className="min-w-0 truncate text-xs font-medium">
+            {plan ? PLANS[plan].name : "Choose plan"} <span className="text-muted-foreground">•</span> {slotLabel} <span className="text-muted-foreground">•</span> {plan ? inr(total) : "—"}
+            <span className="block truncate text-[11px] text-muted-foreground">{plan ? `Pay ${inr(deposit)} Deposit` : "Complete the steps to book"}</span>
+          </p>
+          <Button size="sm" disabled={!canPay} onClick={openPay}>Pay{plan ? ` ${inr(deposit)}` : ""}</Button>
+        </div>
+      </div>
 
       {payOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/60 p-4 backdrop-blur-sm sm:items-center" onClick={() => !paying && setPayOpen(false)}>
