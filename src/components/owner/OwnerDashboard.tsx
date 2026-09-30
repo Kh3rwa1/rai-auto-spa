@@ -4,13 +4,18 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   CalendarDays,
+  CircleCheck,
+  Clock,
   Droplets,
   Fuel,
+  Hourglass,
+  Images,
   Inbox,
   Image as ImageIcon,
   MapPinned,
   MessageCircle,
   Palette,
+  Repeat,
   Route as RouteIcon,
   Users,
   Wallet,
@@ -100,6 +105,25 @@ type Sub = {
 const wa = (phone: string | null | undefined, text: string) =>
   `https://wa.me/${(phone ?? "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 
+/** Relative time for lead/gallery captions, e.g. "3h ago" — falls back to a date. */
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return iso.slice(0, 10);
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+/** Minutes until an offer expires (negative = expired). */
+function minsLeft(expiresAt: string): number {
+  return Math.round((new Date(expiresAt).getTime() - Date.now()) / 60000);
+}
+
 function useSigned(paths: (string | null | undefined)[]) {
   const list = paths.filter(Boolean) as string[];
   const sign = useServerFn(ownerSignedUrls);
@@ -114,13 +138,17 @@ function Stat({
   icon: I,
   label,
   value,
+  sub,
   tone,
+  tile,
   formula,
 }: {
   icon: typeof Users;
   label: string;
   value: string;
+  sub: string;
   tone?: string;
+  tile?: string;
   formula: string;
 }) {
   return (
@@ -128,12 +156,20 @@ function Stat({
       <TooltipTrigger asChild>
         <div
           tabIndex={0}
-          aria-label={`${label}: ${value}. ${formula}`}
-          className="cursor-help rounded-2xl bg-card p-4 shadow-[var(--shadow-soft)]"
+          aria-label={`${label}: ${value}. ${sub} ${formula}`}
+          className="cursor-help rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] transition-shadow hover:shadow-[var(--shadow-glow)]"
         >
-          <I className={cn("h-5 w-5", tone ?? "text-primary")} />
-          <p className="mt-3 font-display text-2xl font-bold">{value}</p>
-          <p className="text-xs text-muted-foreground">{label} ⓘ</p>
+          <span
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl",
+              tile ?? "bg-primary/10",
+            )}
+          >
+            <I className={cn("h-5 w-5", tone ?? "text-primary")} aria-hidden />
+          </span>
+          <p className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">{value}</p>
+          <p className="mt-0.5 text-xs font-semibold">{label}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p>
         </div>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">{formula}</TooltipContent>
@@ -142,13 +178,13 @@ function Stat({
 }
 
 const TABS = [
-  { value: "route", label: "Route" },
-  { value: "calendar", label: "Calendar" },
-  { value: "subs", label: "Subscriptions" },
-  { value: "waitlist", label: "Waitlist" },
-  { value: "leads", label: "Leads" },
-  { value: "wraps", label: "Wrap Approvals" },
-  { value: "gallery", label: "Gallery" },
+  { value: "route", label: "Route", icon: MapPinned },
+  { value: "calendar", label: "Calendar", icon: CalendarDays },
+  { value: "subs", label: "Subscriptions", icon: Repeat },
+  { value: "waitlist", label: "Waitlist", icon: Hourglass },
+  { value: "leads", label: "Leads", icon: Inbox },
+  { value: "wraps", label: "Wrap Approvals", icon: Palette },
+  { value: "gallery", label: "Gallery", icon: Images },
 ] as const;
 
 export function OwnerDashboard() {
@@ -199,13 +235,15 @@ export function OwnerDashboard() {
 
   if (bookingsQ.isLoading)
     return (
-      <main className="mx-auto max-w-7xl space-y-4 px-4 py-6" aria-busy="true">
-        <p className="text-muted-foreground">Loading guest admin demo…</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6" aria-busy="true">
+        <p className="sr-only">Loading guest admin demo…</p>
+        <div className="h-56 animate-pulse rounded-3xl bg-muted" aria-hidden />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-muted" />
+            <div key={i} className="h-36 animate-pulse rounded-2xl bg-muted" aria-hidden />
           ))}
         </div>
+        <div className="h-96 animate-pulse rounded-2xl bg-muted" aria-hidden />
       </main>
     );
   if (bookingsQ.isError)
@@ -240,96 +278,178 @@ export function OwnerDashboard() {
   const failedVideos = bookings.filter((b) =>
     (b as unknown as { video_status?: string }).video_status?.startsWith("failed"),
   ).length;
+  const leadsCount = bookings.filter((b) => b.status === "lead" || b.status === "link_sent").length;
+  const upcomingCount = bookings.filter(
+    (b) => b.date && b.date >= today && ["confirmed", "pending_deposit"].includes(b.status),
+  ).length;
+  const galleryCount = bookings.filter((b) => b.clean_preview_url && b.photo_url).length;
+  const activeSubs = subs.filter((s) => s.active).length;
+  const counts: Record<(typeof TABS)[number]["value"], number> = {
+    route: stops.length,
+    calendar: pendingDeposits,
+    subs: activeSubs,
+    waitlist: upcomingCount,
+    leads: leadsCount,
+    wraps: wrapApprovals,
+    gallery: galleryCount,
+  };
+  const dateLabel = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Kolkata",
+  });
+  const hasPriorities = pendingDeposits > 0 || wrapApprovals > 0 || failedVideos > 0;
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <section
         aria-labelledby="owner-overview"
-        className="rounded-2xl border border-border bg-card p-5"
+        className="overflow-hidden rounded-3xl bg-charcoal text-charcoal-foreground shadow-[var(--shadow-soft)]"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-electric px-3 py-1 text-xs font-bold text-electric-foreground">
-            Guest admin demo
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Open sandbox — no sign-in, reset anytime
-          </span>
+        <div className="p-5 sm:p-7">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-electric px-3 py-1 text-xs font-bold text-electric-foreground">
+              Guest admin demo
+            </span>
+            <span className="text-xs text-charcoal-foreground/70">
+              Open sandbox — no sign-in · {dateLabel}
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 id="owner-overview" className="font-display text-2xl font-bold sm:text-3xl">
+                Today&apos;s operations
+              </h1>
+              <p className="mt-1 text-sm text-charcoal-foreground/70">
+                {todays.length} jobs today · {stops.length} van stops · {route.km.toFixed(1)} km
+                route (est. hill roads)
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="min-h-[44px]"
+              onClick={() => setTab("route")}
+            >
+              <MapPinned className="h-4 w-4" aria-hidden /> Today&apos;s route
+            </Button>
+          </div>
+          {hasPriorities ? (
+            <ul
+              className="mt-5 grid gap-2 sm:grid-cols-3"
+              aria-label="Today's priorities — select to review"
+            >
+              {pendingDeposits > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setTab("calendar")}
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl bg-background/10 p-3 text-left transition hover:bg-background/15"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/25">
+                      <Wallet className="h-4 w-4 text-red-200" aria-hidden />
+                    </span>
+                    <span className="text-sm">
+                      <strong>{pendingDeposits} without deposit</strong>
+                      <span className="block text-xs text-charcoal-foreground/70">
+                        Review calendar →
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              )}
+              {wrapApprovals > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setTab("wraps")}
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl bg-background/10 p-3 text-left transition hover:bg-background/15"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-electric/25">
+                      <Palette className="h-4 w-4 text-electric-foreground" aria-hidden />
+                    </span>
+                    <span className="text-sm">
+                      <strong>{wrapApprovals} wrap(s) to approve</strong>
+                      <span className="block text-xs text-charcoal-foreground/70">
+                        Review designs →
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              )}
+              {failedVideos > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setTab("gallery")}
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl bg-background/10 p-3 text-left transition hover:bg-background/15"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/25">
+                      <AlertTriangle className="h-4 w-4 text-amber-200" aria-hidden />
+                    </span>
+                    <span className="text-sm">
+                      <strong>{failedVideos} video(s) failed</strong>
+                      <span className="block text-xs text-charcoal-foreground/70">
+                        Share via WhatsApp →
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              )}
+            </ul>
+          ) : (
+            <p className="mt-5 flex min-h-[44px] items-center gap-2 rounded-2xl bg-primary/20 p-3 text-sm">
+              <CircleCheck className="h-5 w-5 shrink-0 text-teal" aria-hidden />
+              Nothing urgent — all deposits in, wraps approved, videos rendering.
+            </p>
+          )}
         </div>
-        <h1 id="owner-overview" className="mt-2 font-display text-2xl font-bold sm:text-3xl">
-          Today&apos;s operations
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {todays.length} jobs today · {stops.length} van stops · route distances are estimates for
-          hill roads.
-        </p>
-        {(pendingDeposits > 0 || wrapApprovals > 0 || failedVideos > 0) && (
-          <ul className="mt-3 space-y-1 text-sm" aria-label="Today's priorities">
-            {pendingDeposits > 0 && (
-              <li className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
-                <span>
-                  <strong>{pendingDeposits}</strong> booking(s) without deposit — see Calendar /
-                  Waitlist.
-                </span>
-              </li>
-            )}
-            {wrapApprovals > 0 && (
-              <li className="flex items-start gap-2">
-                <Palette className="mt-0.5 h-4 w-4 shrink-0 text-electric" aria-hidden />
-                <span>
-                  <strong>{wrapApprovals}</strong> Signature wrap(s) awaiting approval.
-                </span>
-              </li>
-            )}
-            {failedVideos > 0 && (
-              <li className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
-                <span>
-                  <strong>{failedVideos}</strong> reveal video(s) failed — share via WhatsApp.
-                </span>
-              </li>
-            )}
-          </ul>
-        )}
-        {pendingDeposits === 0 && wrapApprovals === 0 && failedVideos === 0 && (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Nothing urgent — all deposits in, wraps approved, videos rendering.
-          </p>
-        )}
       </section>
 
       <TooltipProvider delayDuration={150}>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           <Stat
             icon={CalendarDays}
             label="Today's bookings"
             value={String(todays.length)}
+            sub={`${todays.length - subVisits} customers · ${subVisits} subscription`}
             formula={`${todays.length - subVisits} customer bookings + ${subVisits} subscription visits (paused and skipped customers excluded).`}
           />
           <Stat
             icon={RouteIcon}
-            label="Total KM today"
+            label="Van route today"
             value={`${route.km.toFixed(1)} km`}
+            sub={`${route.order.length} stops · est. hill roads`}
+            tile="bg-electric/10"
+            tone="text-electric"
             formula={`Nearest-stop route Studio → ${route.order.length} van stops → Studio. Straight-line distance × ${OPS.roadMultiplier} for hill roads.`}
           />
           <Stat
             icon={Fuel}
             label="Fuel saved by clustering"
             value={`${fuelSaved.toFixed(1)} L`}
+            sub={`vs ${route.naive.toFixed(1)} km separate trips`}
+            tile="bg-amber-400/15"
+            tone="text-amber-600 dark:text-amber-400"
             formula={`(separate round trips ${route.naive.toFixed(1)} km − clustered ${route.km.toFixed(1)} km) × ${OPS.fuelLitresPerKm} L/km.`}
           />
           <Stat
             icon={Wallet}
-            label="Revenue at risk (no deposit)"
+            label="Revenue at risk"
             value={inr(atRisk)}
+            sub={`${pendingDeposits} booking(s) · no deposit`}
             tone="text-destructive"
+            tile="bg-destructive/10"
             formula="Sum of totals for bookings dated today or later whose deposit is not paid yet."
           />
           <Stat
             icon={Droplets}
             label="Water needed today"
             value={`${liters} L`}
+            sub={`${todays.length} job(s) on the schedule`}
             tone="text-electric"
+            tile="bg-electric/10"
             formula={`Per job: Essential ${OPS.litresPerWash.essential} L, Full Detail ${OPS.litresPerWash.detail} L, Signature ${OPS.litresPerWash.signature} L, Daily wash ${OPS.litresPerWash.daily} L.`}
           />
         </div>
@@ -349,36 +469,30 @@ export function OwnerDashboard() {
           >
             {TABS.map((t) => (
               <option key={t.value} value={t.value}>
-                {t.label}
+                {t.label} ({counts[t.value]})
               </option>
             ))}
           </select>
         </div>
-        {/* Desktop: clear tab navigation */}
+        {/* Desktop: clear tab navigation with live counts */}
         <div className="hidden md:block">
-          <TabsList>
-            <TabsTrigger value="route" className="min-h-[44px]">
-              <MapPinned className="mr-1 h-4 w-4" aria-hidden />
-              Route
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="min-h-[44px]">
-              Calendar
-            </TabsTrigger>
-            <TabsTrigger value="subs" className="min-h-[44px]">
-              Subscriptions
-            </TabsTrigger>
-            <TabsTrigger value="waitlist" className="min-h-[44px]">
-              Waitlist
-            </TabsTrigger>
-            <TabsTrigger value="leads" className="min-h-[44px]">
-              Leads
-            </TabsTrigger>
-            <TabsTrigger value="wraps" className="min-h-[44px]">
-              Wrap Approvals
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="min-h-[44px]">
-              Gallery
-            </TabsTrigger>
+          <TabsList className="h-auto flex-wrap gap-1 rounded-2xl p-1.5">
+            {TABS.map((t) => (
+              <TabsTrigger
+                key={t.value}
+                value={t.value}
+                className="group min-h-[44px] gap-1.5 rounded-xl px-3"
+              >
+                <t.icon className="h-4 w-4" aria-hidden />
+                {t.label}
+                <span
+                  aria-label={`${counts[t.value]} items`}
+                  className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground"
+                >
+                  {counts[t.value]}
+                </span>
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
 
@@ -386,23 +500,79 @@ export function OwnerDashboard() {
           <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-muted" />}>
             <RouteMap stops={route.order} route={[STUDIO, ...route.order, STUDIO]} />
           </Suspense>
-          <div className="rounded-2xl bg-card p-4">
-            <p className="font-semibold">Optimised van route · {route.km.toFixed(1)} km</p>
-            <ol className="mt-3 space-y-2 text-sm">
-              <li className="text-muted-foreground">Start: Studio, MG Marg</li>
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)]">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="font-display text-lg font-bold">Van route</p>
+              <p className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+                {route.km.toFixed(1)} km est.
+              </p>
+            </div>
+            <ol className="mt-4 space-y-0">
+              <li className="relative flex gap-3 pb-4">
+                <span
+                  aria-hidden
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-charcoal text-charcoal-foreground"
+                >
+                  <MapPinned className="h-3.5 w-3.5" />
+                </span>
+                <span
+                  aria-hidden
+                  className="absolute left-[13px] top-8 h-[calc(100%-2rem)] w-0.5 bg-border"
+                />
+                <span className="pt-1 text-sm">
+                  <span className="block font-semibold">Start · Studio</span>
+                  <span className="block text-xs text-muted-foreground">MG Marg, Gangtok</span>
+                </span>
+              </li>
               {route.order.map((s, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="font-semibold text-primary">{i + 1}.</span>
-                  {s.label} <span className="text-muted-foreground">· {s.area}</span>
+                <li key={i} className="relative flex gap-3 pb-4">
+                  <span
+                    aria-hidden
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
+                  >
+                    {i + 1}
+                  </span>
+                  {i < route.order.length - 1 && (
+                    <span
+                      aria-hidden
+                      className="absolute left-[13px] top-8 h-[calc(100%-2rem)] w-0.5 bg-border"
+                    />
+                  )}
+                  <span className="min-w-0 pt-0.5 text-sm">
+                    <span className="block font-semibold">{s.label}</span>
+                    <span className="block text-xs text-muted-foreground">{s.area}</span>
+                  </span>
                 </li>
               ))}
               {route.order.length === 0 && (
-                <li className="text-muted-foreground">No van stops today.</li>
+                <li className="pb-4 text-sm text-muted-foreground">
+                  No van stops today — studio jobs only.
+                </li>
               )}
-              <li className="text-muted-foreground">Back to studio</li>
+              <li className="relative flex gap-3">
+                <span
+                  aria-hidden
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                >
+                  <CircleCheck className="h-3.5 w-3.5" />
+                </span>
+                <span className="pt-1 text-sm text-muted-foreground">Back to studio</span>
+              </li>
             </ol>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Clustering saves {(route.naive - route.km).toFixed(1)} km vs separate trips.
+            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-4 text-center">
+              <div className="rounded-xl bg-muted p-2.5">
+                <p className="font-display text-lg font-bold text-primary">
+                  {(route.naive - route.km).toFixed(1)} km
+                </p>
+                <p className="text-[11px] text-muted-foreground">saved by clustering</p>
+              </div>
+              <div className="rounded-xl bg-muted p-2.5">
+                <p className="font-display text-lg font-bold text-electric">{liters} L</p>
+                <p className="text-[11px] text-muted-foreground">water for today&apos;s jobs</p>
+              </div>
+            </div>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Distances are hill-road estimates, not exact odometer readings.
             </p>
           </div>
         </TabsContent>
@@ -479,36 +649,75 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
       setPending((p) => new Set(p).add(k));
   };
 
+  const today = todayIST();
+  const weekLabel = (() => {
+    const f = (d: string, o: Intl.DateTimeFormatOptions) =>
+      new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", { ...o, timeZone: "UTC" });
+    return `${f(days[0]!, { day: "numeric", month: "short" })} – ${f(days[6]!, { day: "numeric", month: "short", year: "numeric" })}`;
+  })();
+
   return (
-    <div className="rounded-2xl bg-card p-4">
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          Drag across slots to block for water shortage. Drag blocked slots to reopen.
-        </p>
+        <div>
+          <p className="font-display text-lg font-bold">{weekLabel}</p>
+          <p className="text-xs text-muted-foreground">
+            Drag across slots to block for water shortage. Drag blocked slots to reopen.
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => setStart(addDays(start, -7))}>
             ← Prev
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={start === today}
+            onClick={() => setStart(today)}
+          >
+            Today
           </Button>
           <Button size="sm" variant="outline" onClick={() => setStart(addDays(start, 7))}>
             Next →
           </Button>
         </div>
       </div>
+      {blockedQ.isError && (
+        <p role="alert" className="mb-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+          Couldn&apos;t load blocked slots.{" "}
+          <button
+            className="min-h-[44px] font-semibold underline"
+            onClick={() => blockedQ.refetch()}
+          >
+            Try again
+          </button>
+        </p>
+      )}
       <div className="overflow-x-auto">
         <div className="grid min-w-[760px] select-none grid-cols-[60px_repeat(7,1fr)] gap-1 text-xs">
           <div />
-          {days.map((d) => (
-            <div key={d} className="text-center font-semibold">
-              {new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", {
-                weekday: "short",
-                day: "numeric",
-                timeZone: "UTC",
-              })}
-            </div>
-          ))}
+          {days.map((d) => {
+            const isToday = d === today;
+            return (
+              <div
+                key={d}
+                className={cn(
+                  "rounded-lg py-1 text-center font-semibold",
+                  isToday && "bg-primary/10 text-primary",
+                )}
+              >
+                {new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", {
+                  weekday: "short",
+                  day: "numeric",
+                  timeZone: "UTC",
+                })}
+                {isToday && <span className="block text-[10px] font-bold uppercase">today</span>}
+              </div>
+            );
+          })}
           {SLOTS.map((t) => (
             <div key={t} className="contents">
-              <div className="py-2 text-muted-foreground">{t}</div>
+              <div className="py-2 font-medium text-muted-foreground">{t}</div>
               {days.map((d) => {
                 const k = `${d} ${t}`;
                 const bs = bookings.filter(
@@ -522,9 +731,16 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
                 const studio = bs.filter((b) => b.location_type === "studio").length;
                 const van = bs.filter((b) => b.location_type === "mobile").length;
                 const isB = effective(k);
+                const summary = isB
+                  ? "blocked for water shortage"
+                  : studio === 0 && van === 0
+                    ? "empty"
+                    : `${studio} of 2 studio bays, van ${van} of 1`;
                 return (
                   <div
                     key={k}
+                    role="img"
+                    aria-label={`${d} ${t}: ${summary}`}
                     onPointerDown={(e) => {
                       e.preventDefault();
                       mode.current = blocked.has(k) ? "unblock" : "block";
@@ -532,25 +748,45 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
                     }}
                     onPointerEnter={() => touch(k)}
                     className={cn(
-                      "min-h-10 cursor-pointer rounded-md p-1",
-                      isB ? "bg-destructive/15 text-destructive" : "bg-muted hover:bg-accent",
+                      "min-h-10 cursor-pointer rounded-md p-1.5 transition",
+                      isB
+                        ? "bg-destructive/15 text-destructive"
+                        : studio >= 2 && van >= 1
+                          ? "bg-primary/15"
+                          : "bg-muted hover:bg-accent",
                     )}
                   >
                     {isB ? (
-                      "💧 blocked"
+                      <span className="flex items-center gap-1 font-semibold">
+                        <Droplets className="h-3.5 w-3.5" aria-hidden /> Blocked
+                      </span>
                     ) : (
-                      <>
-                        <div
-                          className={
-                            studio >= 2 ? "font-semibold text-foreground" : "text-muted-foreground"
-                          }
-                        >
-                          Bays {studio}/2
-                        </div>
-                        <div className={van ? "text-electric" : "text-muted-foreground"}>
-                          Van {van}/1
-                        </div>
-                      </>
+                      <span className="block space-y-1">
+                        <span className="flex items-center gap-1" title="Studio bays">
+                          <span className="flex gap-0.5" aria-hidden>
+                            {[0, 1].map((i) => (
+                              <span
+                                key={i}
+                                className={cn(
+                                  "h-2 w-3 rounded-full",
+                                  i < studio ? "bg-primary" : "bg-border",
+                                )}
+                              />
+                            ))}
+                          </span>
+                          <span className="text-muted-foreground">{studio}/2</span>
+                        </span>
+                        <span className="flex items-center gap-1" title="Mobile van">
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "h-2 w-3 rounded-full",
+                              van >= 1 ? "bg-electric" : "bg-border",
+                            )}
+                          />
+                          <span className="text-muted-foreground">Van {van}/1</span>
+                        </span>
+                      </span>
                     )}
                   </div>
                 );
@@ -558,6 +794,21 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
             </div>
           ))}
         </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span aria-hidden className="flex gap-0.5">
+            <span className="h-2 w-3 rounded-full bg-primary" />
+            <span className="h-2 w-3 rounded-full bg-border" />
+          </span>{" "}
+          Studio bays filled
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span aria-hidden className="h-2 w-3 rounded-full bg-electric" /> Van booked
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Droplets aria-hidden className="h-3.5 w-3.5 text-destructive" /> Blocked (water shortage)
+        </span>
       </div>
     </div>
   );
@@ -604,55 +855,169 @@ function Subscriptions({
       toast.error((e as Error).message);
     }
   }
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "active" | "paused" | "skipped">("all");
+  const visible = subs.filter((s) => {
+    const skipped = s.skip_dates.includes(today);
+    if (filter === "active" && (!s.active || skipped)) return false;
+    if (filter === "paused" && s.active) return false;
+    if (filter === "skipped" && (!s.active || !skipped)) return false;
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return [s.clients?.name, s.clients?.phone, s.clients?.area, s.clients?.building]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(q);
+  });
+  const statusOf = (s: Sub) =>
+    !s.active ? (
+      <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+        Paused
+      </span>
+    ) : s.skip_dates.includes(today) ? (
+      <span className="rounded-full bg-electric/15 px-2.5 py-1 text-xs font-semibold text-electric">
+        Skipped today
+      </span>
+    ) : (
+      <span className="rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary">
+        Active
+      </span>
+    );
   return (
-    <div className="rounded-2xl bg-card p-4">
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="font-semibold">
-          {subs.length} daily wash customers · {active} active
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className="rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground"
-            title="Real count of bookings and generated subscription visits dated this month"
-          >
-            {monthly.toLocaleString("en-IN")} appointments this month
-          </span>
-          <Button size="sm" onClick={runToday} disabled={running}>
-            {running ? "Running…" : "Run today's schedule"}
-          </Button>
+        <div>
+          <p className="font-display text-lg font-bold">Daily wash customers</p>
+          <p className="text-xs text-muted-foreground">
+            {subs.length} total · {active} active · {monthly.toLocaleString("en-IN")} appointments
+            this month
+          </p>
+        </div>
+        <Button size="sm" className="min-h-[44px]" onClick={runToday} disabled={running}>
+          {running ? "Running…" : "Run today's schedule"}
+        </Button>
+      </div>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="relative block sm:max-w-xs sm:flex-1">
+          <span className="sr-only">Search subscriptions</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name, phone, area…"
+            className="block min-h-[44px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+          />
+        </label>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by status">
+          {(["all", "active", "paused", "skipped"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={filter === f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "min-h-[44px] rounded-full px-3.5 text-xs font-semibold transition",
+                filter === f
+                  ? "bg-charcoal text-charcoal-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {f === "all"
+                ? "All"
+                : f === "active"
+                  ? "Active"
+                  : f === "paused"
+                    ? "Paused"
+                    : "Skipped"}
+            </button>
+          ))}
         </div>
       </div>
-      <div className="overflow-x-auto">
+      {visible.length === 0 && (
+        <p className="rounded-xl bg-muted p-6 text-center text-sm text-muted-foreground">
+          No subscriptions match{query.trim() ? ` “${query.trim()}”` : " this filter"}.
+        </p>
+      )}
+      {/* Mobile cards */}
+      <ul className="grid gap-2 md:hidden">
+        {visible.map((s) => {
+          const skipped = s.skip_dates.includes(today);
+          return (
+            <li key={s.id} className="rounded-2xl border border-border p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{s.clients?.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {s.clients?.phone} · {s.clients?.area}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {s.clients?.building}, F{s.clients?.floor} · {s.preferred_time}
+                  </p>
+                </div>
+                {statusOf(s)}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="min-h-[44px] flex-1"
+                  disabled={!s.active}
+                  onClick={() =>
+                    upd(s.id, {
+                      skip_dates: skipped
+                        ? s.skip_dates.filter((d) => d !== today)
+                        : [...s.skip_dates, today],
+                    })
+                  }
+                >
+                  {skipped ? "Unskip" : "Skip today"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={s.active ? "ghost" : "default"}
+                  className="min-h-[44px] flex-1"
+                  onClick={() => upd(s.id, { active: !s.active })}
+                >
+                  {s.active ? "Pause" : "Resume"}
+                </Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {/* Desktop table */}
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[720px] text-sm">
-          <thead className="text-left text-xs text-muted-foreground">
-            <tr>
-              <th className="py-2">Customer</th>
-              <th>Area</th>
-              <th>Building</th>
-              <th>Time</th>
-              <th>Status</th>
-              <th className="text-right">Actions</th>
+          <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-border">
+              <th className="py-2 pr-2 font-semibold">Customer</th>
+              <th className="pr-2 font-semibold">Area</th>
+              <th className="pr-2 font-semibold">Building</th>
+              <th className="pr-2 font-semibold">Time</th>
+              <th className="pr-2 font-semibold">Status</th>
+              <th className="text-right font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {subs.map((s) => {
+            {visible.map((s) => {
               const skipped = s.skip_dates.includes(today);
               return (
-                <tr key={s.id} className="border-t border-border">
-                  <td className="py-2">
+                <tr key={s.id} className="border-b border-border/60 last:border-0">
+                  <td className="py-2.5 pr-2">
                     <p className="font-medium">{s.clients?.name}</p>
                     <p className="text-xs text-muted-foreground">{s.clients?.phone}</p>
                   </td>
-                  <td>{s.clients?.area}</td>
-                  <td className="text-muted-foreground">
+                  <td className="pr-2">{s.clients?.area}</td>
+                  <td className="pr-2 text-muted-foreground">
                     {s.clients?.building}, F{s.clients?.floor}
                   </td>
-                  <td>
+                  <td className="pr-2">
                     <select
                       value={s.preferred_time}
                       onChange={(e) => upd(s.id, { preferred_time: e.target.value })}
-                      className="rounded-md border border-input bg-background px-2 py-1"
-                      aria-label="Change time"
+                      className="min-h-[44px] rounded-lg border border-input bg-background px-2 py-1"
+                      aria-label={`Change time for ${s.clients?.name}`}
                     >
                       {["06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "17:00", "18:00"].map(
                         (t) => (
@@ -661,16 +1026,8 @@ function Subscriptions({
                       )}
                     </select>
                   </td>
-                  <td>
-                    {!s.active ? (
-                      <span className="text-muted-foreground">Paused</span>
-                    ) : skipped ? (
-                      <span className="text-electric">Skipped today</span>
-                    ) : (
-                      <span className="text-primary">Active</span>
-                    )}
-                  </td>
-                  <td className="space-x-1 text-right">
+                  <td className="pr-2">{statusOf(s)}</td>
+                  <td className="space-x-1 whitespace-nowrap text-right">
                     <Button
                       size="sm"
                       variant="outline"
@@ -744,18 +1101,36 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
   }
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const offers = offersQ.data ?? [];
+  const liveOffers = offers.filter((o) => o.status === "offered").length;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-2xl bg-card p-4">
-        <p className="mb-3 font-semibold">Upcoming bookings</p>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="font-display text-lg font-bold">Upcoming bookings</p>
+          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+            {upcoming.length}
+          </span>
+        </div>
         <ul className="divide-y divide-border text-sm">
           {upcoming.map((b) => (
-            <li key={b.id} className="flex items-center justify-between gap-2 py-2">
-              <div>
-                <p className="font-medium">
-                  {b.vehicle_model} · {b.plan}
+            <li key={b.id} className="flex items-center justify-between gap-2 py-2.5">
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-1.5 font-medium">
+                  <span className="truncate">
+                    {b.vehicle_model} · {b.plan}
+                  </span>
+                  {b.deposit_paid ? (
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary">
+                      Deposit paid
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                      Deposit pending
+                    </span>
+                  )}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3 shrink-0" aria-hidden />
                   {b.date} {b.time} · {b.area} · {b.clients?.name}
                 </p>
               </div>
@@ -785,18 +1160,37 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
             </li>
           ))}
           {upcoming.length === 0 && (
-            <li className="py-4 text-muted-foreground">No upcoming bookings.</li>
+            <li className="rounded-xl bg-muted p-6 text-center text-sm text-muted-foreground">
+              No upcoming bookings — new demo bookings appear here.
+            </li>
           )}
         </ul>
       </div>
-      <div className="rounded-2xl bg-card p-4">
-        <p className="mb-3 flex items-center gap-2 font-semibold">
-          <Users className="h-4 w-4" /> Auto-backfill offers
-        </p>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="flex items-center gap-2 font-display text-lg font-bold">
+            <Hourglass className="h-4 w-4 text-electric" aria-hidden /> Auto-backfill offers
+          </p>
+          {liveOffers > 0 && (
+            <span className="rounded-full bg-electric/15 px-2.5 py-1 text-xs font-bold text-electric">
+              {liveOffers} live
+            </span>
+          )}
+        </div>
         {offersQ.isLoading && <p className="text-sm text-muted-foreground">Loading offers…</p>}
-        {offersQ.isError && <p className="text-sm text-destructive">Couldn't load offers.</p>}
+        {offersQ.isError && (
+          <p className="text-sm text-destructive" role="alert">
+            Couldn&apos;t load offers.{" "}
+            <button
+              className="min-h-[44px] font-semibold underline"
+              onClick={() => offersQ.refetch()}
+            >
+              Try again
+            </button>
+          </p>
+        )}
         {!offersQ.isLoading && offers.length === 0 && (
-          <p className="text-sm text-muted-foreground">
+          <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
             Cancel a booking and up to {OPS.offerFanout} waitlisted customers in the same area get a{" "}
             {OPS.offerMinutes}-minute claim link. First to claim wins.
           </p>
@@ -805,21 +1199,27 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
           {offers.map((o) => {
             const expired = o.status === "offered" && new Date(o.expires_at).getTime() < Date.now();
             const st = expired ? "expired" : o.status;
+            const left = o.status === "offered" ? minsLeft(o.expires_at) : null;
             const link = `${origin}/offer/${o.id}`;
             const text = `Hi ${(o.clients?.name ?? "").split(" ")[0]}! A ${o.time} slot on ${o.date} just opened near ${o.area}. First to claim gets it (15 min): ${link} — Rai's Auto Spa`;
             return (
-              <li key={o.id} className="rounded-xl border border-border p-3 text-sm">
+              <li key={o.id} className="rounded-2xl border border-border p-3.5 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium">
+                  <p className="min-w-0 font-medium">
                     {o.clients?.name} · {o.date} {o.time}
+                    {left !== null && left >= 0 && (
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                        Expires in ~{left} min
+                      </span>
+                    )}
                   </p>
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-xs",
+                      "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold",
                       st === "claimed"
                         ? "bg-primary text-primary-foreground"
                         : st === "offered"
-                          ? "bg-accent text-accent-foreground"
+                          ? "bg-electric/15 text-electric"
                           : "bg-muted text-muted-foreground",
                     )}
                   >
@@ -828,14 +1228,14 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
                 </div>
                 {st === "offered" && (
                   <>
-                    <p className="mt-1 text-muted-foreground">{text}</p>
-                    <div className="mt-2 flex gap-2">
-                      <Button asChild size="sm">
+                    <p className="mt-1.5 text-muted-foreground">{text}</p>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      <Button asChild size="sm" className="min-h-[44px]">
                         <a href={wa(o.clients?.phone, text)} target="_blank" rel="noreferrer">
                           <MessageCircle /> WhatsApp
                         </a>
                       </Button>
-                      <Button asChild size="sm" variant="outline">
+                      <Button asChild size="sm" variant="outline" className="min-h-[44px]">
                         <a href={link} target="_blank" rel="noreferrer">
                           Open claim link
                         </a>
@@ -872,39 +1272,58 @@ function Leads({ bookings, onChange }: { bookings: Booking[]; onChange: () => vo
     }
   }
   return (
-    <div className="rounded-2xl bg-card p-4">
-      <p className="mb-3 flex items-center gap-2 font-semibold">
-        <Inbox className="h-4 w-4" /> Abandoned photo uploads ({leads.length})
-      </p>
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 font-display text-lg font-bold">
+          <Inbox className="h-4 w-4 text-primary" aria-hidden /> Abandoned photo uploads
+        </p>
+        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+          {leads.length}
+        </span>
+      </div>
       {leads.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No abandoned uploads yet — they appear here when someone snaps a car but doesn't pay.
+        <p className="rounded-xl bg-muted p-6 text-center text-sm text-muted-foreground">
+          No abandoned uploads yet — they appear here when someone snaps a car but doesn&apos;t pay.
         </p>
       )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {leads.map((l) => (
-          <div key={l.id} className="overflow-hidden rounded-xl border border-border">
-            {l.photo_url && signed.data?.[l.photo_url] ? (
-              <img
-                loading="lazy"
-                decoding="async"
-                src={signed.data[l.photo_url]}
-                alt={l.vehicle_model ?? ""}
-                className="aspect-[4/3] w-full object-cover"
-              />
-            ) : (
-              <div className="aspect-[4/3] bg-muted" />
-            )}
-            <div className="p-3">
-              <p className="font-medium">
+          <div
+            key={l.id}
+            className="overflow-hidden rounded-2xl border border-border transition-shadow hover:shadow-[var(--shadow-soft)]"
+          >
+            <div className="relative">
+              {l.photo_url && signed.data?.[l.photo_url] ? (
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  src={signed.data[l.photo_url]}
+                  alt={l.vehicle_model ?? ""}
+                  className="aspect-[4/3] w-full object-cover"
+                />
+              ) : (
+                <div className="aspect-[4/3] bg-muted" />
+              )}
+              <span
+                className={cn(
+                  "absolute left-2 top-2 rounded-full px-2.5 py-1 text-[11px] font-bold",
+                  l.status === "link_sent"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-charcoal/85 text-charcoal-foreground backdrop-blur",
+                )}
+              >
+                {l.status === "link_sent" ? "Link sent" : "New lead"}
+              </span>
+            </div>
+            <div className="p-3.5">
+              <p className="font-semibold">
                 {l.vehicle_model} · viewed {l.plan}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(l.created_at).toLocaleString("en-IN")}
-                {l.status === "link_sent" && " · link sent"}
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Snapped {timeAgo(l.created_at)}
               </p>
-              <Button size="sm" className="mt-2 w-full" onClick={() => send(l)}>
-                Send Payment Link
+              <Button size="sm" className="mt-2.5 min-h-[44px] w-full" onClick={() => send(l)}>
+                <MessageCircle /> Send payment link
               </Button>
             </div>
           </div>
@@ -932,46 +1351,96 @@ function Wraps({ bookings, onChange }: { bookings: Booking[]; onChange: () => vo
     onChange();
   }
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {wraps.map((w) => {
-        const before = w.photo_url ? signed.data?.[w.photo_url] : undefined;
-        const after = w.clean_preview_url ? signed.data?.[w.clean_preview_url] : undefined;
-        return (
-          <div key={w.id} className="rounded-2xl bg-charcoal p-4 text-charcoal-foreground">
-            {before && after ? (
-              <BeforeAfter before={before} after={after} afterLabel="AI design" />
-            ) : (
-              <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-charcoal-foreground/10 text-sm opacity-70">
-                <Palette className="mr-2 h-4 w-4" /> Consultation booked — design at studio
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 font-display text-lg font-bold">
+          <Palette className="h-4 w-4 text-electric" aria-hidden /> Signature designs
+        </p>
+        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+          {wraps.length} awaiting review
+        </span>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {wraps.map((w) => {
+          const before = w.photo_url ? signed.data?.[w.photo_url] : undefined;
+          const after = w.clean_preview_url ? signed.data?.[w.clean_preview_url] : undefined;
+          const approval =
+            w.approval_status === "approved"
+              ? "bg-primary text-primary-foreground"
+              : w.approval_status === "changes_requested"
+                ? "bg-amber-400/25 text-amber-200"
+                : "bg-electric text-electric-foreground";
+          return (
+            <div
+              key={w.id}
+              className="overflow-hidden rounded-3xl bg-charcoal text-charcoal-foreground shadow-[var(--shadow-soft)]"
+            >
+              <div className="p-4 pb-0">
+                {before && after ? (
+                  <BeforeAfter before={before} after={after} afterLabel="AI design" />
+                ) : (
+                  <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-charcoal-foreground/10 text-sm opacity-70">
+                    <Palette className="mr-2 h-4 w-4" aria-hidden /> Consultation booked — design at
+                    studio
+                  </div>
+                )}
               </div>
-            )}
-            <p className="mt-3 font-semibold">
-              {w.clients?.name} · {w.vehicle_model}
-            </p>
-            <p className="text-sm opacity-80">
-              {w.colour} · {w.style} · {w.date} {w.time}
-            </p>
-            <p className="mt-1 text-xs uppercase tracking-wider text-electric">
-              {w.approval_status?.replace("_", " ")}
-            </p>
-            <div className="mt-3 flex gap-2">
-              <Button
-                size="sm"
-                className="bg-electric text-electric-foreground hover:bg-electric/90"
-                onClick={() => set(w, "approved")}
-              >
-                Approve
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => set(w, "changes_requested")}>
-                Request Change
-              </Button>
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">
+                      {w.clients?.name} · {w.vehicle_model}
+                    </p>
+                    <p className="mt-0.5 text-xs text-charcoal-foreground/70">
+                      {w.date} {w.time} · {timeAgo(w.created_at)}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+                      approval,
+                    )}
+                  >
+                    {w.approval_status?.replace("_", " ")}
+                  </span>
+                </div>
+                <p className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                  {[w.colour, w.style].filter(Boolean).map((chip) => (
+                    <span
+                      key={chip}
+                      className="rounded-full bg-charcoal-foreground/10 px-2.5 py-1 font-medium"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    className="min-h-[44px] bg-electric text-electric-foreground hover:bg-electric/90"
+                    onClick={() => set(w, "approved")}
+                  >
+                    <CircleCheck /> Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="min-h-[44px]"
+                    onClick={() => set(w, "changes_requested")}
+                  >
+                    Request change
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-        );
-      })}
-      {wraps.length === 0 && (
-        <p className="text-sm text-muted-foreground">No wrap consultations.</p>
-      )}
+          );
+        })}
+        {wraps.length === 0 && (
+          <p className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            No wrap consultations — Signature bookings awaiting approval appear here.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -981,45 +1450,65 @@ function Gallery({ bookings }: { bookings: Booking[] }) {
   const signed = useSigned(items.flatMap((i) => [i.photo_url, i.clean_preview_url, i.video_url]));
   if (items.length === 0)
     return (
-      <p className="flex items-center gap-2 rounded-2xl bg-card p-6 text-sm text-muted-foreground">
-        <ImageIcon className="h-4 w-4" /> Before/afters and reveal videos appear here after
-        customers preview their cars.
+      <p className="flex items-center gap-2 rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        <ImageIcon className="h-4 w-4 shrink-0" aria-hidden /> Before/afters and reveal videos
+        appear here after customers preview their cars.
       </p>
     );
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {items.map((i) => {
-        const s = signed.data ?? {};
-        return (
-          <div key={i.id} className="rounded-2xl bg-card p-3">
-            {s[i.photo_url!] && s[i.clean_preview_url!] ? (
-              <BeforeAfter
-                before={s[i.photo_url!]!}
-                after={s[i.clean_preview_url!]!}
-                afterLabel={i.plan}
-              />
-            ) : (
-              <div className="aspect-[4/3] animate-pulse rounded-2xl bg-muted" />
-            )}
-            {i.video_url && s[i.video_url] && (
-              <video
-                src={s[i.video_url]}
-                controls
-                muted
-                playsInline
-                className="mt-2 w-full rounded-xl"
-              />
-            )}
-            <p className="mt-2 text-sm font-medium">
-              {i.vehicle_model} · {i.plan}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {i.clients?.name ?? "Lead"} {i.video_url ? "· video sent" : ""}
-            </p>
-          </div>
-        );
-      })}
-      <AlertTriangle className="hidden" />
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 font-display text-lg font-bold">
+          <Images className="h-4 w-4 text-primary" aria-hidden /> Transformation gallery
+        </p>
+        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+          {items.length}
+        </span>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {items.map((i) => {
+          const s = signed.data ?? {};
+          return (
+            <div
+              key={i.id}
+              className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)]"
+            >
+              <div className="p-3 pb-0">
+                {s[i.photo_url!] && s[i.clean_preview_url!] ? (
+                  <BeforeAfter
+                    before={s[i.photo_url!]!}
+                    after={s[i.clean_preview_url!]!}
+                    afterLabel={i.plan}
+                  />
+                ) : (
+                  <div className="aspect-[4/3] animate-pulse rounded-2xl bg-muted" />
+                )}
+              </div>
+              <div className="p-3.5">
+                {i.video_url && s[i.video_url] && (
+                  <video
+                    src={s[i.video_url]}
+                    controls
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="mb-2.5 w-full rounded-xl"
+                    aria-label={`Reveal video for ${i.vehicle_model}`}
+                  />
+                )}
+                <p className="text-sm font-semibold">
+                  {i.vehicle_model} · {i.plan}
+                </p>
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                  {i.clients?.name ?? "Lead"} · {timeAgo(i.created_at)}
+                  {i.video_url ? " · video ready" : ""}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

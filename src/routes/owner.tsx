@@ -54,17 +54,37 @@ function OwnerPage() {
       setBusy(false);
     }
   }
+  const dateLabel = new Date().toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "Asia/Kolkata",
+  });
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          <Link to="/" className="flex items-center gap-2 font-display font-bold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Droplets className="h-4 w-4" />
-            </span>
-            Rai's Auto Spa · Owner
-          </Link>
-          <div className="flex items-center gap-2">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link to="/" className="flex items-center gap-2 font-display font-bold">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Droplets className="h-4 w-4" />
+              </span>
+              <span className="truncate">
+                Rai&apos;s Auto Spa{" "}
+                <span className="font-sans font-medium text-muted-foreground">· Owner</span>
+              </span>
+            </Link>
+            <span className="hidden text-xs text-muted-foreground lg:inline">{dateLabel}</span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="hidden min-h-[44px] sm:inline-flex"
+            >
+              <Link to="/">← Booking site</Link>
+            </Button>
             <span
               title="Open guest sandbox — anyone can try it, and the data can be reset any time."
               className="cursor-help rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground"
