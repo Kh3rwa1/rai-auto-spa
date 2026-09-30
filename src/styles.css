@@ -53,6 +53,7 @@
   --color-chart-5: var(--chart-5);
   --color-charcoal: var(--charcoal);
   --color-charcoal-foreground: var(--charcoal-foreground);
+  --color-teal: var(--teal);
   --color-electric: var(--electric);
   --color-electric-foreground: var(--electric-foreground);
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -78,12 +79,12 @@
   --card-foreground: oklch(0.21 0.034 264.665);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.21 0.034 264.665);
-  --primary: oklch(0.6 0.118 184.704);
+  --primary: oklch(0.52 0.1 185); /* brand teal, deepened to meet WCAG AA with white text */
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.967 0.003 264.542);
   --secondary-foreground: oklch(0.21 0.034 264.665);
   --muted: oklch(0.967 0.003 264.542);
-  --muted-foreground: oklch(0.551 0.027 264.364);
+  --muted-foreground: oklch(0.5 0.027 264.364);
   --accent: oklch(0.953 0.051 180.801);
   --accent-foreground: oklch(0.386 0.063 188.416);
   --destructive: oklch(0.577 0.245 27.325);
@@ -93,6 +94,7 @@
   --ring: oklch(0.6 0.118 184.704);
   --charcoal: oklch(0.21 0.034 264.665);
   --charcoal-foreground: oklch(0.985 0 0);
+  --teal: oklch(0.72 0.12 183); /* bright brand teal for text on charcoal */
   --electric: oklch(0.546 0.245 262.881);
   --electric-foreground: oklch(1 0 0);
   --chart-1: oklch(0.6 0.118 184.704);

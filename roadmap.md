@@ -10,4 +10,4 @@
 - [x] Phase 7: BookingFlow split, eslint clean
 - [ ] Phase 7 follow-up: split OwnerDashboard.tsx (867) and booking.functions.ts (618) under 300 lines
 - [x] Phase 8: 27 vitest tests + Playwright smoke (tests/e2e/smoke.py)
-- [ ] Phase 9: a11y, performance, OG/favicon, README
+- [x] Phase 9: a11y, performance, favicon/OG, README
