@@ -19,7 +19,7 @@ export const Route = createFileRoute("/offer/$id")({
   component: OfferPage,
 });
 
-const MSG: Record<string, string> = {
+const MSG = {
   ok: "It's yours! Rai will see you then. 🎉",
   claimed: "You've already claimed this slot. See you soon!",
   taken: "Sorry — someone else grabbed this slot first.",
@@ -62,7 +62,7 @@ function OfferPage() {
             {" · "}{o.locationType === "mobile" ? `Rai's van comes to you in ${o.area}` : "MG Marg studio"}
           </p>
           {status ? (
-            <p role="status" className="mt-5 rounded-xl bg-accent p-3 font-medium text-accent-foreground">{MSG[status] ?? MSG.error}</p>
+            <p role="status" className="mt-5 rounded-xl bg-accent p-3 font-medium text-accent-foreground">{(MSG as Record<string, string>)[status] ?? MSG.error}</p>
           ) : (
             <>
               <Button className="mt-5 w-full" size="lg" disabled={busy} onClick={onClaim}>{busy ? "Claiming…" : "Claim this slot"}</Button>
