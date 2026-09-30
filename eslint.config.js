@@ -6,7 +6,9 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi", "src/integrations/supabase/**", "src/routeTree.gen.ts"] },
+  {
+    ignores: ["dist", ".output", ".vinxi", "src/integrations/supabase/**", "src/routeTree.gen.ts"],
+  },
   {
     // Scaffolded email registry takes arbitrary per-template props.
     files: ["src/lib/email-templates/**"],
