@@ -94,7 +94,11 @@ export function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange
                   <Clock className="h-3 w-3 shrink-0" aria-hidden />
                   {b.date} {b.time} · {b.area} · {b.clients?.name}
                 </p>
+                {(b.deposit_paid || b.call_status) && (
+                  <CallBadge booking={b} className="mt-1.5" />
+                )}
               </div>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button size="sm" variant="outline" disabled={busy === b.id}>
