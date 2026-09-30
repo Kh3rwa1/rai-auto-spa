@@ -21,7 +21,8 @@ export const SLOT_ERRORS: Record<string, string> = {
   past_date: "That slot is already in the past. Please pick a later one.",
   dry_window: "Water needed — pick a morning slot or provide water.",
   blocked: "Rai has blocked that slot (water shortage). Please pick another.",
-  full: "SLOT_FULL: That slot just filled up — your photo and plan are saved, please pick another time.",
+  // Short on purpose: the UI adds "your photo, plan and details are kept" itself.
+  full: "SLOT_FULL: That slot just filled up.",
   not_found: "Booking not found.",
 };
 
