@@ -173,6 +173,14 @@ export function BookingFlow() {
     if (p !== "signature") runPreview(p);
   }
 
+  // Signature: generate in background whenever colour/style settle
+  useEffect((): (() => void) | void => {
+    if (plan !== "signature" || !booking) return;
+    const t = setTimeout(() => runPreview("signature", colour, style), 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, colour, style, booking]);
+
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const today = todayIST();
 
@@ -363,36 +371,17 @@ export function BookingFlow() {
                   ))}
                 </div>
               </div>
-              <Button className="bg-electric text-electric-foreground hover:bg-electric/90" onClick={() => runPreview("signature", colour, style)} disabled={!!previewing}>
-                <Sparkles /> Generate my design
-              </Button>
+              <p className="flex items-center gap-2 text-sm text-charcoal-foreground/80">
+                <Sparkles className="h-4 w-4 text-electric" /> Your design is being made in the background — see it in step 4.
+              </p>
             </div>
           )}
 
-          {plan && (
-            <div className="mt-6">
-              {previewUrl && localPhoto ? (
-                <BeforeAfter before={localPhoto} after={previewUrl} afterLabel={`After Rai's ${PLANS[plan].name}`} />
-              ) : previewing === key ? (
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
-                  {localPhoto && <img src={localPhoto} alt="" className="h-full w-full object-cover blur-md scale-105" />}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-charcoal/40 text-charcoal-foreground">
-                    <Droplets className="h-10 w-10 animate-bounce" />
-                    <p className="font-display text-xl font-semibold">Rai is shining your car…</p>
-                    <p className="text-sm opacity-80">About 20–40 seconds</p>
-                  </div>
-                </div>
-              ) : previewError ? (
-                <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-sm">
-                  <p className="font-medium text-destructive">{previewError}</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => runPreview(plan, colour, style)}>Try again</Button>
-                </div>
-              ) : !booking ? (
-                <p className="rounded-2xl bg-muted p-5 text-sm text-muted-foreground">Snap your car in step 1 to see the AI preview. You can still book without it.</p>
-              ) : plan === "signature" ? (
-                <p className="rounded-2xl bg-muted p-5 text-sm text-muted-foreground">Choose a colour and style, then tap "Generate my design".</p>
-              ) : null}
-            </div>
+          {plan && booking && (
+            <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              {previewUrl ? <Check className="h-4 w-4 text-primary" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+              {previewUrl ? "Preview ready — scroll down to see it." : "Rai is preparing your preview while you pick a time…"}
+            </p>
           )}
         </Step>
       </div>
@@ -516,8 +505,35 @@ export function BookingFlow() {
         )}
       </Step>
 
-      {/* STEP 4 */}
-      <Step n={4} title="Pay & confirm">
+      {/* STEP 4 — PREVIEW (generated in the background since step 2) */}
+      <Step n={4} title="Your car, after Rai" done={!!previewUrl}>
+        {!plan ? (
+          <p className="rounded-2xl bg-muted p-5 text-sm text-muted-foreground">Pick a plan in step 2 — your preview gets ready while you choose a time.</p>
+        ) : previewUrl && localPhoto ? (
+          <BeforeAfter before={localPhoto} after={previewUrl} afterLabel={`After Rai's ${PLANS[plan].name}`} />
+        ) : previewing === key ? (
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
+            {localPhoto && <img src={localPhoto} alt="" className="h-full w-full scale-105 object-cover blur-md" />}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-charcoal/40 text-charcoal-foreground">
+              <Droplets className="h-10 w-10 animate-bounce" />
+              <p className="font-display text-xl font-semibold">Rai is shining your car…</p>
+              <p className="text-sm opacity-80">Almost there — you can keep filling in your details</p>
+            </div>
+          </div>
+        ) : previewError ? (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-sm">
+            <p className="font-medium text-destructive">{previewError}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => runPreview(plan, colour, style)}>Try again</Button>
+          </div>
+        ) : !booking ? (
+          <p className="rounded-2xl bg-muted p-5 text-sm text-muted-foreground">Snap your car in step 1 to see the AI preview. You can still book without it.</p>
+        ) : (
+          <Button variant="outline" onClick={() => runPreview(plan, colour, style)}><Sparkles /> Show my preview</Button>
+        )}
+      </Step>
+
+      {/* STEP 5 */}
+      <Step n={5} title="Pay & confirm">
         <div className="grid gap-3 sm:grid-cols-3">
           <div><Label htmlFor="nm">Your name</Label><Input id="nm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Pema Bhutia" /></div>
           <div><Label htmlFor="ph">WhatsApp number</Label><Input id="ph" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98320 12345" /></div>
