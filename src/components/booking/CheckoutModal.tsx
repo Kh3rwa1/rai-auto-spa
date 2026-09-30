@@ -70,6 +70,7 @@ export function CheckoutModal({
             name: draft.name,
             phone: draft.phone,
             country: draft.country,
+            notes: draft.notes,
             email: draft.email,
             mobile: draft.mobile,
             pin: draft.mobile ? draft.pin : null,
