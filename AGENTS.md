@@ -14,5 +14,4 @@
 - Booking wizard state lives in `useBookingDraft` (reducer) with one component per step under src/components/booking/ — keeps each step small and testable.
 - Pure booking rules (pay gate, slot availability, dates) live in src/lib/booking-rules.ts — shared by UI, owner dashboard and unit tests.
 - Brand/sender identity and the GitHub link live only in src/lib/brand.ts — one place to rebrand.
-- Voice booking (Deepgram): hero mascot taps fire `rai-voice:start`; the loop mic→STT→LLM intent→TTS lives in src/components/voice/, endpoints under src/routes/api/voice/ proxy Deepgram + the AI gateway server-side. Requires the `DEEPGRAM_API_KEY` secret.
 - Tests: `bun run test` (vitest; book_slot integration runs against the live backend with far-future dates and cleans up), `bun run test:e2e` (Playwright sample-car smoke).

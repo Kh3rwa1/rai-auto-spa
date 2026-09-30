@@ -9,13 +9,11 @@ import {
   MapPin,
   ShieldCheck,
   MessageCircle,
-  Mic,
   Zap,
 } from "lucide-react";
 import { BookingFlow } from "@/components/BookingFlow";
 import { QuickBook } from "@/components/QuickBook";
 import { PLANS, inr } from "@/lib/plans";
-import { VOICE_PHOTO_FLOW_EVENT, requestVoiceStart } from "@/lib/voice";
 import heroImg from "@/assets/hero.jpg";
 
 /* ───────── config ───────── */
@@ -444,24 +442,7 @@ function Hero() {
           >
             ✦
           </span>
-          <button
-            type="button"
-            onClick={() => {
-              // Voice booking drives the photo wizard — switch to it, then start the session.
-              window.dispatchEvent(new CustomEvent(VOICE_PHOTO_FLOW_EVENT));
-              requestVoiceStart();
-              document
-                .getElementById("book")
-                ?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-            aria-label="Talk to Rai — book your wash by voice"
-            className="group relative flex flex-col items-center transition focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-[#111]"
-          >
-            <Mascot />
-            <span className="ras-btn ras-white mt-1 inline-flex items-center gap-2 text-sm">
-              <Mic className="h-4 w-4" aria-hidden /> Tap to book by voice
-            </span>
-          </button>
+          <Mascot />
         </div>
       </div>
     </section>
@@ -650,12 +631,6 @@ function GlowUp() {
 
 function Booking() {
   const [photoFlow, setPhotoFlow] = useState(false);
-  // Mascot tap → voice booking drives the photo wizard, so switch to it.
-  useEffect(() => {
-    const toPhoto = () => setPhotoFlow(true);
-    window.addEventListener(VOICE_PHOTO_FLOW_EVENT, toPhoto);
-    return () => window.removeEventListener(VOICE_PHOTO_FLOW_EVENT, toPhoto);
-  }, []);
   const switchTo = (v: boolean) => {
     setPhotoFlow(v);
     requestAnimationFrame(() =>
