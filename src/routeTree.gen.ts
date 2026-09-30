@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as OwnerRouteImport } from './routes/owner'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as OfferIdRouteImport } from './routes/offer.$id'
 import { Route as PayBookingIdRouteImport } from './routes/pay.$bookingId'
 import { Route as ApiPublicInitiateSarvamCallRouteImport } from './routes/api/public/initiate-sarvam-call'
@@ -23,11 +25,22 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OwnerRoute = OwnerRouteImport.update({
   id: '/owner',
   path: '/owner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const OfferIdRoute = OfferIdRouteImport.update({
   id: '/offer/$id',
   path: '/offer/$id',
@@ -64,7 +77,9 @@ const LovableEmailTransactionalPreviewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/mcp': typeof McpRoute
   '/owner': typeof OwnerRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
@@ -74,7 +89,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/mcp': typeof McpRoute
   '/owner': typeof OwnerRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
@@ -85,7 +102,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/mcp': typeof McpRoute
   '/owner': typeof OwnerRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
@@ -97,7 +116,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/mcp'
     | '/owner'
+    | '/.well-known/oauth-protected-resource'
     | '/offer/$id'
     | '/pay/$bookingId'
     | '/api/public/initiate-sarvam-call'
@@ -107,7 +128,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/mcp'
     | '/owner'
+    | '/.well-known/oauth-protected-resource'
     | '/offer/$id'
     | '/pay/$bookingId'
     | '/api/public/initiate-sarvam-call'
@@ -117,7 +140,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/mcp'
     | '/owner'
+    | '/.well-known/oauth-protected-resource'
     | '/offer/$id'
     | '/pay/$bookingId'
     | '/api/public/initiate-sarvam-call'
@@ -128,7 +153,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  McpRoute: typeof McpRoute
   OwnerRoute: typeof OwnerRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   OfferIdRoute: typeof OfferIdRoute
   PayBookingIdRoute: typeof PayBookingIdRoute
   ApiPublicInitiateSarvamCallRoute: typeof ApiPublicInitiateSarvamCallRoute
@@ -146,11 +173,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/owner': {
       id: '/owner'
       path: '/owner'
       fullPath: '/owner'
       preLoaderRoute: typeof OwnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/offer/$id': {
@@ -200,7 +241,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  McpRoute: McpRoute,
   OwnerRoute: OwnerRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   OfferIdRoute: OfferIdRoute,
   PayBookingIdRoute: PayBookingIdRoute,
   ApiPublicInitiateSarvamCallRoute: ApiPublicInitiateSarvamCallRoute,

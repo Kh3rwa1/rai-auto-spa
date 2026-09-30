@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.4",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "rai-s-auto-studio",
+      "version": "0.1.0",
+      "title": "Rai's Auto Studio"
+    },
+    "tools": [
+      {
+        "name": "list_plans",
+        "title": "List plans and prices",
+        "description": "List Rai's Auto Spa service plans with prices (INR), duration, features and add-on fees.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_time_slots",
+        "title": "List daily time slots",
+        "description": "List the daily booking time slots (IST) and which are prime-time or dry-window slots.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

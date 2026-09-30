@@ -7,6 +7,7 @@
 import path from "node:path";
 import { loadEnv } from "vite";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 
 // Load all env vars into process.env for server-side code (server routes and
 // server functions). VITE_* client injection stays handled by the wrapper.
@@ -20,6 +21,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    plugins: [mcpPlugin()],
     // react-phone-input-2 is CommonJS; pre-bundling it up front stops Vite from
     // re-optimizing mid-session, which would load a second copy of React.
     optimizeDeps: { include: ["react-phone-input-2"] },
