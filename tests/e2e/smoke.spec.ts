@@ -117,7 +117,7 @@ test("sample car books end to end with preview on the payment screen", async ({ 
   // Step 2 — plan (selecting must not auto-advance; Continue does).
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await expect(page.locator("#step-2-body")).toBeVisible();
   await page
@@ -170,7 +170,7 @@ test("signature keeps colour/style visible and forces studio-only", async ({ pag
   // Selecting Signature must NOT advance away from its customisation controls.
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Signature Super Design/ })
+    .getByRole("radio", { name: /Signature Super Design/ })
     .click();
   await expect(page.locator("#step-2-body")).toBeVisible();
   await expect(page.locator("#step-3-body")).toBeHidden();
@@ -206,7 +206,7 @@ test("mobile layout gates the van on a map pin before Details", async ({ page })
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")
@@ -260,7 +260,7 @@ test("simulated payment failure keeps progress and retry succeeds", async ({ pag
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")
@@ -293,7 +293,7 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")
@@ -312,7 +312,7 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
   await expect(page.locator("#step-2-body")).toBeVisible();
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Full Detail/ })
+    .getByRole("radio", { name: /Full Detail/ })
     .click();
   await expect(page.getByLabel("Email (for your reveal video)")).toHaveValue("demo@example.com");
 });
@@ -355,7 +355,7 @@ test("idle checkout dialog traps focus and Escape cancels", async ({ page }) => 
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")
