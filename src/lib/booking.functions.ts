@@ -476,7 +476,7 @@ export const simulatePayment = createServerFn({ method: "POST" })
           .eq("id", b.id);
       }
     }
-    return { ok: true, status: "success" as const };
+    return { ok: true, status: "success" as const, message: null };
   });
 
 /** Owner: build a deep link that reopens a lead's booking at the slot step. */
