@@ -47,7 +47,7 @@ const formatTime = (value?: string) => {
 const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>{`See how Rai will transform your ${vehicle ?? 'car'} on ${formatDate(date)}`}</Preview>
+    <Preview>{location?.includes('van') ? `Rai is coming to transform your ${vehicle ?? 'car'}` : `See how Rai will transform your ${vehicle ?? 'car'}`}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={brandBlock}>
@@ -55,7 +55,11 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) =
           <Text style={place}>MG MARG · GANGTOK</Text>
         </Section>
 
-        <Heading style={h1}>Rai is coming to transform your {vehicle ?? 'car'}.</Heading>
+        <Heading style={h1}>
+          {location?.includes('van')
+            ? `Rai is coming to transform your ${vehicle ?? 'car'}.`
+            : `Here’s what Rai has planned for your ${vehicle ?? 'car'}.`}
+        </Heading>
         <Text style={text}>
           Hi{name ? ` ${name}` : ''}, here&apos;s a first look at the transformation Rai has planned for your car.
         </Text>
@@ -83,7 +87,9 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) =
 
 export const template = {
   component: Email,
-  subject: (d: Record<string, any>) => `Rai is coming to transform your ${d['vehicle'] ?? 'car'} — ${formatDate(d['date'])}`,
+  subject: (d: Record<string, any>) => d['location']?.includes('van')
+    ? `Rai is coming to transform your ${d['vehicle'] ?? 'car'} — ${formatDate(d['date'])}`
+    : `Your ${d['vehicle'] ?? 'car'} transformation at Rai's — ${formatDate(d['date'])}`,
   displayName: 'Reveal video ready',
   previewData: {
     name: 'Pema',
