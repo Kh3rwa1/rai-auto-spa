@@ -320,6 +320,11 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
     .locator("#step-2-body")
     .getByRole("radio", { name: /Full Detail/ })
     .click();
+  // Reopen Details: the contact fields only render while that step is open.
+  await page
+    .getByRole("navigation", { name: "Booking progress" })
+    .getByRole("button", { name: /Details/ })
+    .click();
   await expect(page.getByLabel("Email (for your reveal video)")).toHaveValue("demo@example.com");
 });
 
