@@ -59,6 +59,12 @@ async function pickStudioSlot(page: import("@playwright/test").Page) {
       { timeout: 60_000, intervals: [1500] },
     )
     .toBe(true);
+  // Step 4 is the reveal; Continue opens the contact + payment step.
+  await page
+    .locator("#step-4-body")
+    .getByRole("button", { name: /Continue to your details/ })
+    .click();
+  await expect(page.locator("#step-5-body")).toBeVisible({ timeout: 30_000 });
 }
 
 test("landing is compact and leads straight to booking", async ({ page }) => {
@@ -89,22 +95,22 @@ test("resizing between mobile and desktop keeps data and the active step", async
   // Jump straight to Details via the progress bar (no backend needed).
   await page
     .getByRole("navigation", { name: "Booking progress" })
-    .getByRole("button", { name: /Details/ })
+    .getByRole("button", { name: /Pay/ })
     .click();
-  await expect(page.locator("#step-4-body")).toBeVisible();
+  await expect(page.locator("#step-5-body")).toBeVisible();
   await page.getByLabel("Your name").fill("Resize Proof");
   // Desktop shows the persistent summary sidebar.
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeVisible();
 
   // Shrink to mobile: same step, same typed value, sidebar hides via CSS only.
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator("#step-4-body")).toBeVisible();
+  await expect(page.locator("#step-5-body")).toBeVisible();
   await expect(page.getByLabel("Your name")).toHaveValue("Resize Proof");
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeHidden();
 
   // Grow back to desktop: everything preserved, sidebar returns with the data.
   await page.setViewportSize({ width: 1280, height: 900 });
-  await expect(page.locator("#step-4-body")).toBeVisible();
+  await expect(page.locator("#step-5-body")).toBeVisible();
   await expect(page.getByLabel("Your name")).toHaveValue("Resize Proof");
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toContainText(
@@ -132,16 +138,11 @@ test("sample car books end to end with preview on the payment screen", async ({ 
   // Step 3 — studio slot straight to Details (step 4 holds payment + preview).
   await pickStudioSlot(page);
 
-  // Step 4 — preview lives on the payment screen; details + demo payment.
-  await expect(
-    page.locator("#step-4-body").getByText("Your AI preview", { exact: true }),
-  ).toBeVisible({
-    timeout: 30_000,
-  });
-  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
+  // Step 5 — contact details + demo payment (the reveal lives in step 4).
+  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
   await expect(page.getByLabel("Email (for your reveal video)")).toHaveValue("demo@example.com");
   await page
-    .locator("#step-4-body")
+    .locator("#step-5-body")
     .getByRole("button", { name: /Simulate.*deposit/ })
     .click();
 
@@ -263,6 +264,12 @@ test("mobile layout gates the van on a map pin before Details", async ({ page })
       { timeout: 60_000, intervals: [1500] },
     )
     .toBe(true);
+  // Step 4 is the reveal; Continue opens the contact + payment step.
+  await page
+    .locator("#step-4-body")
+    .getByRole("button", { name: /Continue to your details/ })
+    .click();
+  await expect(page.locator("#step-5-body")).toBeVisible({ timeout: 30_000 });
 });
 
 test("simulated payment failure keeps progress and retry succeeds", async ({ page }) => {
@@ -277,9 +284,9 @@ test("simulated payment failure keeps progress and retry succeeds", async ({ pag
     .click();
   await pickStudioSlot(page);
 
-  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
+  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
   await page
-    .locator("#step-4-body")
+    .locator("#step-5-body")
     .getByRole("button", { name: /Simulate.*deposit/ })
     .click();
 
@@ -309,7 +316,7 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
     .getByRole("button", { name: /Continue to location/ })
     .click();
   await pickStudioSlot(page);
-  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
+  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
 
   // Jump back to Plan via the progress bar: contact details must survive.
   await page
@@ -326,7 +333,7 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
   // Reopen Details: the contact fields only render while that step is open.
   await page
     .getByRole("navigation", { name: "Booking progress" })
-    .getByRole("button", { name: /Details/ })
+    .getByRole("button", { name: /Pay/ })
     .click();
   await expect(page.getByLabel("Email (for your reveal video)")).toHaveValue("demo@example.com");
 });
@@ -376,9 +383,9 @@ test("idle checkout dialog traps focus and Escape cancels", async ({ page }) => 
     .getByRole("button", { name: /Continue to location/ })
     .click();
   await pickStudioSlot(page);
-  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
+  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
   await page
-    .locator("#step-4-body")
+    .locator("#step-5-body")
     .getByRole("button", { name: /Simulate.*deposit/ })
     .click();
 

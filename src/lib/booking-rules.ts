@@ -19,13 +19,13 @@ export const nowISTHour = () =>
     10,
   );
 
-export const PHONE_RE = /^[+\d][\d\s-]{8,15}$/;
+export const PHONE_RE = /^\+[1-9]\d{7,14}$/;
 export const EMAIL_RE = /\S+@\S+\.\S+/;
 
 /** Clearly fictional demo contact — never a real recipient. */
 export const DEMO_CONTACT = {
   name: "Demo Judge",
-  phone: "+91 90000 00000",
+  phone: "+14155552671",
   email: "demo@example.com",
 } as const;
 
@@ -79,7 +79,7 @@ export function missingForPay(d: PayInputs): string[] {
     !d.hasSlot && "pick a slot",
     d.mobile && !d.hasPin && "drop a map pin",
     d.name.trim().length < 2 && "add your name",
-    !PHONE_RE.test(d.phone.trim()) && "add WhatsApp number",
+    !PHONE_RE.test(d.phone.trim()) && "add a valid phone number",
     !EMAIL_RE.test(d.email) && "add email",
   ].filter((x): x is string => !!x);
 }

@@ -42,12 +42,17 @@ export type Database = {
         Row: {
           approval_status: string | null
           area: string | null
+          call_from_number: string | null
+          call_status: string | null
+          call_transcript: string | null
           clean_preview_url: string | null
           client_id: string | null
           colour: string | null
           created_at: string
+          customer_phone_e164: string | null
           date: string | null
           deposit_paid: boolean
+          detected_country: string | null
           email_status: string | null
           end_date: string | null
           full_day: boolean
@@ -57,6 +62,7 @@ export type Database = {
           location_type: string
           manage_token: string
           map_pin: Json | null
+          notes: string | null
           photo_url: string | null
           plan: string
           status: string
@@ -73,12 +79,17 @@ export type Database = {
         Insert: {
           approval_status?: string | null
           area?: string | null
+          call_from_number?: string | null
+          call_status?: string | null
+          call_transcript?: string | null
           clean_preview_url?: string | null
           client_id?: string | null
           colour?: string | null
           created_at?: string
+          customer_phone_e164?: string | null
           date?: string | null
           deposit_paid?: boolean
+          detected_country?: string | null
           email_status?: string | null
           end_date?: string | null
           full_day?: boolean
@@ -88,6 +99,7 @@ export type Database = {
           location_type?: string
           manage_token?: string
           map_pin?: Json | null
+          notes?: string | null
           photo_url?: string | null
           plan: string
           status?: string
@@ -104,12 +116,17 @@ export type Database = {
         Update: {
           approval_status?: string | null
           area?: string | null
+          call_from_number?: string | null
+          call_status?: string | null
+          call_transcript?: string | null
           clean_preview_url?: string | null
           client_id?: string | null
           colour?: string | null
           created_at?: string
+          customer_phone_e164?: string | null
           date?: string | null
           deposit_paid?: boolean
+          detected_country?: string | null
           email_status?: string | null
           end_date?: string | null
           full_day?: boolean
@@ -119,6 +136,7 @@ export type Database = {
           location_type?: string
           manage_token?: string
           map_pin?: Json | null
+          notes?: string | null
           photo_url?: string | null
           plan?: string
           status?: string

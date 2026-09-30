@@ -20,8 +20,10 @@ const confirmSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^[+\d][\d\s-]{8,15}$/),
+    .regex(/^\+[1-9]\d{7,14}$/),
+  country: z.string().trim().length(2).optional(),
   email: z.string().trim().email().max(200),
+  notes: z.string().trim().max(300).optional(),
   mobile: z.boolean(),
   pin: z.object({ lat: z.number(), lng: z.number() }).nullable(),
   building: z.string().max(120).optional(),
@@ -88,6 +90,9 @@ export const confirmBooking = createServerFn({ method: "POST" })
         area: data.mobile && data.pin ? nearestArea(data.pin) : "MG Marg",
         guard_permission: data.guard,
         water_needed: waterFee,
+        customer_phone_e164: data.phone,
+        detected_country: data.country ?? null,
+        notes: data.notes || null,
         total,
         status: "pending_deposit",
         approval_status: data.plan === "signature" ? "pending" : null,
@@ -122,7 +127,7 @@ export const simulatePayment = createServerFn({ method: "POST" })
     const sb = await admin();
     const { data: b } = await sb
       .from("bookings")
-      .select("*, clients(name, email)")
+      .select("*, clients(name, email, phone, building)")
       .eq("id", data.bookingId)
       .maybeSingle();
     // Expected outcomes are returned, never thrown: a thrown server-fn error
@@ -155,7 +160,41 @@ export const simulatePayment = createServerFn({ method: "POST" })
       .from("bookings")
       .update({ deposit_paid: true, status: plan === "signature" ? "consultation" : "confirmed" })
       .eq("id", b.id);
-    const client = b.clients as { name: string; email: string | null } | null;
+    const client = b.clients as {
+      name: string;
+      email: string | null;
+      phone: string | null;
+      building: string | null;
+    } | null;
+    // Sarvam voice agent rings the customer to confirm; never blocks the booking.
+    const toCall = b.customer_phone_e164 ?? client?.phone ?? null;
+    if (toCall) {
+      try {
+        const { placeConfirmationCall } = await import("./sarvam.server");
+        const call = await placeConfirmationCall(
+          {
+            bookingId: b.id,
+            customerName: client?.name ?? "there",
+            customerPhoneE164: toCall,
+            detectedCountry: b.detected_country ?? null,
+            plan: b.plan,
+            date: b.date,
+            time: b.time,
+            building:
+              b.location_type === "mobile"
+                ? (client?.building ?? b.area ?? "your address")
+                : "our MG Marg studio",
+          },
+          await requestOrigin(),
+        );
+        await sb
+          .from("bookings")
+          .update({ call_status: call.status, call_from_number: call.from })
+          .eq("id", b.id);
+      } catch (e) {
+        console.error("confirmation call failed", e);
+      }
+    }
     if (client?.email) {
       try {
         const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");

@@ -2,6 +2,7 @@ import { useCallback, useReducer, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { COLOURS, STYLES, type PlanId } from "@/lib/plans";
 import { previewKey } from "@/lib/booking-rules";
+import { DEFAULT_COUNTRY } from "@/lib/phone";
 import { makePreview } from "@/lib/booking.functions";
 
 export type Draft = {
@@ -20,7 +21,9 @@ export type Draft = {
   slot: { date: string; time: string } | null;
   name: string;
   phone: string;
+  country: string;
   email: string;
+  notes: string;
   manageToken: string;
 };
 
@@ -40,7 +43,9 @@ export const initialDraft: Draft = {
   slot: null,
   name: "",
   phone: "",
+  country: DEFAULT_COUNTRY,
   email: "",
+  notes: "",
   manageToken: "",
 };
 
@@ -48,7 +53,13 @@ type Action = { type: "patch"; patch: Partial<Draft> } | { type: "reset" };
 
 export function draftReducer(state: Draft, a: Action): Draft {
   if (a.type === "reset")
-    return { ...initialDraft, name: state.name, phone: state.phone, email: state.email };
+    return {
+      ...initialDraft,
+      name: state.name,
+      phone: state.phone,
+      country: state.country,
+      email: state.email,
+    };
   return { ...state, ...a.patch };
 }
 
