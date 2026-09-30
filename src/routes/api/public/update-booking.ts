@@ -32,12 +32,19 @@ const schema = z.object({
   new_building: z.string().max(120).optional(),
   call_status: z.string().max(40).optional(),
   call_transcript: z.string().max(20000).optional(),
+  call_duration_seconds: z.number().int().min(0).max(86400).optional(),
 });
 
 /** Sarvam's outcome callback body. */
 const outcomeSchema = z.object({
   attempt_id: z.string(),
   status: z.enum(["connected", "no_answer", "busy", "failed"]),
+  // Sarvam reports the billable call length; field name varies by payload version.
+  duration_seconds: z.number().nullable().optional(),
+  duration: z.number().nullable().optional(),
+  call_duration_seconds: z.number().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  ended_at: z.string().nullable().optional(),
   interaction_transcript: z
     .array(z.object({ role: z.string().optional(), content: z.string().optional() }).passthrough())
     .nullable()
@@ -67,10 +74,24 @@ function fromOutcome(raw: unknown): z.infer<typeof schema> | null {
     .join("\n")
     .slice(0, 20000);
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+  // Prefer a reported duration; otherwise derive it from the start/end stamps.
+  const spanned =
+    p.data.started_at && p.data.ended_at
+      ? Math.round(
+          (new Date(p.data.ended_at).getTime() - new Date(p.data.started_at).getTime()) / 1000,
+        )
+      : null;
+  const secs = [
+    p.data.duration_seconds,
+    p.data.call_duration_seconds,
+    p.data.duration,
+    spanned,
+  ].find((n): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0);
   return schema.parse({
     bookingId: id,
     call_status: p.data.status,
     ...(transcript ? { call_transcript: transcript } : {}),
+    ...(secs !== undefined ? { call_duration_seconds: Math.round(secs) } : {}),
     ...(str(vars["new_time"]) ? { new_time: str(vars["new_time"]) } : {}),
     ...(str(vars["new_date"]) ? { new_date: str(vars["new_date"]) } : {}),
     ...(str(vars["new_plan"]) ? { new_plan: str(vars["new_plan"]) } : {}),
@@ -105,10 +126,16 @@ export const Route = createFileRoute("/api/public/update-booking")({
         const patch: {
           call_status?: string;
           call_transcript?: string;
+          call_duration_seconds?: number;
+          call_updated_at?: string;
           plan?: string;
         } = {};
         if (d.call_status) patch.call_status = d.call_status;
         if (d.call_transcript) patch.call_transcript = d.call_transcript;
+        if (d.call_duration_seconds !== undefined)
+          patch.call_duration_seconds = d.call_duration_seconds;
+        if (d.call_status || d.call_transcript || d.call_duration_seconds !== undefined)
+          patch.call_updated_at = new Date().toISOString();
         if (d.new_plan) {
           const name = planName(d.new_plan);
           if (name) patch.plan = name;

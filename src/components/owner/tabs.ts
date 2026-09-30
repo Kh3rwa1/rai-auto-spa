@@ -1,8 +1,18 @@
-import { CalendarDays, Hourglass, Images, Inbox, MapPinned, Palette, Repeat } from "lucide-react";
+import {
+  CalendarDays,
+  Hourglass,
+  Images,
+  Inbox,
+  MapPinned,
+  Palette,
+  PhoneCall,
+  Repeat,
+} from "lucide-react";
 
 export const TABS = [
   { value: "route", label: "Route", icon: MapPinned },
   { value: "calendar", label: "Calendar", icon: CalendarDays },
+  { value: "calls", label: "Calls", icon: PhoneCall },
   { value: "subs", label: "Subscriptions", icon: Repeat },
   { value: "waitlist", label: "Waitlist", icon: Hourglass },
   { value: "leads", label: "Leads", icon: Inbox },

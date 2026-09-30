@@ -167,34 +167,28 @@ export const simulatePayment = createServerFn({ method: "POST" })
       building: string | null;
     } | null;
     // Sarvam voice agent rings the customer to confirm; never blocks the booking.
-    const toCall = b.customer_phone_e164 ?? client?.phone ?? null;
-    if (toCall) {
-      try {
-        const { placeConfirmationCall } = await import("./sarvam.server");
-        const call = await placeConfirmationCall(
-          {
-            bookingId: b.id,
-            customerName: client?.name ?? "there",
-            customerPhoneE164: toCall,
-            detectedCountry: b.detected_country ?? null,
-            plan: b.plan,
-            date: b.date,
-            time: b.time,
-            building:
-              b.location_type === "mobile"
-                ? (client?.building ?? b.area ?? "your address")
-                : "our MG Marg studio",
-          },
-          await requestOrigin(),
-        );
-        await sb
-          .from("bookings")
-          .update({ call_status: call.status, call_from_number: call.from })
-          .eq("id", b.id);
-      } catch (e) {
-        console.error("confirmation call failed", e);
-      }
+    try {
+      const { callBookingAndRecord } = await import("./call-booking.server");
+      await callBookingAndRecord(
+        {
+          id: b.id,
+          plan: b.plan,
+          date: b.date,
+          time: b.time,
+          area: b.area,
+          location_type: b.location_type,
+          detected_country: b.detected_country ?? null,
+          customer_phone_e164: b.customer_phone_e164 ?? null,
+          clients: client
+            ? { name: client.name, phone: client.phone, building: client.building }
+            : null,
+        },
+        await requestOrigin(),
+      );
+    } catch (e) {
+      console.error("confirmation call failed", e);
     }
+
     if (client?.email) {
       try {
         const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");

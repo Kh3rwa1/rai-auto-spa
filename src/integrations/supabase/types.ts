@@ -42,9 +42,13 @@ export type Database = {
         Row: {
           approval_status: string | null
           area: string | null
+          call_attempt_id: string | null
+          call_detail: string | null
+          call_duration_seconds: number | null
           call_from_number: string | null
           call_status: string | null
           call_transcript: string | null
+          call_updated_at: string | null
           clean_preview_url: string | null
           client_id: string | null
           colour: string | null
@@ -79,9 +83,13 @@ export type Database = {
         Insert: {
           approval_status?: string | null
           area?: string | null
+          call_attempt_id?: string | null
+          call_detail?: string | null
+          call_duration_seconds?: number | null
           call_from_number?: string | null
           call_status?: string | null
           call_transcript?: string | null
+          call_updated_at?: string | null
           clean_preview_url?: string | null
           client_id?: string | null
           colour?: string | null
@@ -116,9 +124,13 @@ export type Database = {
         Update: {
           approval_status?: string | null
           area?: string | null
+          call_attempt_id?: string | null
+          call_detail?: string | null
+          call_duration_seconds?: number | null
           call_from_number?: string | null
           call_status?: string | null
           call_transcript?: string | null
+          call_updated_at?: string | null
           clean_preview_url?: string | null
           client_id?: string | null
           colour?: string | null

@@ -19,42 +19,15 @@ export const Route = createFileRoute("/api/public/initiate-sarvam-call")({
         if (!parsed.success) return new Response("Bad request", { status: 400 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { callBookingAndRecord, CALL_SELECT } = await import("@/lib/call-booking.server");
         const { data: b } = await supabaseAdmin
           .from("bookings")
-          .select("*, clients(name, phone, building)")
+          .select(CALL_SELECT)
           .eq("id", parsed.data.bookingId)
           .maybeSingle();
         if (!b) return new Response("Not found", { status: 404 });
-        const client = b.clients as {
-          name: string;
-          phone: string | null;
-          building: string | null;
-        } | null;
-        const to = b.customer_phone_e164 ?? client?.phone;
-        if (!to || !b.date || !b.time) return new Response("Booking incomplete", { status: 400 });
 
-        const { placeConfirmationCall } = await import("@/lib/sarvam.server");
-        const origin = new URL(request.url).origin;
-        const call = await placeConfirmationCall(
-          {
-            bookingId: b.id,
-            customerName: client?.name ?? "there",
-            customerPhoneE164: to,
-            detectedCountry: b.detected_country ?? null,
-            plan: b.plan,
-            date: b.date,
-            time: b.time,
-            building:
-              b.location_type === "mobile"
-                ? (client?.building ?? b.area ?? "your address")
-                : "our MG Marg studio",
-          },
-          origin,
-        );
-        await supabaseAdmin
-          .from("bookings")
-          .update({ call_status: call.status, call_from_number: call.from })
-          .eq("id", b.id);
+        const call = await callBookingAndRecord(b, new URL(request.url).origin);
         return Response.json(call);
       },
     },

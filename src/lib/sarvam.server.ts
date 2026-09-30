@@ -73,6 +73,13 @@ function unknownVars(detail: string): string[] {
   return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]!);
 }
 
+/**
+ * Variables the agent rejected earlier in this process. Remembering them means
+ * the *second* and every later booking skips the 422 round-trip entirely —
+ * without this, a slow or rate-limited retry could drop the call altogether.
+ */
+const rejectedVars = new Set<string>();
+
 function buildBody(env: Env, from: string, v: CallVars, vars: Record<string, string>) {
   return {
     app_config: {
@@ -103,7 +110,7 @@ async function post(env: Env, body: unknown) {
 }
 
 async function placeOne(env: Env, from: string, v: CallVars) {
-  const vars: Record<string, string> = {
+  const all: Record<string, string> = {
     customer_name: v.customerName,
     plan: v.plan,
     date: v.date,
@@ -111,11 +118,15 @@ async function placeOne(env: Env, from: string, v: CallVars) {
     building: v.building,
     bookingId: v.bookingId,
   };
+  const vars = Object.fromEntries(Object.entries(all).filter(([k]) => !rejectedVars.has(k)));
   let r = await post(env, buildBody(env, from, v, vars));
   if (!r.ok && r.status === 422) {
     const drop = unknownVars(r.text);
     if (drop.length) {
-      for (const k of drop) delete vars[k];
+      for (const k of drop) {
+        rejectedVars.add(k);
+        delete vars[k];
+      }
       r = await post(env, buildBody(env, from, v, vars));
     }
   }
@@ -123,8 +134,12 @@ async function placeOne(env: Env, from: string, v: CallVars) {
   return JSON.parse(r.text || "{}") as { attempt_id?: string };
 }
 
-
-export type CallResult = { status: string; from: string | null; detail: string | null };
+export type CallResult = {
+  status: string;
+  from: string | null;
+  detail: string | null;
+  attemptId: string | null;
+};
 
 /** Never throws — the demo booking must succeed even when the call cannot be placed. */
 export async function placeConfirmationCall(
@@ -132,17 +147,28 @@ export async function placeConfirmationCall(
   origin: string | null,
 ): Promise<CallResult> {
   const env = readEnv(origin);
-  if (!env) return { status: "not_configured", from: null, detail: "Sarvam keys missing" };
+  if (!env)
+    return { status: "not_configured", from: null, detail: "Sarvam keys missing", attemptId: null };
   const start = pickIndex(v.bookingId, env.numbers.length);
   const order = env.numbers.map((_, i) => env.numbers[(start + i) % env.numbers.length]!);
-  let last = "";
+  const errors: string[] = [];
   for (const from of order) {
     try {
       const out = await placeOne(env, from, v);
-      return { status: "calling", from, detail: out.attempt_id ?? null };
+      return {
+        status: "calling",
+        from,
+        detail: out.attempt_id ?? null,
+        attemptId: out.attempt_id ?? null,
+      };
     } catch (e) {
-      last = (e as Error).message;
+      errors.push(`${from}: ${(e as Error).message}`);
     }
   }
-  return { status: "failed", from: null, detail: last.slice(0, 200) };
+  return {
+    status: "failed",
+    from: null,
+    detail: errors.join(" | ").slice(0, 400),
+    attemptId: null,
+  };
 }

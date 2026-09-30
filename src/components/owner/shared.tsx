@@ -41,8 +41,18 @@ export type Booking = {
   approval_status: string | null;
   water_needed: boolean | null;
   created_at: string;
+  customer_phone_e164?: string | null;
+  call_status?: string | null;
+  call_transcript?: string | null;
+  call_duration_seconds?: number | null;
+  call_from_number?: string | null;
+  call_attempt_id?: string | null;
+  call_detail?: string | null;
+  call_updated_at?: string | null;
+  notes?: string | null;
   clients: Client | null;
 };
+
 export type Sub = {
   id: string;
   client_id: string;

@@ -78,6 +78,13 @@
       "when": 1790755133237,
       "tag": "0010_add_booking_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790760317984,
+      "tag": "0011_add_call_detail_columns_to_bookings",
+      "breakpoints": true
     }
   ]
 }

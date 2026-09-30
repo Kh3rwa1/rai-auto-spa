@@ -20,6 +20,7 @@ import { Waitlist } from "./Waitlist";
 import { Leads } from "./Leads";
 import { Wraps } from "./Wraps";
 import { Gallery } from "./Gallery";
+import { Calls } from "./Calls";
 
 export function OwnerDashboard() {
   const qc = useQueryClient();
@@ -118,15 +119,18 @@ export function OwnerDashboard() {
   ).length;
   const galleryCount = bookings.filter((b) => b.clean_preview_url && b.photo_url).length;
   const activeSubs = subs.filter((s) => s.active).length;
+  const callRows = bookings.filter((b) => b.deposit_paid || b.call_status).length;
   const counts: Record<(typeof TABS)[number]["value"], number> = {
     route: stops.length,
     calendar: pendingDeposits,
+    calls: callRows,
     subs: activeSubs,
     waitlist: upcomingCount,
     leads: leadsCount,
     wraps: wrapApprovals,
     gallery: galleryCount,
   };
+
   const dateLabel = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
@@ -246,6 +250,10 @@ export function OwnerDashboard() {
         <TabsContent value="calendar" className="mt-4">
           <WeekCalendar bookings={bookings} />
         </TabsContent>
+        <TabsContent value="calls" className="mt-4">
+          <Calls bookings={bookings} onChange={refresh} />
+        </TabsContent>
+
         <TabsContent value="subs" className="mt-4">
           <Subscriptions subs={subs} bookings={bookings} onChange={refresh} />
         </TabsContent>
