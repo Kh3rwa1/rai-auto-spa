@@ -166,6 +166,17 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
       .catch(() => toast.error("Could not load the calendar"));
   }, [weekStart, mobile, pin, slotsFn, slotsNonce]);
 
+  // Live grid: owner blocks/cancellations show up without a reload (poll + on tab focus).
+  useEffect(() => {
+    const bump = () => document.visibilityState === "visible" && setSlotsNonce((n) => n + 1);
+    const id = window.setInterval(bump, 10000);
+    window.addEventListener("focus", bump);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", bump);
+    };
+  }, []);
+
   // clear a selected slot that became invalid
   useEffect((): void => {
     if (slot && mobile && !water && isDryWindow(slot.time)) setSlot(null);
