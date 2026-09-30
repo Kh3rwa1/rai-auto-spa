@@ -32,12 +32,20 @@ const schema = z.object({
   new_building: z.string().max(120).optional(),
   call_status: z.string().max(40).optional(),
   call_transcript: z.string().max(20000).optional(),
+  call_duration_seconds: z.number().int().min(0).max(86400).optional(),
 });
+
 
 /** Sarvam's outcome callback body. */
 const outcomeSchema = z.object({
   attempt_id: z.string(),
   status: z.enum(["connected", "no_answer", "busy", "failed"]),
+  // Sarvam reports the billable call length; field name varies by payload version.
+  duration_seconds: z.number().nullable().optional(),
+  duration: z.number().nullable().optional(),
+  call_duration_seconds: z.number().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  ended_at: z.string().nullable().optional(),
   interaction_transcript: z
     .array(z.object({ role: z.string().optional(), content: z.string().optional() }).passthrough())
     .nullable()
@@ -48,6 +56,7 @@ const outcomeSchema = z.object({
     .nullable()
     .optional(),
 });
+
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
