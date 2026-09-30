@@ -218,12 +218,18 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   stopVoice.current = voice.stop;
   startVoice.current = voice.start;
   announceVoice.current = (text) => void voice.announce(text);
+  const interactVoice = useRef<() => void>(() => {});
+  interactVoice.current = () => {
+    // Tapping while Rai speaks interrupts — cut the audio and start listening.
+    if (voice.phase === "speaking") voice.skip();
+    else startVoice.current();
+  };
 
   // Mascot tap → toggle the voice session (stable listener via ref).
   useEffect(() => {
     const onStart = () => {
       consumeVoiceStart();
-      startVoice.current();
+      interactVoice.current();
     };
     window.addEventListener(VOICE_START_EVENT, onStart);
     return () => window.removeEventListener(VOICE_START_EVENT, onStart);

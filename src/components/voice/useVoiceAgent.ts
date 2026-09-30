@@ -109,8 +109,10 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
       audioEl.current = el;
       await el.play();
       await new Promise<void>((resolve) => {
+        // Resolve on end, error OR pause — pausing is how skip()/stop() cut the speech.
         el.onended = () => resolve();
         el.onerror = () => resolve();
+        el.onpause = () => resolve();
       });
       URL.revokeObjectURL(url);
       audioEl.current = null;
@@ -259,6 +261,13 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
     }
   }, [listen, speak]);
 
+  /** Barge-in: tap while Rai is speaking → cut the audio and start listening immediately. */
+  const skip = useCallback(() => {
+    if (phaseRef.current !== "speaking") return;
+    audioEl.current?.pause();
+    // speak()'s wait resolves on pause; the turn loop then flows into listening.
+  }, []);
+
   /** One-shot announcement (e.g. payment confirmed) — ends the loop, then goes idle. */
   const announce = useCallback(
     async (text: string) => {
@@ -284,5 +293,5 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
   // Unmount / tab hidden: never leave a mic open or audio playing.
   useEffect(() => () => stop(), [stop]);
 
-  return { phase, transcript, reply, error, supported, start, stop, announce, setPhaseSafe };
+  return { phase, transcript, reply, error, supported, start, stop, skip, announce, setPhaseSafe };
 }

@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const BASE = "https://api.deepgram.com/v1/listen";
-const DEFAULT_MODEL = "nova-2";
+/** Best-first chain: nova-3 English (accent-robust incl. Indian), then nova-2 India, then general. */
+const MODEL_CHAIN: [string, string][] = [
+  ["nova-3", "en"],
+  ["nova-2", "en-IN"],
+  ["nova-2", "en"],
+];
 
 function key() {
   const k = process.env["DEEPGRAM_API_KEY"];
@@ -9,9 +14,9 @@ function key() {
   return k;
 }
 
-async function transcribe(bytes: ArrayBuffer, mime: string, language: string) {
+async function transcribe(bytes: ArrayBuffer, mime: string, model: string, language: string) {
   const params = new URLSearchParams({
-    model: DEFAULT_MODEL,
+    model,
     language,
     smart_format: "true",
     punctuate: "true",
@@ -47,12 +52,22 @@ export const Route = createFileRoute("/api/voice/stt")({
           }
           const mime = request.headers.get("content-type") ?? "audio/webm";
 
-          let res = await transcribe(bytes, mime, "en-IN");
-          // en-IN is only available on some English models — retry with the general one.
-          if (res.status === 400) res = await transcribe(bytes, mime, "en");
-          if (!res.ok) {
-            const detail = await res.json().catch(() => null);
-            console.error("Deepgram STT failed", res.status, detail);
+          let res: Response | null = null;
+          for (const [model, language] of MODEL_CHAIN) {
+            const attempt = await transcribe(bytes, mime, model, language);
+            if (attempt.ok) {
+              res = attempt;
+              break;
+            }
+            // Model/language not available on this account — fall through to the next.
+            if (attempt.status === 400 || attempt.status === 404) continue;
+            res = attempt;
+            break;
+          }
+          if (!res || !res.ok) {
+            const status = res?.status ?? 0;
+            const detail = res ? await res.json().catch(() => null) : null;
+            console.error("Deepgram STT failed", status, detail);
             return Response.json(
               { error: "Could not transcribe — please try again." },
               { status: 502 },

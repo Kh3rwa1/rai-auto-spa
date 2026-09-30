@@ -29,8 +29,20 @@ export function VoiceAgentOverlay({ voice }: { voice: Voice }) {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={voice.phase === "idle" ? voice.start : voice.stop}
-          aria-label={active ? "Stop voice booking" : "Start voice booking"}
+          onClick={
+            voice.phase === "idle"
+              ? voice.start
+              : voice.phase === "speaking"
+                ? voice.skip
+                : voice.stop
+          }
+          aria-label={
+            voice.phase === "idle"
+              ? "Start voice booking"
+              : voice.phase === "speaking"
+                ? "Interrupt — start listening"
+                : "Stop voice booking"
+          }
           className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--wb-ink)] text-[#faf5ea] transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
         >
           {voice.phase === "listening" && (
@@ -46,7 +58,9 @@ export function VoiceAgentOverlay({ voice }: { voice: Voice }) {
           )}
         </button>
         <p className="min-w-0 flex-1 text-sm font-bold" aria-live="polite">
-          {STATUS[voice.phase] ?? STATUS["idle"]}
+          {voice.phase === "speaking"
+            ? "Rai is speaking — tap the orb to interrupt"
+            : (STATUS[voice.phase] ?? STATUS["idle"])}
         </p>
         <button
           type="button"
