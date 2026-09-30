@@ -167,8 +167,8 @@ export const makePreview = createServerFn({ method: "POST" })
       "image/jpeg",
       imagePrompt(data.plan, data.colour, data.style),
     );
-    const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.png`;
-    await sb.storage.from(BUCKET).upload(path, out, { contentType: "image/png", upsert: true });
+    const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.jpg`;
+    await sb.storage.from(BUCKET).upload(path, out, { contentType: "image/jpeg", upsert: true });
     await sb
       .from("bookings")
       .update({
@@ -198,7 +198,7 @@ export const makePreview = createServerFn({ method: "POST" })
         try {
           const jobId = await createVideoJob(
             out,
-            "image/png",
+            "image/jpeg",
             videoPrompt(data.plan, data.colour, data.style),
           );
           await sb
