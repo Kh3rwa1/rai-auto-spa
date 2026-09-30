@@ -73,7 +73,7 @@ export function OwnerDashboard() {
   const dataQ = useQuery({
     queryKey: ["owner"],
     queryFn: async () => {
-      await ensure(); // auto-seed if there's nothing from today onwards
+      await ensure().catch(() => null); // auto-seed if empty; never block the dashboard on it
       return load();
     },
   });
@@ -96,6 +96,13 @@ export function OwnerDashboard() {
   const fuelSaved = Math.max(0, (route.naive - route.km) * 0.1);
 
   if (bookingsQ.isLoading) return <p className="p-8 text-muted-foreground">Loading…</p>;
+  if (bookingsQ.isError)
+    return (
+      <div className="p-8 text-center">
+        <p className="font-medium">Couldn't load the dashboard.</p>
+        <Button className="mt-3" variant="outline" onClick={() => bookingsQ.refetch()}>Try again</Button>
+      </div>
+    );
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
