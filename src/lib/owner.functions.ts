@@ -92,7 +92,8 @@ export const updateSubscription = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await ownerDb();
-    const { error } = await sb.from("subscriptions").update(data.patch).eq("id", data.id);
+    const patch = Object.fromEntries(Object.entries(data.patch).filter(([, v]) => v !== undefined));
+    const { error } = await sb.from("subscriptions").update(patch).eq("id", data.id);
     if (error) throw new Error("Could not update the subscription.");
     return { ok: true };
   });
