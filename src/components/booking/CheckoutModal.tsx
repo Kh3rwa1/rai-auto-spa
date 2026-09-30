@@ -69,6 +69,7 @@ export function CheckoutModal({
             style: sig ? draft.style : undefined,
             name: draft.name,
             phone: draft.phone,
+            country: draft.country,
             email: draft.email,
             mobile: draft.mobile,
             pin: draft.mobile ? draft.pin : null,

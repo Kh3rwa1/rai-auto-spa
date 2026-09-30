@@ -8,7 +8,7 @@ const base = {
   mobile: false,
   hasPin: false,
   name: "Pema",
-  phone: "+91 98320 12345",
+  phone: "+919832012345",
   email: "p@x.in",
 };
 const slot = {

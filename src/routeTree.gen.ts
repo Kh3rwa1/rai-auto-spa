@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as OfferIdRouteImport } from './routes/offer.$id'
 import { Route as PayBookingIdRouteImport } from './routes/pay.$bookingId'
+import { Route as ApiPublicInitiateSarvamCallRouteImport } from './routes/api/public/initiate-sarvam-call'
+import { Route as ApiPublicUpdateBookingRouteImport } from './routes/api/public/update-booking'
 import { Route as ApiPublicHooksRunScheduleRouteImport } from './routes/api/public/hooks/run-schedule'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
@@ -36,6 +38,17 @@ const PayBookingIdRoute = PayBookingIdRouteImport.update({
   path: '/pay/$bookingId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInitiateSarvamCallRoute =
+  ApiPublicInitiateSarvamCallRouteImport.update({
+    id: '/api/public/initiate-sarvam-call',
+    path: '/api/public/initiate-sarvam-call',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicUpdateBookingRoute = ApiPublicUpdateBookingRouteImport.update({
+  id: '/api/public/update-booking',
+  path: '/api/public/update-booking',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksRunScheduleRoute =
   ApiPublicHooksRunScheduleRouteImport.update({
     id: '/api/public/hooks/run-schedule',
@@ -54,6 +67,8 @@ export interface FileRoutesByFullPath {
   '/owner': typeof OwnerRoute
   '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
+  '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -62,6 +77,8 @@ export interface FileRoutesByTo {
   '/owner': typeof OwnerRoute
   '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
+  '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -71,6 +88,8 @@ export interface FileRoutesById {
   '/owner': typeof OwnerRoute
   '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
+  '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -81,6 +100,8 @@ export interface FileRouteTypes {
     | '/owner'
     | '/offer/$id'
     | '/pay/$bookingId'
+    | '/api/public/initiate-sarvam-call'
+    | '/api/public/update-booking'
     | '/api/public/hooks/run-schedule'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
@@ -89,6 +110,8 @@ export interface FileRouteTypes {
     | '/owner'
     | '/offer/$id'
     | '/pay/$bookingId'
+    | '/api/public/initiate-sarvam-call'
+    | '/api/public/update-booking'
     | '/api/public/hooks/run-schedule'
     | '/lovable/email/transactional/preview'
   id:
@@ -97,6 +120,8 @@ export interface FileRouteTypes {
     | '/owner'
     | '/offer/$id'
     | '/pay/$bookingId'
+    | '/api/public/initiate-sarvam-call'
+    | '/api/public/update-booking'
     | '/api/public/hooks/run-schedule'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
@@ -106,6 +131,8 @@ export interface RootRouteChildren {
   OwnerRoute: typeof OwnerRoute
   OfferIdRoute: typeof OfferIdRoute
   PayBookingIdRoute: typeof PayBookingIdRoute
+  ApiPublicInitiateSarvamCallRoute: typeof ApiPublicInitiateSarvamCallRoute
+  ApiPublicUpdateBookingRoute: typeof ApiPublicUpdateBookingRoute
   ApiPublicHooksRunScheduleRoute: typeof ApiPublicHooksRunScheduleRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
@@ -140,6 +167,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PayBookingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/initiate-sarvam-call': {
+      id: '/api/public/initiate-sarvam-call'
+      path: '/api/public/initiate-sarvam-call'
+      fullPath: '/api/public/initiate-sarvam-call'
+      preLoaderRoute: typeof ApiPublicInitiateSarvamCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/update-booking': {
+      id: '/api/public/update-booking'
+      path: '/api/public/update-booking'
+      fullPath: '/api/public/update-booking'
+      preLoaderRoute: typeof ApiPublicUpdateBookingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/run-schedule': {
       id: '/api/public/hooks/run-schedule'
       path: '/api/public/hooks/run-schedule'
@@ -162,6 +203,8 @@ const rootRouteChildren: RootRouteChildren = {
   OwnerRoute: OwnerRoute,
   OfferIdRoute: OfferIdRoute,
   PayBookingIdRoute: PayBookingIdRoute,
+  ApiPublicInitiateSarvamCallRoute: ApiPublicInitiateSarvamCallRoute,
+  ApiPublicUpdateBookingRoute: ApiPublicUpdateBookingRoute,
   ApiPublicHooksRunScheduleRoute: ApiPublicHooksRunScheduleRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }

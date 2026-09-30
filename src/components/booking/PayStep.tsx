@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { MOBILE_FEE, PLANS, WATER_FEE, inr } from "@/lib/plans";
 import { DEMO_CONTACT, EMAIL_RE, PHONE_RE, formatSlot } from "@/lib/booking-rules";
 import { cn } from "@/lib/utils";
-import { BeforeAfter } from "../BeforeAfter";
 import type { Draft, SetDraft } from "./useBookingDraft";
 import { Field } from "./Field";
+import { PhoneField } from "./PhoneField";
 
 type Props = {
   draft: Draft;
@@ -14,42 +15,19 @@ type Props = {
   missing: string[];
   total: number;
   deposit: number;
-  photo: string | null;
-  previewUrl: string | undefined;
-  isPending: boolean;
-  previewError: string | null;
   planName: string;
-  colour?: string | undefined;
-  style?: string | undefined;
-  onRetry: () => void;
   onPay: () => void;
   onBack: () => void;
 };
 
-export function PayStep({
-  draft,
-  set,
-  missing,
-  total,
-  deposit,
-  photo,
-  previewUrl,
-  isPending,
-  previewError,
-  planName,
-  colour,
-  style,
-  onRetry,
-  onPay,
-  onBack,
-}: Props) {
+export function PayStep({ draft, set, missing, total, deposit, planName, onPay, onBack }: Props) {
   const { plan, slot, booking, mobile } = draft;
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [attempted, setAttempted] = useState(false);
 
   const nameErr = draft.name.trim().length < 2 ? "Enter your name (2+ characters)." : null;
   const phoneErr = !PHONE_RE.test(draft.phone.trim())
-    ? "Enter a valid WhatsApp number, e.g. +91 98320 12345."
+    ? "Enter a valid number with country code, e.g. +1 415 555 2671."
     : null;
   const emailErr = !EMAIL_RE.test(draft.email.trim())
     ? "Enter a valid email for your video."
@@ -65,62 +43,24 @@ export function PayStep({
     : "Studio, MG Marg, Gangtok";
 
   const canPay = missing.length === 0;
-  const designLabel = planName + (colour && style ? ` · ${colour} · ${style}` : "");
+  void planName;
 
   return (
     <div>
-      <div className="mb-5">
-        <p className="mb-2 text-sm font-semibold">Your AI preview</p>
-        {photo && previewUrl ? (
-          <div>
-            <BeforeAfter
-              before={photo}
-              after={previewUrl}
-              afterLabel={`After Rai's ${designLabel}`}
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
-              AI visualization of {designLabel} on your car — an artistic preview, not a guaranteed
-              real-world result. Drag the slider or use arrow keys to compare.
-            </p>
-          </div>
-        ) : previewError ? (
-          <div
-            role="alert"
-            className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
-          >
-            <p className="font-semibold">AI preview couldn&apos;t be created</p>
-            <p className="mt-1 text-muted-foreground">{previewError}</p>
-            <p className="mt-1 text-muted-foreground">
-              You can still complete your booking — your photo, plan and slot are saved.
-            </p>
-            <Button variant="outline" size="sm" className="mt-2 min-h-[44px]" onClick={onRetry}>
-              Retry preview
-            </Button>
-          </div>
-        ) : (
-          <div
-            className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <p className="font-medium text-foreground">Creating your AI preview…</p>
-            <p className="mt-1">
-              {isPending
-                ? "Still creating — fill in your details below, no need to wait."
-                : "It will appear here once your photo is detected."}
-            </p>
-          </div>
-        )}
-      </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold">Contact details</p>
+        <p className="text-sm font-semibold">Your contact details</p>
         <Button
           type="button"
           variant="secondary"
           size="sm"
           className="min-h-[44px]"
           onClick={() =>
-            set({ name: DEMO_CONTACT.name, phone: DEMO_CONTACT.phone, email: DEMO_CONTACT.email })
+            set({
+              name: DEMO_CONTACT.name,
+              phone: DEMO_CONTACT.phone,
+              email: DEMO_CONTACT.email,
+              country: "US",
+            })
           }
         >
           Use demo details
@@ -131,7 +71,7 @@ export function PayStep({
         this demo booking.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field id="nm" label="Your name" error={show("name", nameErr)}>
           <Input
             id="nm"
@@ -145,23 +85,14 @@ export function PayStep({
             aria-describedby={show("name", nameErr) ? "nm-error" : undefined}
           />
         </Field>
-        <Field
-          id="ph"
-          label="WhatsApp number"
-          error={show("phone", phoneErr)}
-          hint="Used only for demo confirmation preview."
-        >
-          <Input
-            id="ph"
-            type="tel"
-            autoComplete="tel"
-            inputMode="tel"
-            className={cn("mt-1 min-h-[44px]", show("phone", phoneErr) && "border-destructive")}
+        <Field id="ph" label="Phone number" error={show("phone", phoneErr)}>
+          <PhoneField
             value={draft.phone}
-            onChange={(e) => set({ phone: e.target.value })}
+            country={draft.country}
+            onChange={(v) => set({ phone: v })}
+            onCountry={(cc) => set({ country: cc })}
             onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
-            placeholder="+91 98320 12345"
-            aria-invalid={!!show("phone", phoneErr)}
+            invalid={!!show("phone", phoneErr)}
           />
         </Field>
         <Field id="em" label="Email (for your reveal video)" error={show("email", emailErr)}>
@@ -176,6 +107,16 @@ export function PayStep({
             onBlur={() => setTouched((t) => ({ ...t, email: true }))}
             placeholder="you@gmail.com"
             aria-invalid={!!show("email", emailErr)}
+          />
+        </Field>
+        <Field id="nt" label="Notes for Rai (optional)">
+          <Textarea
+            id="nt"
+            className="mt-1 min-h-[44px]"
+            value={draft.notes}
+            onChange={(e) => set({ notes: e.target.value.slice(0, 300) })}
+            placeholder="Gate code, pet in the car, extra dirty boot…"
+            rows={2}
           />
         </Field>
       </div>

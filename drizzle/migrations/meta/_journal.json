@@ -64,6 +64,13 @@
       "when": 1790738406014,
       "tag": "0008_book_slot_status_and_seed_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790754304361,
+      "tag": "0009_add_call_columns_to_bookings",
+      "breakpoints": true
     }
   ]
 }

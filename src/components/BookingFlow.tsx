@@ -5,11 +5,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PLANS, calcTotal, depositOf, inr, isDryWindow, type PlanId } from "@/lib/plans";
 import { addDays, formatSlot, missingForPay, previewKey, todayIST } from "@/lib/booking-rules";
+import { countryLabel, flagEmoji } from "@/lib/phone";
 import { BookedScreen } from "./BookedScreen";
 import { ProgressBar, Step } from "./booking/Step";
 import { CaptureStep } from "./booking/CaptureStep";
 import { PlanStep } from "./booking/PlanStep";
 import { WhereWhenStep } from "./booking/WhereWhenStep";
+import { RevealStep } from "./booking/RevealStep";
 import { PayStep } from "./booking/PayStep";
 import { CheckoutModal } from "./booking/CheckoutModal";
 import { SummarySidebar } from "./booking/SummarySidebar";
@@ -252,6 +254,13 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
           enabled: !!slot && !needsPin,
           onClick: () => slot && !needsPin && open(4),
         };
+      case 4:
+        return {
+          label: slot ? "Continue to details" : "Pick a slot first",
+          hint: slot ? "Your reveal is ready" : "Step 3 unlocks the reveal",
+          enabled: !!slot && !needsPin,
+          onClick: () => slot && !needsPin && open(5),
+        };
       default:
         return {
           label: plan ? `Simulate ${inr(deposit)} deposit` : "Add details above",
@@ -267,7 +276,7 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
       <ProgressBar
         active={activeStep}
         onOpen={setActiveStep}
-        complete={[!!booking, !!plan, !!slot, booked]}
+        complete={[!!booking, !!plan, !!slot, !!slot && !!previewUrl, booked]}
       />
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -377,9 +386,33 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
 
           <Step
             n={4}
-            title="Details & demo payment"
+            title="Your reveal"
+            done={!!slot && !!previewUrl}
             active={activeStep === 4}
             onOpen={() => setActiveStep(4)}
+            summary={slot ? "Your transformation ✨" : "Locked until you pick a slot"}
+          >
+            <RevealStep
+              photo={draft.photo}
+              previewUrl={previewUrl}
+              hasSlot={!!slot && !needsPin}
+              isPending={isPending}
+              previewError={previewError}
+              designLabel={
+                (plan ? PLANS[plan].name : "service") +
+                (plan === "signature" ? ` · ${colour} · ${style}` : "")
+              }
+              onRetry={() => plan && run(plan, colour, style)}
+              onBack={() => open(3)}
+              onContinue={() => open(5)}
+            />
+          </Step>
+
+          <Step
+            n={5}
+            title="Your details & demo payment"
+            active={activeStep === 5}
+            onOpen={() => setActiveStep(5)}
             summary={canPay ? `${inr(deposit)} demo deposit ready` : "Add contact details"}
           >
             <PayStep
@@ -388,16 +421,9 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
               missing={missing}
               total={total}
               deposit={deposit}
-              photo={draft.photo}
-              previewUrl={previewUrl}
-              isPending={isPending}
-              previewError={previewError}
               planName={plan ? PLANS[plan].name : "service"}
-              colour={plan === "signature" ? colour : undefined}
-              style={plan === "signature" ? style : undefined}
-              onRetry={() => plan && run(plan, colour, style)}
               onPay={() => setPayOpen(true)}
-              onBack={() => open(3)}
+              onBack={() => open(4)}
             />
           </Step>
         </div>
@@ -422,7 +448,9 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
             </span>
             {plan ? PLANS[plan].name : "Choose plan"}{" "}
             <span className="text-muted-foreground">•</span> {slotLabel}{" "}
-            <span className="text-muted-foreground">•</span> {plan ? inr(total) : "—"}
+            <span className="text-muted-foreground">•</span> {plan ? inr(total) : "—"}{" "}
+            <span className="text-muted-foreground">•</span> Pay {plan ? inr(deposit) : "—"}{" "}
+            <span aria-label={countryLabel(draft.country)}>{flagEmoji(draft.country)}</span>
             <span className="block truncate text-[11px] text-muted-foreground">
               {stepAction.hint}
             </span>
