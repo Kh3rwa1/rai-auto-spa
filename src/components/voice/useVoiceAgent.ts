@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PLANS } from "@/lib/plans";
+import { formatSlot } from "@/lib/booking-rules";
 import type { VoiceContext, VoiceIntent } from "@/lib/voice";
 
 export type VoicePhase = "idle" | "listening" | "thinking" | "speaking";
@@ -12,8 +14,23 @@ const MAX_RECORD_MS = 15_000;
 const MAX_SILENCE_MS = 1_800;
 const MIN_SPEECH_MS = 700;
 const SILENCE_RMS = 0.012;
-const GREETING =
-  "Namaste! Rai here — your car's best friend on MG Marg. Tell me what it needs today: a quick wash, a full detail, or a full-on makeover? I can book the van to your doorstep or a studio slot, any day this week.";
+
+/** Context-aware opener — Rai reacts to where the customer already is, never a canned line. */
+function greetingFor(ctx: VoiceContext): string {
+  if (!ctx.hasPhoto)
+    return "Hey hey, welcome to Rai's Auto Spa! Grab a photo of your car — or tap a sample — and tell me what we're doing: quick wash, full detail, or a total glow-up?";
+  const car =
+    ctx.vehicle && ctx.vehicle.toLowerCase() !== "car" ? `Oho, a ${ctx.vehicle}! ` : "Nice ride! ";
+  if (!ctx.plan)
+    return `${car}What's the plan — Essential Wash to freshen it up, Full Detail to really pamper it, or a Signature wrap that turns heads on MG Marg?`;
+  if (!ctx.hasSlot)
+    return `${PLANS[ctx.plan].name}, solid choice! When suits you? Tomorrow morning is prime time — and if you want, our van comes right to your doorstep.`;
+  if (ctx.slotDate && ctx.slotTime) {
+    const left = ctx.missing.length ? `Just need: ${ctx.missing.join(", ")}. ` : "Nearly done! ";
+    return `${formatSlot(ctx.slotDate, ctx.slotTime)} locked in. ${left}Say your name, WhatsApp number and email, and it's yours.`;
+  }
+  return "Welcome back! Pick up right where you left off — what's next?";
+}
 
 function pickMime(): string {
   if (typeof MediaRecorder === "undefined") return "";
@@ -182,8 +199,8 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
 
   const turn = useCallback(async () => {
     const mySession = ++session.current;
-    // Chatting greeting first — chattier, sets the tone, then the listen loop begins.
-    await speak(GREETING, mySession);
+    // Proactive opener: react to the customer's live wizard state first.
+    await speak(greetingFor(ctx.current.getContext()), mySession);
     if (session.current !== mySession) return;
     // Loop: listen → think → speak → listen again, until stopped or unmounted.
     for (;;) {
