@@ -1,51 +1,96 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Droplets, MapPin, Sparkles, Truck } from "lucide-react";
+import { Droplets, MapPin, Sparkles, Store, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookingFlow } from "@/components/BookingFlow";
 import { DemoRibbon } from "@/components/DemoRibbon";
 import { HeroMedia } from "@/components/HeroMedia";
+import { MOBILE_FEE, PLANS, inr, type PlanId } from "@/lib/plans";
 import heroImg from "@/assets/hero.jpg";
 import heroVideo from "@/assets/hero-video.mp4.asset.json";
-import raiFounder from "@/assets/rai-founder.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Rai's Auto Spa — Premium Car Wash & Super Design, Gangtok" },
+      { title: "Rai's Auto Spa — Car Care on MG Marg, Gangtok" },
       {
         name: "description",
         content:
-          "Snap your car and see it shine with AI. Foam wash, full detail and custom wraps at MG Marg, Gangtok — or our van comes to you.",
+          "Studio and doorstep car care in Gangtok with clear choices, transparent pricing, and availability-aware booking. Try the interactive demo — no real charges.",
       },
-      { property: "og:title", content: "Rai's Auto Spa — From Boring to Beast" },
+      {
+        property: "og:title",
+        content: "Rai's Auto Spa — Your car, cared for. Your booking, sorted.",
+      },
       {
         property: "og:description",
         content:
-          "Premium car wash & super design studio in MG Marg, Gangtok. Instant AI previews, mobile van service.",
+          "Choose a wash, a full detail, or a custom wrap. Two-bay studio on MG Marg or mobile van to your doorstep.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Rai's Auto Spa — From Boring to Beast" },
+      { name: "twitter:title", content: "Rai's Auto Spa — MG Marg, Gangtok" },
     ],
   }),
   component: Index,
 });
 
+/**
+ * "The wash line" — the single signature motif: one quiet wave, a reference
+ * to water movement and a clean finish. Decorative only (aria-hidden),
+ * used in exactly three places: hero eyebrow, booking eyebrow, footer.
+ */
+function WashLine({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      width="30"
+      height="8"
+      viewBox="0 0 30 8"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+    >
+      <path
+        d="M1.5 5.5C7 2.5 12.5 2.5 18 5.5C21 6.8 24 6.8 28.5 4.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function Wordmark({ dark = false }: { dark?: boolean }) {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <Droplets className="h-4.5 w-4.5" aria-hidden />
+      </span>
+      <span className="leading-none">
+        <span className="block font-display text-lg font-bold tracking-tight">
+          Rai&rsquo;s <span className="font-semibold text-primary">Auto Spa</span>
+        </span>
+        <span
+          className={`mt-1 block text-[11px] font-medium tracking-wide ${dark ? "text-charcoal-foreground/70" : "text-muted-foreground"}`}
+        >
+          MG Marg, Gangtok
+        </span>
+      </span>
+    </span>
+  );
+}
+
 function Nav() {
   return (
     <header className="fixed inset-x-0 top-0 z-40">
-      <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border/60 bg-background/80 px-4 py-2 backdrop-blur-xl sm:px-6">
-        <a href="#top" className="flex items-center gap-2 font-display text-lg font-bold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Droplets className="h-4 w-4" aria-hidden />
-          </span>
-          <span className="hidden sm:inline">Rai's Auto Spa</span>
-          <span className="sr-only sm:hidden">Rai's Auto Spa home</span>
+      <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border/60 bg-background/85 py-2 pl-4 pr-2 backdrop-blur-xl sm:px-5">
+        <a href="#top" aria-label="Rai's Auto Spa — back to top">
+          <Wordmark />
         </a>
         <nav aria-label="Main" className="flex items-center gap-1 text-sm sm:gap-2">
           <a
             href="#services"
-            className="hidden rounded-full px-3 py-2 hover:bg-muted sm:block min-h-[44px] items-center"
+            className="hidden min-h-[44px] items-center rounded-full px-3 py-2 font-medium hover:bg-muted sm:flex"
           >
             Services
           </a>
@@ -53,16 +98,223 @@ function Nav() {
             href="https://maps.google.com/?q=MG+Marg+Gangtok+737101"
             target="_blank"
             rel="noreferrer"
-            className="hidden items-center gap-1 rounded-full px-3 py-2 hover:bg-muted md:flex min-h-[44px]"
+            className="hidden min-h-[44px] items-center gap-1 rounded-full px-3 py-2 font-medium hover:bg-muted md:flex"
           >
-            <MapPin className="h-4 w-4" aria-hidden /> MG Marg, Gangtok
+            <MapPin className="h-4 w-4" aria-hidden /> MG Marg
           </a>
-          <Button asChild size="sm" variant="outline" className="rounded-full min-h-[44px]">
-            <Link to="/owner">Explore Admin Demo</Link>
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="min-h-[44px] rounded-full font-semibold"
+          >
+            <Link to="/owner">Explore admin demo</Link>
+          </Button>
+          <Button asChild size="sm" className="min-h-[44px] rounded-full font-semibold">
+            <a href="#book">Try a sample booking</a>
           </Button>
         </nav>
       </div>
     </header>
+  );
+}
+
+const FACTS = [
+  {
+    icon: Store,
+    title: "2-bay studio",
+    body: "Drop off at MG Marg, Gangtok — two bays, clear slot availability.",
+  },
+  {
+    icon: Truck,
+    title: "1 mobile van",
+    body: "Doorstep service in Tadong, Deorali and Development Area.",
+  },
+  {
+    icon: Droplets,
+    title: "Water-aware slots",
+    body: "Municipal supply runs 6–9am. Midday van visits need water on site.",
+  },
+] as const;
+
+function Facts() {
+  return (
+    <section aria-label="How Rai's Auto Spa operates" className="border-b border-border bg-card">
+      <dl className="mx-auto grid max-w-6xl gap-6 px-5 py-10 sm:grid-cols-3 sm:py-12">
+        {FACTS.map(({ icon: Icon, title, body }) => (
+          <div key={title} className="flex gap-3.5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+              <Icon className="h-5 w-5 text-primary" aria-hidden />
+            </span>
+            <span>
+              <dt className="font-display text-lg font-bold tracking-tight">{title}</dt>
+              <dd className="mt-1 text-sm leading-relaxed text-muted-foreground">{body}</dd>
+            </span>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function Services() {
+  return (
+    <section id="services" aria-labelledby="services-title" className="scroll-mt-24 bg-background">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:py-20">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+          What you can book
+        </p>
+        <h2
+          id="services-title"
+          className="mt-2 max-w-xl font-display text-3xl font-bold tracking-tight sm:text-4xl"
+        >
+          Three services, honest prices
+        </h2>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {(Object.keys(PLANS) as PlanId[]).map((id) => {
+            const p = PLANS[id];
+            return (
+              <a
+                key={id}
+                href="#book"
+                aria-label={`${p.name}, ${inr(p.price)}, ${p.duration} — start booking`}
+                className="group flex flex-col rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition-shadow hover:shadow-[var(--shadow-glow)]"
+              >
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                  {p.badge}
+                </span>
+                <span className="mt-1.5 font-display text-xl font-bold tracking-tight">
+                  {p.name}
+                </span>
+                <span className="mt-2 font-display text-3xl font-bold tracking-tight">
+                  {inr(p.price)}
+                  <span className="ml-2 align-middle font-sans text-sm font-medium text-muted-foreground">
+                    · {p.duration}
+                  </span>
+                </span>
+                <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
+                  {p.features.slice(0, 3).map((f) => (
+                    <li key={f} className="flex items-start gap-2">
+                      <span
+                        aria-hidden
+                        className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                      />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <span className="mt-5 inline-flex min-h-[44px] items-center text-sm font-bold text-primary">
+                  Start booking
+                  <span aria-hidden className="ml-1 transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
+                </span>
+              </a>
+            );
+          })}
+        </div>
+        <p className="mt-5 text-sm text-muted-foreground">
+          Mobile van adds {inr(MOBILE_FEE)}. A 30% demo deposit is taken at confirmation —
+          simulated, no real charge.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function BookingEntrance() {
+  return (
+    <section id="book" aria-labelledby="book-title" className="scroll-mt-20 bg-muted/50">
+      <div className="mx-auto max-w-4xl px-4 py-14 sm:px-5 sm:py-20">
+        <div className="mb-8 max-w-2xl">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
+            <WashLine className="text-primary" /> Try the customer experience
+          </p>
+          <h2
+            id="book-title"
+            className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl"
+          >
+            Choose your service. Find your slot.
+          </h2>
+          <p className="mt-3 leading-relaxed text-muted-foreground">
+            Start with a sample car or your own photo. Choose studio or doorstep service, then
+            complete a simulated booking.
+          </p>
+          <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-electric" aria-hidden />
+            <span>
+              <strong className="font-semibold text-foreground">
+                Preview the look before you book
+              </strong>{" "}
+              — your AI preview can finish while you continue.
+            </span>
+          </p>
+        </div>
+        <BookingFlow />
+      </div>
+    </section>
+  );
+}
+
+const BEFORE_STEPS = ["Inquiry", "service questions", "availability messages", "booking details"];
+const WITH_STEPS = ["Service selection", "available slot", "details", "simulated confirmation"];
+
+function ClientBrief() {
+  return (
+    <section
+      aria-labelledby="brief-title"
+      className="border-y border-border bg-charcoal text-charcoal-foreground"
+    >
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:py-20">
+        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-teal">
+          <WashLine className="text-teal" /> The client brief
+        </p>
+        <h2
+          id="brief-title"
+          className="mt-2 max-w-xl font-display text-3xl font-bold tracking-tight sm:text-4xl"
+        >
+          One owner. Two bays. One van.
+        </h2>
+        <p className="mt-4 max-w-2xl leading-relaxed text-charcoal-foreground/80">
+          Rai&rsquo;s Auto Spa is our hypothetical Gangtok client: a solo owner coordinating studio
+          jobs, mobile visits, and appointments affected by water access. This build brings service
+          selection, availability, and booking details into one customer flow, with an owner
+          dashboard for follow-through.
+        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-3xl bg-charcoal-foreground/10 p-6">
+            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-charcoal-foreground/60">
+              Before
+            </h3>
+            <ol className="mt-3 space-y-2 text-sm">
+              {BEFORE_STEPS.map((s, i) => (
+                <li key={s} className="flex items-baseline gap-2.5">
+                  <span aria-hidden className="font-display font-bold text-charcoal-foreground/40">
+                    {i + 1}
+                  </span>
+                  {s}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="rounded-3xl bg-primary/25 p-6">
+            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-teal">
+              With this demo
+            </h3>
+            <ol className="mt-3 space-y-2 text-sm">
+              {WITH_STEPS.map((s, i) => (
+                <li key={s} className="flex items-baseline gap-2.5">
+                  <span aria-hidden className="font-display font-bold text-teal">
+                    {i + 1}
+                  </span>
+                  {s}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -77,129 +329,93 @@ function Index() {
       </a>
       <Nav />
       <main>
-        <section className="relative flex min-h-[92svh] items-end overflow-hidden">
+        <section
+          aria-labelledby="hero-title"
+          className="relative flex min-h-[82svh] items-end overflow-hidden"
+        >
           <HeroMedia poster={heroImg} video={heroVideo.url} />
-          <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/30 to-transparent" />
-          <div className="relative mx-auto w-full max-w-6xl px-5 pb-16 pt-32 text-charcoal-foreground">
-            <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1.5 text-xs font-bold text-charcoal backdrop-blur">
-              Interactive demo · No real charges
+          <div className="absolute inset-0 bg-gradient-to-t from-charcoal/95 via-charcoal/45 to-charcoal/10" />
+          <div className="relative mx-auto w-full max-w-6xl px-5 pb-14 pt-36 text-charcoal-foreground sm:pb-20">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-teal">
+              <WashLine className="text-teal" /> Car care on MG Marg, Gangtok
             </p>
-            <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-background/15 px-3 py-1 text-xs font-medium backdrop-blur ml-2">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI-powered car spa · Gangtok
-            </p>
-            <h1 className="max-w-3xl font-display text-5xl font-bold leading-[0.95] sm:text-7xl">
-              RAI&apos;S AUTO SPA
-              <span className="block text-primary">From Boring to Beast</span>
+            <h1
+              id="hero-title"
+              className="mt-3 max-w-2xl font-display text-4xl font-bold leading-[1.02] tracking-tight sm:text-6xl"
+            >
+              Your car, cared for.
+              <span className="block">Your booking, sorted.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-lg opacity-90 sm:text-xl">
-              Snap your dirty car. See it shine or super-designed instantly with AI. No upload
-              needed — try a sample car, no personal info required.
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-charcoal-foreground/85 sm:text-lg">
+              Choose a wash, a full detail, or a custom wrap. Visit our two-bay studio or book the
+              mobile van to your doorstep— with prices and available slots in one booking flow.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 asChild
                 size="lg"
-                className="h-14 rounded-full px-8 text-base shadow-[var(--shadow-glow)] min-h-[56px]"
+                className="min-h-[56px] rounded-full px-8 text-base font-bold shadow-[var(--shadow-glow)]"
               >
-                <a href="#book">
-                  <span aria-hidden>📸</span> Try a sample booking
-                </a>
+                <a href="#book">Try a sample booking</a>
               </Button>
               <Button
                 asChild
                 size="lg"
-                variant="secondary"
-                className="h-14 rounded-full px-8 text-base min-h-[56px]"
+                variant="outline"
+                className="min-h-[56px] rounded-full border-charcoal-foreground/30 bg-transparent px-8 text-base font-semibold text-charcoal-foreground hover:bg-charcoal-foreground/10 hover:text-charcoal-foreground"
               >
                 <Link to="/owner">Explore admin demo</Link>
               </Button>
             </div>
-            <p className="mt-3 text-sm opacity-80">
-              Demo only: simulated payments, fictional contacts. Guest access — no sign-in.
+            <p className="mt-4 inline-block rounded-full bg-charcoal-foreground/15 px-4 py-2 text-sm font-semibold text-charcoal-foreground backdrop-blur">
+              Interactive challenge demo · No real charges · No personal details needed
             </p>
           </div>
         </section>
 
-        <section
-          id="services"
-          aria-labelledby="services-title"
-          className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16"
-        >
-          <h2 id="services-title" className="sr-only">
-            Services
-          </h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              {
-                icon: Droplets,
-                t: "Studio, 2 bays",
-                d: "MG Marg, Gangtok. Drop in, sip a tea, drive out gleaming.",
-              },
-              {
-                icon: Truck,
-                t: "Van comes to you",
-                d: "Tadong, Deorali, Development Area — water-aware scheduling around municipal supply.",
-              },
-              {
-                icon: Sparkles,
-                t: "Super design",
-                d: "Full colour wraps and body kits, previewed on your own car with AI first.",
-              },
-            ].map(({ icon: I, t, d }) => (
-              <div key={t} className="rounded-3xl bg-muted/60 p-6">
-                <I className="h-6 w-6 text-primary" aria-hidden />
-                <h3 className="mt-4 text-xl font-semibold">{t}</h3>
-                <p className="mt-1 text-muted-foreground">{d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="border-y border-border bg-charcoal text-charcoal-foreground">
-          <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-14 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:py-20">
-            <div className="overflow-hidden rounded-2xl">
-              <img
-                src={raiFounder}
-                alt="Rai, founder of Rai's Auto Spa"
-                loading="lazy"
-                width={1200}
-                height={1008}
-                className="aspect-[6/5] w-full object-cover"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-semibold uppercase text-teal">Meet Rai</p>
-              <h2 className="mt-2 font-display text-4xl font-bold sm:text-5xl">
-                One founder. 200+ cars transformed.
-              </h2>
-              <p className="mt-5 max-w-xl text-lg text-charcoal-foreground/75">
-                Rai runs the studio at MG Marg herself. Before this booking system, she managed
-                1,500 appointments in a notebook—one customer, one car, and one promise at a time.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section id="book" className="mx-auto max-w-4xl scroll-mt-20 px-4 pb-24 sm:px-5">
-          <div className="mb-8 text-center">
-            <p className="mb-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 dark:bg-amber-900/30 dark:text-amber-200">
-              Interactive demo · No real charges · No sign-in
-            </p>
-            <h2 className="font-display text-4xl font-bold sm:text-5xl">Book in 5 steps</h2>
-            <p className="mt-2 text-muted-foreground">
-              Snap → Plan → Location &amp; time → AI reveal → Details &amp; demo payment. Try a
-              sample car — no upload or personal info needed.
-            </p>
-          </div>
-          <BookingFlow />
-        </section>
+        <Facts />
+        <Services />
+        <BookingEntrance />
+        <ClientBrief />
       </main>
-      <footer className="border-t border-border bg-charcoal py-10 text-charcoal-foreground">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 text-sm sm:flex-row sm:justify-between">
-          <p className="font-display text-lg font-semibold">Rai's Auto Spa</p>
-          <p className="opacity-70">
-            Premium Car Wash & Super Design Studio · MG Marg, Gangtok, Sikkim 737101
-          </p>
+      <footer className="bg-charcoal py-12 text-charcoal-foreground">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <Wordmark dark />
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-charcoal-foreground/70">
+              Studio and doorstep car care with clear choices, transparent pricing, and
+              availability-aware booking.
+            </p>
+          </div>
+          <nav aria-label="Footer" className="flex flex-col gap-1 text-sm">
+            <a
+              href="#book"
+              className="flex min-h-[44px] items-center font-semibold hover:underline"
+            >
+              Try a sample booking
+            </a>
+            <a
+              href="#services"
+              className="flex min-h-[44px] items-center text-charcoal-foreground/70 hover:underline"
+            >
+              Services and prices
+            </a>
+            <Link
+              to="/owner"
+              className="flex min-h-[44px] items-center text-charcoal-foreground/70 hover:underline"
+            >
+              Explore admin demo
+            </Link>
+          </nav>
+          <div className="sm:text-right">
+            <WashLine className="text-teal sm:ml-auto" />
+            <p className="mt-2 text-sm text-charcoal-foreground/70">
+              MG Marg, Gangtok, Sikkim 737101
+            </p>
+            <p className="mt-1 text-xs text-charcoal-foreground/50">
+              Challenge demo · Simulated payments only
+            </p>
+          </div>
         </div>
       </footer>
       <DemoRibbon />

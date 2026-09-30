@@ -69,11 +69,11 @@ async function continuePastPreview(page: import("@playwright/test").Page) {
 
 test("demo entry points are obvious and need no personal info", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
-  await expect(page.getByText("Interactive demo · No real charges").first()).toBeVisible();
+  await expect(page.getByText("Interactive challenge demo").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Try a sample booking" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Explore admin demo" }).first()).toBeVisible();
   await page.goto("/#book", { waitUntil: "networkidle" });
-  await expect(page.getByText("Try a sample car", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("sample car or your own photo").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Maruti Swift" })).toBeVisible();
   // Skip link lets keyboard users jump straight to booking.
   await expect(page.getByRole("link", { name: "Skip to booking" })).toBeAttached();
