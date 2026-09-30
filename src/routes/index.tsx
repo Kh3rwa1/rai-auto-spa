@@ -95,7 +95,8 @@ function Index() {
         </div>
       </section>
 
-      <section id="services" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
+      <section id="services" aria-labelledby="services-title" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
+        <h2 id="services-title" className="sr-only">Services</h2>
         <div className="grid gap-6 md:grid-cols-3">
           {[
             {
