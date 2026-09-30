@@ -45,7 +45,7 @@ export async function callBookingAndRecord(
       time: b.time,
       building:
         b.location_type === "mobile"
-          ? (b.clients?.building || b.area || "your address")
+          ? b.clients?.building || b.area || "your address"
           : "our MG Marg studio",
     },
     origin,

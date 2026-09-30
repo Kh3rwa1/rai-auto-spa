@@ -33,7 +33,6 @@ export const recallBooking = createServerFn({ method: "POST" })
     return callBookingAndRecord(b, await requestOrigin());
   });
 
-
 export const ownerData = createServerFn({ method: "POST" }).handler(async () => {
   const sb = await ownerDb();
   const [b, s] = await Promise.all([

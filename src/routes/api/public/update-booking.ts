@@ -35,7 +35,6 @@ const schema = z.object({
   call_duration_seconds: z.number().int().min(0).max(86400).optional(),
 });
 
-
 /** Sarvam's outcome callback body. */
 const outcomeSchema = z.object({
   attempt_id: z.string(),
@@ -56,7 +55,6 @@ const outcomeSchema = z.object({
     .nullable()
     .optional(),
 });
-
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -101,7 +99,6 @@ function fromOutcome(raw: unknown): z.infer<typeof schema> | null {
   });
 }
 
-
 export const Route = createFileRoute("/api/public/update-booking")({
   server: {
     handlers: {
@@ -143,7 +140,6 @@ export const Route = createFileRoute("/api/public/update-booking")({
           const name = planName(d.new_plan);
           if (name) patch.plan = name;
         }
-
 
         let rescheduled: string | null = null;
         if (d.new_time || d.new_date) {

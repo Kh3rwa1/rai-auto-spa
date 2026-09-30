@@ -4,7 +4,8 @@ import { PLANS, MOBILE_FEE, WATER_FEE, STUDIO } from "../../plans";
 export default defineTool({
   name: "list_plans",
   title: "List plans and prices",
-  description: "List Rai's Auto Spa service plans with prices (INR), duration, features and add-on fees.",
+  description:
+    "List Rai's Auto Spa service plans with prices (INR), duration, features and add-on fees.",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: () => {
@@ -24,6 +25,9 @@ export default defineTool({
       waterSupplyFeeInr: WATER_FEE,
       depositPercent: 30,
     };
-    return { content: [{ type: "text", text: JSON.stringify(info, null, 2) }], structuredContent: info };
+    return {
+      content: [{ type: "text", text: JSON.stringify(info, null, 2) }],
+      structuredContent: info,
+    };
   },
 });

@@ -80,7 +80,6 @@ function unknownVars(detail: string): string[] {
  */
 const rejectedVars = new Set<string>();
 
-
 function buildBody(env: Env, from: string, v: CallVars, vars: Record<string, string>) {
   return {
     app_config: {
@@ -166,6 +165,10 @@ export async function placeConfirmationCall(
       errors.push(`${from}: ${(e as Error).message}`);
     }
   }
-  return { status: "failed", from: null, detail: errors.join(" | ").slice(0, 400), attemptId: null };
+  return {
+    status: "failed",
+    from: null,
+    detail: errors.join(" | ").slice(0, 400),
+    attemptId: null,
+  };
 }
-

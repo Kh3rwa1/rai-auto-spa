@@ -22,7 +22,9 @@ export function Calls({ bookings, onChange }: { bookings: Booking[]; onChange: (
 
   const rows = bookings
     .filter((b) => b.deposit_paid || b.call_status)
-    .sort((a, b) => (b.call_updated_at ?? b.created_at).localeCompare(a.call_updated_at ?? a.created_at));
+    .sort((a, b) =>
+      (b.call_updated_at ?? b.created_at).localeCompare(a.call_updated_at ?? a.created_at),
+    );
 
   async function callAgain(b: Booking) {
     setBusy(b.id);
@@ -64,8 +66,7 @@ export function Calls({ bookings, onChange }: { bookings: Booking[]; onChange: (
                 <CallBadge booking={b} />
               </p>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {b.date} {b.time} ·{" "}
-                {b.customer_phone_e164 ?? b.clients?.phone ?? "no number"}
+                {b.date} {b.time} · {b.customer_phone_e164 ?? b.clients?.phone ?? "no number"}
                 {b.call_from_number && ` · from ${b.call_from_number}`}
                 {b.call_updated_at && ` · ${timeAgo(b.call_updated_at)}`}
               </p>
@@ -103,11 +104,7 @@ export function Calls({ bookings, onChange }: { bookings: Booking[]; onChange: (
                 onClick={() => callAgain(b)}
                 aria-label={`Call ${b.clients?.name ?? "customer"} again`}
               >
-                {busy === b.id ? (
-                  <RefreshCw className="animate-spin" />
-                ) : (
-                  <PhoneCall />
-                )}
+                {busy === b.id ? <RefreshCw className="animate-spin" /> : <PhoneCall />}
                 Call again
               </Button>
             </div>

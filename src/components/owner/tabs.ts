@@ -20,5 +20,4 @@ export const TABS = [
   { value: "gallery", label: "Gallery", icon: Images },
 ] as const;
 
-
 export type TabValue = (typeof TABS)[number]["value"];
