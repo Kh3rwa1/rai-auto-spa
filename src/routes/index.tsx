@@ -3,6 +3,7 @@ import { Droplets, MapPin, Sparkles, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookingFlow } from "@/components/BookingFlow";
 import { DemoRibbon } from "@/components/DemoRibbon";
+import { HeroMedia } from "@/components/HeroMedia";
 import heroImg from "@/assets/hero.jpg";
 import heroVideo from "@/assets/hero-video.mp4.asset.json";
 import raiFounder from "@/assets/rai-founder.jpg";
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Rai's Auto Spa — From Boring to Beast" },
     ],
   }),
   component: Index,
@@ -35,11 +37,12 @@ function Nav() {
       <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border/60 bg-background/80 px-4 py-2 backdrop-blur-xl sm:px-6">
         <a href="#top" className="flex items-center gap-2 font-display text-lg font-bold">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Droplets className="h-4 w-4" />
+            <Droplets className="h-4 w-4" aria-hidden />
           </span>
           <span className="hidden sm:inline">Rai's Auto Spa</span>
+          <span className="sr-only sm:hidden">Rai's Auto Spa home</span>
         </a>
-        <nav className="flex items-center gap-1 text-sm sm:gap-4">
+        <nav aria-label="Main" className="flex items-center gap-1 text-sm sm:gap-4">
           <a href="#services" className="rounded-full px-3 py-1.5 hover:bg-muted">
             Services
           </a>
@@ -49,7 +52,7 @@ function Nav() {
             rel="noreferrer"
             className="hidden items-center gap-1 rounded-full px-3 py-1.5 hover:bg-muted md:flex"
           >
-            <MapPin className="h-4 w-4" /> MG Marg, Gangtok
+            <MapPin className="h-4 w-4" aria-hidden /> MG Marg, Gangtok
           </a>
           <Button asChild size="sm" variant="outline" className="rounded-full">
             <Link to="/owner">Owner Dashboard</Link>
@@ -63,21 +66,17 @@ function Nav() {
 function Index() {
   return (
     <div id="top" className="min-h-screen bg-background">
+      <a href="#book" className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+        Skip to booking
+      </a>
       <Nav />
+      <main>
       <section className="relative flex min-h-[92svh] items-end overflow-hidden">
-        <video
-          className="absolute inset-0 h-full w-full object-cover"
-          src={heroVideo.url}
-          poster={heroImg}
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
+        <HeroMedia poster={heroImg} video={heroVideo.url} />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/30 to-transparent" />
         <div className="relative mx-auto w-full max-w-6xl px-5 pb-16 pt-32 text-charcoal-foreground">
           <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-background/15 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5" /> AI-powered car spa · Gangtok
+            <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI-powered car spa · Gangtok
           </p>
           <h1 className="max-w-3xl font-display text-5xl font-bold leading-[0.95] sm:text-7xl">
             RAI'S AUTO SPA
@@ -91,7 +90,7 @@ function Index() {
             size="lg"
             className="mt-8 h-14 rounded-full px-8 text-base shadow-[var(--shadow-glow)]"
           >
-            <a href="#book">📸 Snap Your Ride</a>
+            <a href="#book"><span aria-hidden>📸</span> Snap Your Ride</a>
           </Button>
         </div>
       </section>
@@ -116,7 +115,7 @@ function Index() {
             },
           ].map(({ icon: I, t, d }) => (
             <div key={t} className="rounded-3xl bg-muted/60 p-6">
-              <I className="h-6 w-6 text-primary" />
+              <I className="h-6 w-6 text-primary" aria-hidden />
               <h3 className="mt-4 text-xl font-semibold">{t}</h3>
               <p className="mt-1 text-muted-foreground">{d}</p>
             </div>
@@ -157,6 +156,7 @@ function Index() {
         <BookingFlow />
       </section>
 
+      </main>
       <footer className="border-t border-border bg-charcoal py-10 text-charcoal-foreground">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 text-sm sm:flex-row sm:justify-between">
           <p className="font-display text-lg font-semibold">Rai's Auto Spa</p>

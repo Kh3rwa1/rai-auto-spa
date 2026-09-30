@@ -730,6 +730,8 @@ function Leads({ bookings, onChange }: { bookings: Booking[]; onChange: () => vo
           <div key={l.id} className="overflow-hidden rounded-xl border border-border">
             {l.photo_url && signed.data?.[l.photo_url] ? (
               <img
+                loading="lazy"
+                decoding="async"
                 src={signed.data[l.photo_url]}
                 alt={l.vehicle_model ?? ""}
                 className="aspect-[4/3] w-full object-cover"
