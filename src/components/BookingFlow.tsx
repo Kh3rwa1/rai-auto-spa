@@ -24,7 +24,7 @@ import {
   WATER_FEE,
   type PlanId,
 } from "@/lib/plans";
-import { confirmBooking, getSlots, makePreview, uploadCar } from "@/lib/booking.functions";
+import { confirmBooking, getSlots, makePreview, simulatePayment, uploadCar } from "@/lib/booking.functions";
 
 const PinPicker = lazy(() => import("./PinPicker"));
 
@@ -97,6 +97,7 @@ export function BookingFlow() {
   const preview = useServerFn(makePreview);
   const slotsFn = useServerFn(getSlots);
   const confirm = useServerFn(confirmBooking);
+  const payFn = useServerFn(simulatePayment);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
@@ -131,7 +132,9 @@ export function BookingFlow() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [payOpen, setPayOpen] = useState(false);
-  const [paying, setPaying] = useState(false);
+  const [payStage, setPayStage] = useState<"idle" | "processing" | "verifying" | "success" | "failed">("idle");
+  const [pay_, setPay_] = useState<{ method: "upi" | "card" | "netbanking"; fail: boolean; heldFor: string }>({ method: "upi", fail: false, heldFor: "" });
+  const paying = payStage === "processing" || payStage === "verifying" || payStage === "success";
   const [booked, setBooked] = useState(false);
   const [revealHold, setRevealHold] = useState(false);
   const [manageToken, setManageToken] = useState("");
@@ -251,44 +254,55 @@ export function BookingFlow() {
 
   async function pay() {
     if (!booking || !plan || !slot) return;
-    setPaying(true);
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    setPayStage("processing");
     try {
-      await new Promise((r) => setTimeout(r, 1400));
-      const res = await confirm({
-        data: {
-          bookingId: booking.id,
-          plan,
-          colour: plan === "signature" ? colour : undefined,
-          style: plan === "signature" ? style : undefined,
-          name,
-          phone,
-          email,
-          mobile,
-          pin: mobile ? pin : null,
-          building,
-          floor,
-          parking,
-          guard,
-          water,
-          date: slot.date,
-          time: slot.time,
-        },
-      });
-      setManageToken(res.manageToken ?? "");
+      // Reserve the slot + save details once; retries after a failed payment reuse the hold.
+      const holdKey = `${slot.date}|${slot.time}|${mobile}|${plan}`;
+      let token = manageToken;
+      if (pay_.heldFor !== holdKey || !token) {
+        const res = await confirm({
+          data: {
+            bookingId: booking.id,
+            plan,
+            colour: plan === "signature" ? colour : undefined,
+            style: plan === "signature" ? style : undefined,
+            name, phone, email, mobile,
+            pin: mobile ? pin : null,
+            building, floor, parking, guard, water,
+            date: slot.date,
+            time: slot.time,
+          },
+        });
+        token = res.manageToken ?? "";
+        setManageToken(token);
+        setPay_((p) => ({ ...p, heldFor: holdKey }));
+      }
+      await wait(900);
+      setPayStage("verifying");
+      await payFn({ data: { bookingId: booking.id, token, method: pay_.method, fail: pay_.fail } });
+      await wait(700);
+      setPayStage("success");
+      await wait(800);
       setPayOpen(false);
+      setPayStage("idle");
       setBooked(true);
     } catch (e) {
       const msg = (e as Error).message;
       if (msg.startsWith("SLOT_FULL:")) {
         // keep photo, preview and plan; drop only the slot and refresh the grid
         setPayOpen(false);
+        setPayStage("idle");
         setSlot(null);
         setSlotsNonce((n) => n + 1);
         setActiveStep(3);
         toast.message(msg.replace("SLOT_FULL: ", ""));
-      } else toast.error(msg);
-    } finally {
-      setPaying(false);
+      } else if (msg.startsWith("PAYMENT_FAILED:")) {
+        setPayStage("failed");
+      } else {
+        setPayStage("idle");
+        toast.error(msg);
+      }
     }
   }
 
@@ -647,23 +661,46 @@ export function BookingFlow() {
       </div>
 
       {payOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/60 p-4 backdrop-blur-sm sm:items-center" onClick={() => !paying && setPayOpen(false)}>
+        <div role="dialog" aria-modal="true" aria-label="Demo checkout" className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/60 p-4 backdrop-blur-sm sm:items-center" onClick={() => !paying && setPayOpen(false)}>
           <div className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-electric">Secure checkout · Demo</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-electric">Secure checkout · Demo payment - no real money</p>
             <h4 className="mt-1 text-2xl font-semibold">Pay {inr(deposit)}</h4>
             <p className="text-sm text-muted-foreground">Deposit for {plan && PLANS[plan].name}. Balance {inr(total - deposit)} after service.</p>
-            <div className="mt-5 space-y-2">
-              {["UPI (GPay / PhonePe / Paytm)", "Card", "Netbanking"].map((m, i) => (
-                <label key={m} className="flex items-center gap-3 rounded-xl border border-border p-3 text-sm">
-                  <input type="radio" name="pm" defaultChecked={i === 0} /> {m}
+            {payStage === "idle" || payStage === "failed" ? (
+              <>
+                {payStage === "failed" && (
+                  <p role="alert" className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">Payment failed — nothing was charged. Your slot is still held, tap retry.</p>
+                )}
+                <div className="mt-5 space-y-2">
+                  {([["upi", "UPI (GPay / PhonePe / Paytm)"], ["card", "Card"], ["netbanking", "Netbanking"]] as const).map(([id, label]) => (
+                    <label key={id} className="flex items-center gap-3 rounded-xl border border-border p-3 text-sm">
+                      <input type="radio" name="pm" checked={pay_.method === id} onChange={() => setPay_((p) => ({ ...p, method: id }))} /> {label}
+                    </label>
+                  ))}
+                </div>
+                <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={pay_.fail} onChange={(e) => setPay_((p) => ({ ...p, fail: e.target.checked }))} /> Simulate failure
                 </label>
-              ))}
-            </div>
-            <Button size="lg" className="mt-5 w-full" onClick={pay} disabled={paying}>
-              {paying ? <><Loader2 className="animate-spin" /> Processing…</> : `Pay ${inr(deposit)}`}
-            </Button>
-            <Button variant="ghost" className="mt-2 w-full" onClick={() => setPayOpen(false)} disabled={paying}>Cancel</Button>
-            <p className="mt-2 text-center text-[11px] text-muted-foreground">Test payment — no real money is charged.</p>
+                <Button size="lg" className="mt-4 w-full" onClick={pay}>
+                  {payStage === "failed" ? `Retry ${inr(deposit)}` : `Pay ${inr(deposit)}`}
+                </Button>
+                <Button variant="ghost" className="mt-2 w-full" onClick={() => { setPayOpen(false); setPayStage("idle"); }}>Cancel</Button>
+              </>
+            ) : (
+              <ol className="mt-6 space-y-3 text-sm" aria-live="polite">
+                {(["processing", "verifying", "success"] as const).map((st, i) => {
+                  const order = ["processing", "verifying", "success"].indexOf(payStage);
+                  const done = i < order || payStage === "success";
+                  return (
+                    <li key={st} className={`flex items-center gap-3 ${i > order ? "text-muted-foreground" : ""}`}>
+                      {done ? <Check className="h-4 w-4 text-teal" /> : i === order ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="h-4 w-4 rounded-full border border-border" />}
+                      {st === "processing" ? "Processing" : st === "verifying" ? "Verifying with bank" : "Success"}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">Demo payment - no real money is charged.</p>
           </div>
         </div>
       )}
