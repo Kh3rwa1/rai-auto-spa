@@ -180,19 +180,17 @@ export const cancelBooking = createServerFn({ method: "POST" })
     ids = ids.slice(0, OPS.offerFanout);
     const expires = new Date(Date.now() + OPS.offerMinutes * 60000).toISOString();
     if (ids.length) {
-      const { error } = await sb
-        .from("waitlist_offers")
-        .insert(
-          ids.map((client_id) => ({
-            cancelled_booking_id: b.id,
-            client_id,
-            date: b.date!,
-            time: b.time!,
-            location_type: b.location_type,
-            area: b.area,
-            expires_at: expires,
-          })),
-        );
+      const { error } = await sb.from("waitlist_offers").insert(
+        ids.map((client_id) => ({
+          cancelled_booking_id: b.id,
+          client_id,
+          date: b.date!,
+          time: b.time!,
+          location_type: b.location_type,
+          area: b.area,
+          expires_at: expires,
+        })),
+      );
       if (error) throw new Error("Could not create waitlist offers.");
     }
     return { offered: ids.length };

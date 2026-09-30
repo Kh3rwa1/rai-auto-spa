@@ -84,11 +84,9 @@ export const uploadCar = createServerFn({ method: "POST" })
     const blurred = box && input.mime === "image/jpeg" ? blurRegion(input.bytes, box) : null;
     const [o, u] = await Promise.all([
       sb.storage.from(BUCKET).upload(originalPath, input.bytes, { contentType: input.mime }),
-      sb.storage
-        .from(BUCKET)
-        .upload(displayPath, blurred ?? input.bytes, {
-          contentType: blurred ? "image/jpeg" : input.mime,
-        }),
+      sb.storage.from(BUCKET).upload(displayPath, blurred ?? input.bytes, {
+        contentType: blurred ? "image/jpeg" : input.mime,
+      }),
     ]);
     if (o.error || u.error)
       return { ok: false as const, error: "Could not save your photo. Please try again." };

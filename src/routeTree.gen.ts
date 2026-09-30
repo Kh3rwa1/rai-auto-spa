@@ -8,150 +8,152 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as OwnerRouteImport } from "./routes/owner";
-import { Route as OfferIdRouteImport } from "./routes/offer.$id";
-import { Route as PayBookingIdRouteImport } from "./routes/pay.$bookingId";
-import { Route as ApiPublicHooksRunScheduleRouteImport } from "./routes/api/public/hooks/run-schedule";
-import { Route as LovableEmailTransactionalPreviewRouteImport } from "./routes/lovable/email/transactional/preview";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as OwnerRouteImport } from './routes/owner'
+import { Route as OfferIdRouteImport } from './routes/offer.$id'
+import { Route as PayBookingIdRouteImport } from './routes/pay.$bookingId'
+import { Route as ApiPublicHooksRunScheduleRouteImport } from './routes/api/public/hooks/run-schedule'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const OwnerRoute = OwnerRouteImport.update({
-  id: "/owner",
-  path: "/owner",
+  id: '/owner',
+  path: '/owner',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const OfferIdRoute = OfferIdRouteImport.update({
-  id: "/offer/$id",
-  path: "/offer/$id",
+  id: '/offer/$id',
+  path: '/offer/$id',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const PayBookingIdRoute = PayBookingIdRouteImport.update({
-  id: "/pay/$bookingId",
-  path: "/pay/$bookingId",
+  id: '/pay/$bookingId',
+  path: '/pay/$bookingId',
   getParentRoute: () => rootRouteImport,
-} as any);
-const ApiPublicHooksRunScheduleRoute = ApiPublicHooksRunScheduleRouteImport.update({
-  id: "/api/public/hooks/run-schedule",
-  path: "/api/public/hooks/run-schedule",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const LovableEmailTransactionalPreviewRoute = LovableEmailTransactionalPreviewRouteImport.update({
-  id: "/lovable/email/transactional/preview",
-  path: "/lovable/email/transactional/preview",
-  getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
+const ApiPublicHooksRunScheduleRoute =
+  ApiPublicHooksRunScheduleRouteImport.update({
+    id: '/api/public/hooks/run-schedule',
+    path: '/api/public/hooks/run-schedule',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/owner": typeof OwnerRoute;
-  "/offer/$id": typeof OfferIdRoute;
-  "/pay/$bookingId": typeof PayBookingIdRoute;
-  "/api/public/hooks/run-schedule": typeof ApiPublicHooksRunScheduleRoute;
-  "/lovable/email/transactional/preview": typeof LovableEmailTransactionalPreviewRoute;
+  '/': typeof IndexRoute
+  '/owner': typeof OwnerRoute
+  '/offer/$id': typeof OfferIdRoute
+  '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/owner": typeof OwnerRoute;
-  "/offer/$id": typeof OfferIdRoute;
-  "/pay/$bookingId": typeof PayBookingIdRoute;
-  "/api/public/hooks/run-schedule": typeof ApiPublicHooksRunScheduleRoute;
-  "/lovable/email/transactional/preview": typeof LovableEmailTransactionalPreviewRoute;
+  '/': typeof IndexRoute
+  '/owner': typeof OwnerRoute
+  '/offer/$id': typeof OfferIdRoute
+  '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/owner": typeof OwnerRoute;
-  "/offer/$id": typeof OfferIdRoute;
-  "/pay/$bookingId": typeof PayBookingIdRoute;
-  "/api/public/hooks/run-schedule": typeof ApiPublicHooksRunScheduleRoute;
-  "/lovable/email/transactional/preview": typeof LovableEmailTransactionalPreviewRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/owner': typeof OwnerRoute
+  '/offer/$id': typeof OfferIdRoute
+  '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/owner"
-    | "/offer/$id"
-    | "/pay/$bookingId"
-    | "/api/public/hooks/run-schedule"
-    | "/lovable/email/transactional/preview";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/owner'
+    | '/offer/$id'
+    | '/pay/$bookingId'
+    | '/api/public/hooks/run-schedule'
+    | '/lovable/email/transactional/preview'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/owner"
-    | "/offer/$id"
-    | "/pay/$bookingId"
-    | "/api/public/hooks/run-schedule"
-    | "/lovable/email/transactional/preview";
+    | '/'
+    | '/owner'
+    | '/offer/$id'
+    | '/pay/$bookingId'
+    | '/api/public/hooks/run-schedule'
+    | '/lovable/email/transactional/preview'
   id:
-    | "__root__"
-    | "/"
-    | "/owner"
-    | "/offer/$id"
-    | "/pay/$bookingId"
-    | "/api/public/hooks/run-schedule"
-    | "/lovable/email/transactional/preview";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/owner'
+    | '/offer/$id'
+    | '/pay/$bookingId'
+    | '/api/public/hooks/run-schedule'
+    | '/lovable/email/transactional/preview'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  OwnerRoute: typeof OwnerRoute;
-  OfferIdRoute: typeof OfferIdRoute;
-  PayBookingIdRoute: typeof PayBookingIdRoute;
-  ApiPublicHooksRunScheduleRoute: typeof ApiPublicHooksRunScheduleRoute;
-  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute;
+  IndexRoute: typeof IndexRoute
+  OwnerRoute: typeof OwnerRoute
+  OfferIdRoute: typeof OfferIdRoute
+  PayBookingIdRoute: typeof PayBookingIdRoute
+  ApiPublicHooksRunScheduleRoute: typeof ApiPublicHooksRunScheduleRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/owner": {
-      id: "/owner";
-      path: "/owner";
-      fullPath: "/owner";
-      preLoaderRoute: typeof OwnerRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/offer/$id": {
-      id: "/offer/$id";
-      path: "/offer/$id";
-      fullPath: "/offer/$id";
-      preLoaderRoute: typeof OfferIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/pay/$bookingId": {
-      id: "/pay/$bookingId";
-      path: "/pay/$bookingId";
-      fullPath: "/pay/$bookingId";
-      preLoaderRoute: typeof PayBookingIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/public/hooks/run-schedule": {
-      id: "/api/public/hooks/run-schedule";
-      path: "/api/public/hooks/run-schedule";
-      fullPath: "/api/public/hooks/run-schedule";
-      preLoaderRoute: typeof ApiPublicHooksRunScheduleRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/lovable/email/transactional/preview": {
-      id: "/lovable/email/transactional/preview";
-      path: "/lovable/email/transactional/preview";
-      fullPath: "/lovable/email/transactional/preview";
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner': {
+      id: '/owner'
+      path: '/owner'
+      fullPath: '/owner'
+      preLoaderRoute: typeof OwnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offer/$id': {
+      id: '/offer/$id'
+      path: '/offer/$id'
+      fullPath: '/offer/$id'
+      preLoaderRoute: typeof OfferIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pay/$bookingId': {
+      id: '/pay/$bookingId'
+      path: '/pay/$bookingId'
+      fullPath: '/pay/$bookingId'
+      preLoaderRoute: typeof PayBookingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/run-schedule': {
+      id: '/api/public/hooks/run-schedule'
+      path: '/api/public/hooks/run-schedule'
+      fullPath: '/api/public/hooks/run-schedule'
+      preLoaderRoute: typeof ApiPublicHooksRunScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -162,17 +164,7 @@ const rootRouteChildren: RootRouteChildren = {
   PayBookingIdRoute: PayBookingIdRoute,
   ApiPublicHooksRunScheduleRoute: ApiPublicHooksRunScheduleRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
-
-import type { getRouter } from "./router.tsx";
-import type { startInstance } from "./start.ts";
-declare module "@tanstack/react-start" {
-  interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
-  }
-}
+  ._addFileTypes<FileRouteTypes>()

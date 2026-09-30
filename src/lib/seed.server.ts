@@ -139,17 +139,15 @@ export async function seedDemo(sb: DB) {
   const subsClients = cRows.slice(0, 40);
   const bookClients = cRows.slice(40);
 
-  const subsP = sb
-    .from("subscriptions")
-    .insert(
-      subsClients.map((c, i) => ({
-        client_id: c.id,
-        plan: "Daily Wash",
-        active: i % 13 !== 12,
-        preferred_time: TIMES[i % TIMES.length]!,
-        skip_dates: [],
-      })),
-    );
+  const subsP = sb.from("subscriptions").insert(
+    subsClients.map((c, i) => ({
+      client_id: c.id,
+      plan: "Daily Wash",
+      active: i % 13 !== 12,
+      preferred_time: TIMES[i % TIMES.length]!,
+      skip_dates: [],
+    })),
+  );
 
   type Row = Database["public"]["Tables"]["bookings"]["Insert"];
   const mk = (i: number, r: Partial<Row> & { plan: Row["plan"] }): Row => {
@@ -279,17 +277,13 @@ export async function seedDemo(sb: DB) {
   const [{ error: be }] = await Promise.all([
     sb.from("bookings").insert(bookings, { defaultToNull: false }),
     subsP,
-    sb
-      .from("waitlist")
-      .insert(
-        subsClients
-          .slice(0, 6)
-          .map((c, i) => ({
-            client_id: c.id,
-            area: c.area ?? "MG Marg",
-            date: plusDays(today, i % 3),
-          })),
-      ),
+    sb.from("waitlist").insert(
+      subsClients.slice(0, 6).map((c, i) => ({
+        client_id: c.id,
+        area: c.area ?? "MG Marg",
+        date: plusDays(today, i % 3),
+      })),
+    ),
   ]);
   if (be) console.error("seed bookings", be);
   if (be) throw new Error("Seeding bookings failed.");
