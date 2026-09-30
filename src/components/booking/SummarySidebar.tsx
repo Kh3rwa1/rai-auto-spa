@@ -16,6 +16,7 @@ type Props = {
   total: number;
   deposit: number;
   missing: string[];
+  previewUrl: string | undefined;
   action: StepAction;
   onEdit: (n: number) => void;
 };
@@ -65,6 +66,7 @@ export function SummarySidebar({
   total,
   deposit,
   missing,
+  previewUrl,
   action,
   onEdit,
 }: Props) {
@@ -88,12 +90,25 @@ export function SummarySidebar({
           </span>
         </div>
 
-        {draft.photo ? (
-          <img
-            src={draft.photo}
-            alt={booking ? `Your ${booking.vehicle}` : "Your car photo"}
-            className="aspect-[16/9] w-full rounded-2xl object-cover"
-          />
+        {previewUrl || draft.photo ? (
+          <figure className="overflow-hidden rounded-2xl">
+            <img
+              src={previewUrl ?? draft.photo!}
+              alt={
+                previewUrl
+                  ? "AI preview of your selected plan on your car"
+                  : booking
+                    ? `Your ${booking.vehicle}`
+                    : "Your car photo"
+              }
+              className="aspect-[16/9] w-full object-cover"
+            />
+            {previewUrl && (
+              <figcaption className="bg-muted px-3 py-1.5 text-[11px] text-muted-foreground">
+                AI preview — an artistic impression, not the guaranteed result.
+              </figcaption>
+            )}
+          </figure>
         ) : (
           <div
             aria-hidden

@@ -26,6 +26,7 @@ type Props = {
   set: SetDraft;
   nonce: number;
   total: number;
+  needsPin: boolean;
   onChooseSlot: (date: string, time: string) => void;
 };
 
@@ -43,9 +44,11 @@ function reasonFor(args: {
   return null;
 }
 
-export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props) {
+export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot }: Props) {
   const slotsFn = useServerFn(getSlots);
   const { mobile, water, pin, slot, plan } = draft;
+  // Signature reserves a studio bay for 2 days — the van cannot do it.
+  const studioOnly = plan === "signature";
   const [weekStart, setWeekStart] = useState(todayIST());
   const [selectedDate, setSelectedDate] = useState<string>(
     () => slot?.date ?? addDays(todayIST(), 1),
@@ -175,31 +178,54 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
             [false, Store, "Come to Studio", "MG Marg, Gangtok · Free · 2 bays"],
             [true, Truck, "We Come To You", `+${inr(MOBILE_FEE)} · Mobile van`],
           ] as const
-        ).map(([m, Icon, t, sub]) => (
-          <button
-            key={t}
-            type="button"
-            role="radio"
-            aria-checked={mobile === m}
-            aria-label={`${t}. ${sub}${mobile === m ? ", selected" : ""}`}
-            onClick={() => set({ mobile: m })}
-            className={cn(
-              "flex min-h-[44px] items-start gap-3 rounded-2xl border-2 p-4 text-left transition",
-              mobile === m
-                ? "border-primary bg-accent/50"
-                : "border-border hover:border-primary/40",
-            )}
-          >
-            <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-            <span>
-              <span className="block font-semibold">
-                {t} {mobile === m && <span className="text-primary">✓</span>}
+        ).map(([m, Icon, t, sub]) => {
+          const unavailable = m && studioOnly;
+          return (
+            <button
+              key={t}
+              type="button"
+              role="radio"
+              aria-checked={mobile === m}
+              aria-disabled={unavailable}
+              aria-label={`${t}. ${sub}${mobile === m ? ", selected" : ""}${unavailable ? ", unavailable: Signature needs the studio" : ""}`}
+              disabled={unavailable}
+              onClick={() => set({ mobile: m })}
+              className={cn(
+                "flex min-h-[44px] items-start gap-3 rounded-2xl border-2 p-4 text-left transition",
+                mobile === m
+                  ? "border-primary bg-accent/50"
+                  : "border-border hover:border-primary/40",
+                unavailable && "cursor-not-allowed opacity-60 hover:border-border",
+              )}
+            >
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+              <span>
+                <span className="block font-semibold">
+                  {t} {mobile === m && <span className="text-primary">✓</span>}
+                </span>
+                <span className="block text-sm text-muted-foreground">
+                  {unavailable ? "Not available for Signature — 2 studio days needed" : sub}
+                </span>
               </span>
-              <span className="block text-sm text-muted-foreground">{sub}</span>
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
+      {studioOnly && (
+        <p className="mt-3 rounded-xl bg-charcoal p-3 text-sm text-charcoal-foreground" role="note">
+          Signature Super Design reserves a studio bay for 2 full days, so the mobile van can&apos;t
+          do it — studio selected.
+        </p>
+      )}
+      {needsPin && (
+        <p
+          className="mt-3 rounded-xl bg-amber-400/15 p-3 text-sm font-medium text-amber-800 dark:text-amber-200"
+          role="status"
+        >
+          Pick a time below, then drop a map pin so the van can reach you — both are needed to
+          continue.
+        </p>
+      )}
 
       {mobile ? (
         <div className="mt-5 space-y-4">
@@ -217,7 +243,7 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
               </p>
             ) : (
               <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
-                Drop a pin so the van can reach you — required before payment.
+                Drop a pin so the van can reach you — required to continue.
               </p>
             )}
           </div>

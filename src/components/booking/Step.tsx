@@ -74,7 +74,7 @@ export function Step(p: {
   );
 }
 
-const LABELS = ["Snap", "Plan", "Where & When", "Preview", "Pay"] as const;
+const LABELS = ["Snap", "Plan", "Where & When", "Details"] as const;
 
 export function ProgressBar({
   active,
@@ -90,7 +90,7 @@ export function ProgressBar({
       aria-label="Booking progress"
       className="sticky top-20 z-30 -mx-4 border-y border-border bg-background/95 px-2 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:px-4"
     >
-      <ol className="mx-auto grid grid-cols-5 items-center">
+      <ol className="mx-auto grid grid-cols-4 items-center">
         {LABELS.map((label, i) => {
           const n = i + 1;
           return (
@@ -114,7 +114,7 @@ export function ProgressBar({
                   <span aria-hidden>•</span>
                 ) : null}
               </Button>
-              {n < 5 && (
+              {n < 4 && (
                 <span
                   aria-hidden
                   className={cn(

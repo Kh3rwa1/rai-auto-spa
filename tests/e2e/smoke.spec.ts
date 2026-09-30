@@ -4,19 +4,20 @@ import { expect, test } from "@playwright/test";
  * Challenge-demo browser suite (all demo, no real money / no real contacts).
  *
  * Covers:
- *  1. Sample-car booking (no upload / no personal info required)
- *  2. Signature colour/style selection stays visible until Continue
- *  3. Mobile date chips + time grid (no page-level horizontal scroll)
- *  4. Continuing while the AI preview is pending
- *  5. Demo payment success
- *  6. Simulated payment failure and retry (progress preserved)
- *  7. Slot contention recovery contract (edit earlier steps, keep progress)
- *  8. Guest admin navigation
- *  9. Waitlist-to-payment continuation contract (invalid links handled)
- * 10. Keyboard navigation and dialog focus behaviour
+ *  1. Compact landing leading straight to booking
+ *  2. Plan step opening while detection runs in the background
+ *  3. Resize-safe responsive booking (mobile wizard / desktop sidebar)
+ *  4. Sample-car booking with preview shown on the payment screen
+ *  5. Signature forcing studio-only (server rejects van + 2-day combos)
+ *  6. Mobile van gated on the map pin before Details
+ *  7. Simulated payment failure and retry (progress preserved)
+ *  8. Slot contention recovery contract (edit earlier steps, keep progress)
+ *  9. Guest admin navigation
+ * 10. Waitlist-to-payment continuation contract (invalid links handled)
+ * 11. Keyboard navigation and dialog focus behaviour
  *
- * Tests 2, 4, 5, 6 hit the live backend (uploads, slots, simulated checkout)
- * like the original smoke test did. Test 1 and parts of 8/9/10 are static.
+ * Backend-dependent tests hit the live backend (uploads, slots, simulated
+ * checkout) like the original smoke test did; the rest are static.
  */
 
 async function sampleToPlan(page: import("@playwright/test").Page) {
@@ -37,7 +38,8 @@ async function pickStudioSlot(page: import("@playwright/test").Page) {
     if ((await free.count()) > 0) break;
   }
   await expect(free.first()).toBeVisible({ timeout: 60_000 });
-  // The grid re-renders when the availability query settles, so retry until a pick sticks.
+  // The grid re-renders when the availability query settles, so retry until a
+  // pick sticks and Details (step 4) opens.
   await expect
     .poll(
       async () => {
@@ -53,18 +55,6 @@ async function pickStudioSlot(page: import("@playwright/test").Page) {
       { timeout: 60_000, intervals: [1500] },
     )
     .toBe(true);
-}
-
-async function continuePastPreview(page: import("@playwright/test").Page) {
-  // Either the preview is ready ("Continue to details") or still pending/failed
-  // ("Continue without preview") — both must let the judge move on without waiting.
-  const ready = page.locator("#step-4-body").getByRole("button", { name: "Continue to details" });
-  const without = page
-    .locator("#step-4-body")
-    .getByRole("button", { name: "Continue without preview" });
-  if (await without.isVisible().catch(() => false)) await without.click();
-  else await ready.click();
-  await expect(page.locator("#step-5-body")).toBeVisible({ timeout: 30_000 });
 }
 
 test("landing is compact and leads straight to booking", async ({ page }) => {
@@ -95,22 +85,22 @@ test("resizing between mobile and desktop keeps data and the active step", async
   // Jump straight to Details via the progress bar (no backend needed).
   await page
     .getByRole("navigation", { name: "Booking progress" })
-    .getByRole("button", { name: /Pay/ })
+    .getByRole("button", { name: /Details/ })
     .click();
-  await expect(page.locator("#step-5-body")).toBeVisible();
+  await expect(page.locator("#step-4-body")).toBeVisible();
   await page.getByLabel("Your name").fill("Resize Proof");
   // Desktop shows the persistent summary sidebar.
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeVisible();
 
   // Shrink to mobile: same step, same typed value, sidebar hides via CSS only.
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator("#step-5-body")).toBeVisible();
+  await expect(page.locator("#step-4-body")).toBeVisible();
   await expect(page.getByLabel("Your name")).toHaveValue("Resize Proof");
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeHidden();
 
   // Grow back to desktop: everything preserved, sidebar returns with the data.
   await page.setViewportSize({ width: 1280, height: 900 });
-  await expect(page.locator("#step-5-body")).toBeVisible();
+  await expect(page.locator("#step-4-body")).toBeVisible();
   await expect(page.getByLabel("Your name")).toHaveValue("Resize Proof");
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Booking summary" })).toContainText(
@@ -118,9 +108,7 @@ test("resizing between mobile and desktop keeps data and the active step", async
   );
 });
 
-test("sample car books end to end, continues while AI pends, pays demo deposit", async ({
-  page,
-}) => {
+test("sample car books end to end with preview on the payment screen", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
 
@@ -137,17 +125,17 @@ test("sample car books end to end, continues while AI pends, pays demo deposit",
     .getByRole("button", { name: /Continue to location/ })
     .click();
 
-  // Step 3 — studio slot.
+  // Step 3 — studio slot straight to Details (step 4 holds payment + preview).
   await pickStudioSlot(page);
 
-  // Step 4 — continue without waiting for the AI preview.
-  await continuePastPreview(page);
-
-  // Step 5 — details + demo payment (fictional contacts, values kept).
-  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
+  // Step 4 — preview lives on the payment screen; details + demo payment.
+  await expect(page.locator("#step-4-body").getByText("Your AI preview")).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
   await expect(page.getByLabel("Email (for your reveal video)")).toHaveValue("demo@example.com");
   await page
-    .locator("#step-5-body")
+    .locator("#step-4-body")
     .getByRole("button", { name: /Simulate.*deposit/ })
     .click();
 
@@ -176,7 +164,7 @@ test("sample car books end to end, continues while AI pends, pays demo deposit",
   expect(errors).toEqual([]);
 });
 
-test("signature keeps colour/style controls visible until Continue", async ({ page }) => {
+test("signature keeps colour/style visible and forces studio-only", async ({ page }) => {
   await sampleToPlan(page);
 
   // Selecting Signature must NOT advance away from its customisation controls.
@@ -198,15 +186,22 @@ test("signature keeps colour/style controls visible until Continue", async ({ pa
   await page.locator("#step-2-body").getByRole("button", { name: "Carbon Hood" }).click();
   await expect(page.locator("#step-2-body").getByText(/Selected: Racing Red/)).toBeVisible();
 
-  // Only the explicit Continue advances.
+  // Only the explicit Continue advances — and Signature switches the van to
+  // the studio, since the server rejects 2-day van reservations.
   await page
     .locator("#step-2-body")
     .getByRole("button", { name: /Continue to location/ })
     .click();
   await expect(page.locator("#step-3-body")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("radio", { name: /Come to Studio/ })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expect(page.getByRole("radio", { name: /We Come To You/ })).toBeDisabled();
+  await expect(page.getByText(/the mobile van/i).first()).toBeVisible();
 });
 
-test("mobile scheduling uses date chips and explains unavailable slots", async ({ page }) => {
+test("mobile layout gates the van on a map pin before Details", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await sampleToPlan(page);
   await page
@@ -229,16 +224,36 @@ test("mobile scheduling uses date chips and explains unavailable slots", async (
   );
   expect(noOverflow).toBe(true);
 
-  // Next-available shortcut exists when the week has capacity; unavailable
-  // times are explained in visible text, not hover-only tooltips.
+  // The van (default) demands a pin: picking the next available slot saves it
+  // but must NOT advance to Details.
+  await expect(page.getByText(/drop a map pin/i).first()).toBeVisible();
   const next = page.getByRole("button", { name: /Next available/ });
   if (await next.isVisible().catch(() => false)) {
-    await expect(next).toBeEnabled();
     await next.click();
-    await expect(page.locator("#step-4-body")).toBeVisible({ timeout: 30_000 });
-  } else {
-    await expect(page.getByText(/No free slots this week/)).toBeVisible();
+    await page.waitForTimeout(1500);
+    await expect(page.locator("#step-3-body")).toBeVisible();
+    await expect(page.locator("#step-4-body")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Drop a map pin above" })).toBeVisible();
   }
+
+  // Studio needs no pin: switching advances normally.
+  await page.getByRole("radio", { name: "Come to Studio" }).click();
+  const free = page.locator("#step-3-body button:not([disabled])").filter({ hasText: /^\d\d:00$/ });
+  await expect
+    .poll(
+      async () => {
+        await free
+          .first()
+          .click({ timeout: 5000 })
+          .catch(() => {});
+        return page
+          .locator("#step-4-body")
+          .isVisible()
+          .catch(() => false);
+      },
+      { timeout: 60_000, intervals: [1500] },
+    )
+    .toBe(true);
 });
 
 test("simulated payment failure keeps progress and retry succeeds", async ({ page }) => {
@@ -252,11 +267,10 @@ test("simulated payment failure keeps progress and retry succeeds", async ({ pag
     .getByRole("button", { name: /Continue to location/ })
     .click();
   await pickStudioSlot(page);
-  await continuePastPreview(page);
 
-  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
+  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
   await page
-    .locator("#step-5-body")
+    .locator("#step-4-body")
     .getByRole("button", { name: /Simulate.*deposit/ })
     .click();
 
@@ -286,8 +300,7 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
     .getByRole("button", { name: /Continue to location/ })
     .click();
   await pickStudioSlot(page);
-  await continuePastPreview(page);
-  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
+  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
 
   // Jump back to Plan via the progress bar: contact details must survive.
   await page
@@ -349,10 +362,9 @@ test("idle checkout dialog traps focus and Escape cancels", async ({ page }) => 
     .getByRole("button", { name: /Continue to location/ })
     .click();
   await pickStudioSlot(page);
-  await continuePastPreview(page);
-  await page.locator("#step-5-body").getByRole("button", { name: "Use demo details" }).click();
+  await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
   await page
-    .locator("#step-5-body")
+    .locator("#step-4-body")
     .getByRole("button", { name: /Simulate.*deposit/ })
     .click();
 
