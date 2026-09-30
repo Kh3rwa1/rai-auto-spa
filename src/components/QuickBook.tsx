@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CalendarPlus, Check, Loader2, LocateFixed, MapPin, Store, Truck, Zap } from "lucide-react";
+import {
+  CalendarPlus,
+  Camera,
+  Check,
+  Loader2,
+  LocateFixed,
+  MapPin,
+  Sparkles,
+  Store,
+  Truck,
+  Upload,
+  Zap,
+} from "lucide-react";
 import {
   AREAS,
   MOBILE_FEE,
@@ -14,7 +26,7 @@ import {
   isDryWindow,
   type PlanId,
 } from "@/lib/plans";
-import { getSlots } from "@/lib/booking.functions";
+import { getSlots, makePreview, uploadCar } from "@/lib/booking.functions";
 import { holdQuickSlot, releaseQuickSlot, startQuickBooking } from "@/lib/quickbook.functions";
 import { CheckoutModal } from "./booking/CheckoutModal";
 import { initialDraft, type Draft } from "./booking/useBookingDraft";
@@ -25,6 +37,12 @@ type SlotMap = Record<string, { taken: number; blocked: string | null; travelMin
 const DAY = 86_400_000;
 const HOLD_MIN = 20;
 const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
+const SAMPLES = [
+  { file: "swift.jpg", label: "Maruti Swift" },
+  { file: "thar.jpg", label: "Mahindra Thar" },
+  { file: "creta.jpg", label: "Hyundai Creta" },
+] as const;
+
 const istNow = () => new Date(Date.now() + 5.5 * 3_600_000);
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 const plusDays = (ds: string, n: number) => ymd(new Date(Date.parse(ds) + n * DAY));
@@ -42,17 +60,28 @@ const dayLabel = (ds: string, today: string) =>
           timeZone: "UTC",
         });
 const reducedMotion = () =>
-  typeof window !== "undefined" &&
-  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-function calendarUrl(plan: PlanId, date: string, time: string, where: string) {
-  const [h, m] = time.split(":").map(Number);
+/** Same compression as the photo flow: max 1280px JPEG. */
+async function compress(file: Blob): Promise<{ b64: string; url: string }> {
+  const img = await createImageBitmap(file);
+  const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", 0.85);
+  return { b64: url.split(",")[1] ?? "", url };
+}
+
+function calendarUrl(plan: PlanId, date: string, time: string, where: string, car: string) {
+  const [h = 9, m = 0] = time.split(":").map(Number);
   const start = Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10), h, m);
-  const mins = plan === "wash" ? 45 : plan === "detail" ? 120 : 33 * 60; // Signature: 9am → 6pm next day
+  const mins = plan === "wash" ? 45 : plan === "detail" ? 120 : 33 * 60;
   const f = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").slice(0, 15);
   const q = new URLSearchParams({
     action: "TEMPLATE",
-    text: `${PLANS[plan].name} — Rai's Auto Spa`,
+    text: `${PLANS[plan].name} (${car}) — Rai's Auto Spa`,
     dates: `${f(start)}/${f(start + mins * 60_000)}`,
     ctz: "Asia/Kolkata",
     location: where,
@@ -67,8 +96,8 @@ const CSS = `
 .qb{--ink:#111;--pink:#FF5FA2;--yellow:#FFD84D;--mint:#9EE6C4;color:var(--ink)}
 .qb-h{font-family:Outfit,Inter,system-ui,sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:-.02em}
 .qb-card{position:relative;border:3px solid var(--ink);border-radius:16px;background:#fff;text-align:left;transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s}
-.qb-card:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--ink)}
-.qb-card:active:not(:disabled){transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+button.qb-card:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--ink)}
+button.qb-card:active:not(:disabled){transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
 .qb-card[aria-checked=true]{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--ink)}
 .qb-card:disabled{opacity:.45;cursor:not-allowed}
 .qb-tick{position:absolute;top:10px;right:10px;display:grid;place-items:center;width:28px;height:28px;border-radius:999px;border:2.5px solid var(--ink);background:var(--yellow);animation:qb-pop .4s cubic-bezier(.3,1.6,.5,1)}
@@ -77,7 +106,11 @@ const CSS = `
 .qb-chip:active:not(:disabled){transform:scale(.93)}
 .qb-chip[aria-pressed=true]{background:var(--yellow);animation:qb-pop .35s cubic-bezier(.3,1.6,.5,1)}
 .qb-chip:disabled,.qb-day:disabled{opacity:.35;cursor:not-allowed}
-.qb-chip:disabled{text-decoration:line-through}
+.qb-time:disabled{text-decoration:line-through}
+.qb-sample{width:96px;overflow:hidden;border:2.5px solid var(--ink);border-radius:14px;background:#fff;font-size:11px;font-weight:800;transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s}
+.qb-sample:hover:not(:disabled){transform:translate(-2px,-2px) rotate(-1.5deg);box-shadow:4px 4px 0 var(--ink)}
+.qb-sample:disabled{opacity:.5}
+.qb-skel{background:linear-gradient(100deg,#f3eee4 30%,#fff 50%,#f3eee4 70%);background-size:300% 100%;animation:qb-skel 1.4s linear infinite}
 .qb-day{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;min-width:64px;padding:8px 6px;border:2.5px solid var(--ink);border-radius:14px;background:#fff;font-weight:800;transition:transform .15s cubic-bezier(.3,1.6,.5,1)}
 .qb-day:hover:not(:disabled){transform:translateY(-3px)}
 .qb-day[aria-pressed=true]{background:var(--ink);color:#fff;transform:translateY(-3px)}
@@ -103,20 +136,11 @@ const CSS = `
 @keyframes qb-up{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
 @keyframes qb-shine{0%{transform:translateX(-120%) skewX(-20deg)}60%,100%{transform:translateX(320%) skewX(-20deg)}}
 @keyframes qb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,216,77,.7)}50%{box-shadow:0 0 0 8px rgba(255,216,77,0)}}
+@keyframes qb-skel{to{background-position:-300% 0}}
 @media (prefers-reduced-motion:reduce){.qb *,.qb *::after{animation:none!important;transition:none!important}}
 `;
 
-function Block({
-  n,
-  title,
-  done,
-  children,
-}: {
-  n: number;
-  title: string;
-  done: boolean;
-  children: ReactNode;
-}) {
+function Block({ n, title, done, children }: { n: number; title: string; done: boolean; children: ReactNode }) {
   return (
     <section className={`qb-in ${done ? "qb-done" : ""}`} aria-label={title}>
       <h3 className="qb-h mb-3 flex items-center gap-3 text-xl">
@@ -135,9 +159,21 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const hold = useServerFn(holdQuickSlot);
   const release = useServerFn(releaseQuickSlot);
   const fetchSlots = useServerFn(getSlots);
+  const upload = useServerFn(uploadCar);
+  const previewFn = useServerFn(makePreview);
 
   const [plan, setPlan] = useState<PlanId | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  // car
+  const [car, setCar] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoBookingId, setPhotoBookingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [plateBlurred, setPlateBlurred] = useState<boolean | null>(null);
+  const [previews, setPreviews] = useState<Partial<Record<PlanId, string>>>({});
+  const [previewing, setPreviewing] = useState<PlanId | null>(null);
+  const [previewFailed, setPreviewFailed] = useState<PlanId | null>(null);
+  // where / when
   const [mobile, setMobile] = useState(false);
   const [area, setArea] = useState<string | null>(null);
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
@@ -149,24 +185,32 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const [slot, setSlot] = useState<Slot | null>(null);
   const [heldAt, setHeldAt] = useState<number | null>(null);
   const [holding, setHolding] = useState<string | null>(null);
+  // who
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  // pay
   const [manageToken, setManageToken] = useState("");
   const [payOpen, setPayOpen] = useState(false);
   const [booked, setBooked] = useState(false);
   const [locating, setLocating] = useState(false);
   const [, setTick] = useState(0);
+
   const starting = useRef<Promise<string | null> | null>(null);
+  const camRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const previewRuns = useRef(new Set<string>());
 
   const today = ymd(istNow());
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => plusDays(today, i)), [today]);
+  const carName = car.trim();
+  const carOk = carName.length >= 2 && !uploading;
 
   const ensureBooking = useCallback(
     (p: PlanId): Promise<string | null> => {
       if (bookingId) return Promise.resolve(bookingId);
       if (!starting.current) {
-        starting.current = start({ data: { plan: p } })
+        starting.current = start({ data: { plan: p, vehicle: carName || undefined } })
           .then((r) => {
             if (r.ok) {
               setBookingId(r.bookingId);
@@ -184,7 +228,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       }
       return starting.current;
     },
-    [bookingId, start],
+    [bookingId, start, carName],
   );
 
   const loadSlots = useCallback(async () => {
@@ -222,6 +266,24 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       .catch(() => {});
   }, [booked]);
 
+  // AI "after" preview: once per photo + plan (cached), only for photo bookings.
+  useEffect(() => {
+    if (!plan || !photoBookingId || bookingId !== photoBookingId || uploading) return;
+    if (previews[plan]) return;
+    const key = `${photoBookingId}|${plan}`;
+    if (previewRuns.current.has(key)) return;
+    previewRuns.current.add(key);
+    setPreviewing(plan);
+    setPreviewFailed(null);
+    previewFn({ data: { bookingId: photoBookingId, plan } })
+      .then((r) => {
+        if (r.previewUrl) setPreviews((p) => ({ ...p, [plan]: r.previewUrl as string }));
+        else setPreviewFailed(plan);
+      })
+      .catch(() => setPreviewFailed(plan))
+      .finally(() => setPreviewing((cur) => (cur === plan ? null : cur)));
+  }, [plan, photoBookingId, bookingId, uploading, previews, previewFn]);
+
   const dropSlot = useCallback(() => {
     if (slot && bookingId) void release({ data: { bookingId } }).catch(() => {});
     setSlot(null);
@@ -255,8 +317,23 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const activeDay = day ?? slot?.date ?? soonest?.date ?? days[0]!;
   const gridLoaded = Object.keys(slots).length > 0;
 
+  async function holdFor(id: string, ds: string, t: string) {
+    if (!plan) return false;
+    const r = await hold({
+      data: { bookingId: id, plan, date: ds, time: t, mobile, water, vehicle: carName || undefined },
+    });
+    if (r.ok) {
+      setSlot({ date: ds, time: t });
+      setHeldAt(Date.now());
+      setDay(ds);
+      return true;
+    }
+    toast.error(r.error);
+    return false;
+  }
+
   async function pick(ds: string, t: string) {
-    if (!plan || holding) return;
+    if (!plan || holding || uploading) return;
     if (mobile && !pin) {
       toast.message("Pick your area first so the van knows where to go.");
       return;
@@ -268,19 +345,65 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       return;
     }
     try {
-      const r = await hold({ data: { bookingId: id, plan, date: ds, time: t, mobile, water } });
-      if (r.ok) {
-        setSlot({ date: ds, time: t });
-        setHeldAt(Date.now());
-        setDay(ds);
-      } else {
-        toast.error(r.error);
-      }
+      await holdFor(id, ds, t);
     } catch {
       toast.error("Couldn't hold that time. Try again.");
     } finally {
       setHolding(null);
       void loadSlots();
+    }
+  }
+
+  async function sendPhoto(f?: Blob | null) {
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      toast.error("Please choose a photo.");
+      return;
+    }
+    setUploading(true);
+    const prevSlot = slot;
+    const prevBooking = bookingId;
+    try {
+      const { b64, url } = await compress(f);
+      setPhoto(url);
+      setPlateBlurred(null);
+      const r = await upload({ data: { image: b64, mime: "image/jpeg" } });
+      if (!r.ok) throw new Error(r.error);
+      if (!r.isCar) toast.warning("Hmm, that doesn't look like a car — previews work best with a clear car photo.");
+      if (r.photoUrl) setPhoto(r.photoUrl);
+      setPlateBlurred(!!r.plateBlurred);
+      if (r.vehicle && r.vehicle !== "Car") setCar(r.vehicle);
+      setPreviews({});
+      setPreviewFailed(null);
+      // The photo creates its own booking row — move any held slot over to it.
+      setBookingId(r.bookingId);
+      setPhotoBookingId(r.bookingId);
+      starting.current = Promise.resolve(r.bookingId);
+      if (prevSlot && prevBooking) {
+        setSlot(null);
+        setHeldAt(null);
+        await release({ data: { bookingId: prevBooking } }).catch(() => {});
+        const ok = await holdFor(r.bookingId, prevSlot.date, prevSlot.time).catch(() => false);
+        if (!ok) toast.message("Photo added — please pick your time again.");
+        void loadSlots();
+      }
+    } catch (e) {
+      toast.error((e as Error).message || "Couldn't upload the photo.");
+      setPhoto(null);
+    } finally {
+      setUploading(false);
+      if (camRef.current) camRef.current.value = "";
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function sample(file: string) {
+    try {
+      const res = await fetch(`/samples/${file}`);
+      if (!res.ok) throw new Error();
+      await sendPhoto(await res.blob());
+    } catch {
+      toast.error("Couldn't load the sample car — try again.");
     }
   }
 
@@ -296,7 +419,6 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     }
     setPlan(p);
     setDay(null);
-    void ensureBooking(p);
   }
 
   function setMode(m: boolean) {
@@ -338,6 +460,13 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   function resetAll() {
     setPlan(null);
     setBookingId(null);
+    setCar("");
+    setPhoto(null);
+    setPhotoBookingId(null);
+    setPlateBlurred(null);
+    setPreviews({});
+    setPreviewing(null);
+    setPreviewFailed(null);
     setMobile(false);
     setArea(null);
     setPin(null);
@@ -351,6 +480,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     setPayOpen(false);
     setBooked(false);
     starting.current = null;
+    previewRuns.current.clear();
   }
 
   const digits = phone.replace(/\D/g, "").slice(-10);
@@ -361,34 +491,38 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const whereDone = !mobile || !!pin;
   const total = plan ? calcTotal(plan, mobile, mobile && !water) : 0;
   const deposit = depositOf(total);
-  const ready =
-    !!plan && !!bookingId && !!slot && holdLive && whereDone && nameOk && phoneOk && emailOk;
+  const ready = !!plan && carOk && !!bookingId && !!slot && holdLive && whereDone && nameOk && phoneOk && emailOk;
   const nextHint = !plan
     ? "Pick a service"
-    : !whereDone
-      ? "Pick your area"
-      : !slot
-        ? "Pick a time"
-        : !holdLive
-          ? "Hold expired — tap a time again"
-          : !nameOk
-            ? "Add your name"
-            : !phoneOk
-              ? "Add a 10-digit mobile"
-              : !emailOk
-                ? "Add your email"
-                : null;
+    : !carOk
+      ? uploading
+        ? "Checking your photo…"
+        : "Add your car"
+      : !whereDone
+        ? "Pick your area"
+        : !slot
+          ? "Pick a time"
+          : !holdLive
+            ? "Hold expired — tap a time again"
+            : !nameOk
+              ? "Add your name"
+              : !phoneOk
+                ? "Add a 10-digit mobile"
+                : !emailOk
+                  ? "Add your email"
+                  : null;
   const slotText = slot
     ? `${dayLabel(slot.date, today)} ${plan === "signature" ? "drop-off 9am" : timeLabel(slot.time)}`
     : "";
   const whereText = mobile
     ? `${building || area || "Your place"}, Gangtok (van comes to you)`
     : "Rai's Auto Spa, MG Marg, Gangtok 737101";
+  const preview = plan ? previews[plan] : undefined;
 
   const draft: Draft = {
     ...initialDraft,
-    booking: bookingId ? { id: bookingId, vehicle: "Car" } : null,
-    photo: null,
+    booking: bookingId ? { id: bookingId, vehicle: carName || "Car" } : null,
+    photo,
     plan,
     mobile,
     pin: mobile ? pin : null,
@@ -412,28 +546,30 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
         </div>
         <h3 className="qb-h mt-5 text-4xl">You&rsquo;re booked!</h3>
         <p className="mt-2 text-lg font-bold">
-          {PLANS[plan].name} · {slotText}
+          {PLANS[plan].name} for your {carName || "car"} · {slotText}
         </p>
         <p className="mt-1 text-sm text-[#444]">{whereText}</p>
         <p className="mt-3 text-sm font-bold">
           Paid {inr(deposit)} deposit · {inr(total - deposit)} due on the day
         </p>
+        {preview && (
+          <img
+            src={preview}
+            alt="Your car after the service (AI preview)"
+            className="qb-card mx-auto mt-5 aspect-[4/3] w-full max-w-sm object-cover"
+          />
+        )}
         <div className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row">
           <a
             className="qb-soon justify-center"
-            href={calendarUrl(plan, slot.date, slot.time, whereText)}
+            href={calendarUrl(plan, slot.date, slot.time, whereText, carName || "car")}
             target="_blank"
             rel="noreferrer"
           >
             <CalendarPlus className="h-5 w-5" aria-hidden /> Add to calendar
           </a>
           {!mobile && (
-            <a
-              className="qb-soon justify-center !bg-white"
-              href={MAPS_URL}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a className="qb-soon justify-center !bg-white" href={MAPS_URL} target="_blank" rel="noreferrer">
               <MapPin className="h-5 w-5" aria-hidden /> Directions
             </a>
           )}
@@ -453,6 +589,23 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   return (
     <div className="qb space-y-7 p-2 sm:p-3">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <input
+        ref={camRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        aria-label="Take a photo of your car"
+        onChange={(e) => void sendPhoto(e.target.files?.[0])}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-label="Upload a photo of your car"
+        onChange={(e) => void sendPhoto(e.target.files?.[0])}
+      />
 
       <Block n={1} title="Pick your glow-up" done={!!plan}>
         <div role="radiogroup" aria-label="Service" className="grid gap-3 sm:grid-cols-3">
@@ -483,17 +636,142 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                 </span>
                 <span className="qb-h mt-1 block text-xl leading-tight">{p.name}</span>
                 <span className="qb-h mt-2 block text-3xl">{inr(p.price)}</span>
-                <span className="mt-2 block text-xs text-[#444]">
-                  {p.features.slice(0, 3).join(" · ")}
-                </span>
+                <span className="mt-2 block text-xs text-[#444]">{p.features.join(" · ")}</span>
               </button>
             );
           })}
         </div>
+        <p className="mt-3 text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
+          Doorstep van +{inr(MOBILE_FEE)} · 30% deposit secures your slot · No hidden fees
+        </p>
       </Block>
 
       {plan && (
-        <Block n={2} title="Where?" done={whereDone}>
+        <Block n={2} title="Your car" done={carOk}>
+          {photo ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <figure className="qb-card overflow-hidden">
+                <img
+                  src={photo}
+                  alt={carName ? `Your ${carName}` : "Your car"}
+                  className="aspect-[4/3] w-full object-cover"
+                />
+                <figcaption className="flex items-center justify-between gap-2 border-t-[3px] border-[#111] px-3 py-2 text-[11px] font-extrabold uppercase">
+                  <span className="flex items-center gap-1.5">
+                    {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                    {uploading ? "Detecting your car…" : "Before"}
+                  </span>
+                  {plateBlurred !== null && <span>{plateBlurred ? "Plate blurred ✓" : "No plate found"}</span>}
+                </figcaption>
+              </figure>
+              <figure className="qb-card overflow-hidden">
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt="AI preview of your car after the service"
+                    className="qb-in aspect-[4/3] w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`grid aspect-[4/3] w-full place-items-center p-4 text-center text-sm font-bold ${previewing === plan ? "qb-skel" : "bg-[#FFF8EC]"}`}
+                    aria-live="polite"
+                  >
+                    {previewing === plan ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Making your glow-up…
+                      </span>
+                    ) : previewFailed === plan ? (
+                      "Preview unavailable right now — you can still book."
+                    ) : uploading ? (
+                      "Preview comes right after the photo."
+                    ) : (
+                      "Preview on its way…"
+                    )}
+                  </div>
+                )}
+                <figcaption className="flex items-center justify-between gap-2 border-t-[3px] border-[#111] px-3 py-2 text-[11px] font-extrabold uppercase">
+                  <span>After · AI preview</span>
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                </figcaption>
+              </figure>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="qb-chip" disabled={uploading} onClick={() => camRef.current?.click()}>
+                  <Camera className="h-4 w-4" aria-hidden /> Take photo
+                </button>
+                <button type="button" className="qb-chip" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                  <Upload className="h-4 w-4" aria-hidden /> Upload
+                </button>
+              </div>
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
+                No car handy? Try a sample
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {SAMPLES.map((s) => (
+                  <button
+                    key={s.file}
+                    type="button"
+                    className="qb-sample"
+                    disabled={uploading}
+                    onClick={() => void sample(s.file)}
+                  >
+                    <img
+                      src={`/samples/${s.file}`}
+                      alt=""
+                      loading="lazy"
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                    <span className="block px-1 py-1.5">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <label className="mt-4 block">
+            <span className="mb-1 block text-xs font-extrabold uppercase">
+              {photo ? "Car model (edit if we got it wrong)" : "Or just type your car"}
+            </span>
+            <input
+              className="qb-input"
+              placeholder="e.g. Maruti Swift"
+              value={car}
+              maxLength={60}
+              autoComplete="off"
+              onChange={(e) => setCar(e.target.value)}
+            />
+          </label>
+          <p className="mt-2 text-xs text-[#555]">
+            {photo
+              ? "Your original photo stays private. Only the plate-blurred copy is shown."
+              : "Photo is optional. Add one to see an AI preview of your car after the service."}
+          </p>
+          {photo && (
+            <button
+              type="button"
+              className="qb-chip mt-3"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Camera className="h-4 w-4" aria-hidden /> Change photo
+            </button>
+          )}
+          {plan === "signature" && onUsePhotoFlow && (
+            <button
+              type="button"
+              onClick={onUsePhotoFlow}
+              className="mt-3 block text-sm font-bold underline decoration-[#FF5FA2] decoration-[3px] underline-offset-4"
+            >
+              Want to choose your wrap colour and style? Open the full wrap studio →
+            </button>
+          )}
+        </Block>
+      )}
+
+      {plan && (
+        <Block n={3} title="Where?" done={whereDone}>
           <div role="radiogroup" aria-label="Location" className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -517,9 +795,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
               <Truck className="h-6 w-6" aria-hidden />
               <span className="qb-h mt-2 block text-lg">Doorstep</span>
               <span className="block text-xs text-[#444]">
-                {plan === "signature"
-                  ? "Signature is studio-only"
-                  : `Van comes to you · +${inr(MOBILE_FEE)}`}
+                {plan === "signature" ? "Signature is studio-only" : `Van comes to you · +${inr(MOBILE_FEE)}`}
               </span>
             </button>
           </div>
@@ -527,12 +803,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
           {mobile && (
             <div className="qb-in mt-4 space-y-3">
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="qb-chip"
-                  aria-pressed={area === "My location"}
-                  onClick={locate}
-                >
+                <button type="button" className="qb-chip" aria-pressed={area === "My location"} onClick={locate}>
                   {locating ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                   ) : (
@@ -574,8 +845,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
               </label>
               {!water && (
                 <p className="qb-in text-sm text-[#444]">
-                  No stress — the van brings a tank (+{inr(WATER_FEE)}). 11am–4pm isn&rsquo;t
-                  available without water.
+                  No stress — the van brings a tank (+{inr(WATER_FEE)}). 11am–4pm isn&rsquo;t available without water.
                 </p>
               )}
             </div>
@@ -584,7 +854,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       )}
 
       {plan && (
-        <Block n={3} title="When?" done={!!slot && holdLive}>
+        <Block n={4} title="When?" done={!!slot && holdLive}>
           {!gridLoaded ? (
             <p className="flex items-center gap-2 text-sm font-bold">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Checking live slots…
@@ -592,11 +862,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
           ) : (
             <>
               {soonest && !slot && whereDone && (
-                <button
-                  type="button"
-                  className="qb-soon mb-3"
-                  onClick={() => pick(soonest.date, soonest.time)}
-                >
+                <button type="button" className="qb-soon mb-3" onClick={() => void pick(soonest.date, soonest.time)}>
                   <Zap className="h-5 w-5" aria-hidden />
                   Soonest: {dayLabel(soonest.date, today)}{" "}
                   {plan === "signature" ? "drop-off 9am" : timeLabel(soonest.time)} — tap to grab it
@@ -612,11 +878,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                   Signature takes 2 full days in a bay. Pick your drop-off day (9am).
                 </p>
               )}
-              <div
-                role="group"
-                aria-label="Day"
-                className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-1"
-              >
+              <div role="group" aria-label="Day" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-1">
                 {days.map((ds) => {
                   const count = openTimes(ds).length;
                   const mine = slot?.date === ds;
@@ -628,7 +890,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                       className="qb-day"
                       disabled={!count && !mine}
                       aria-pressed={on}
-                      onClick={() => (plan === "signature" ? pick(ds, "09:00") : setDay(ds))}
+                      onClick={() => (plan === "signature" ? void pick(ds, "09:00") : setDay(ds))}
                     >
                       <span className="text-[11px] uppercase">{dayLabel(ds, today)}</span>
                       <span className="text-xl leading-none">{Number(ds.slice(8, 10))}</span>
@@ -656,10 +918,10 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                       <button
                         key={t}
                         type="button"
-                        className="qb-chip"
+                        className="qb-chip qb-time"
                         disabled={!open && !mine}
                         aria-pressed={mine}
-                        onClick={() => pick(activeDay!, t)}
+                        onClick={() => void pick(activeDay, t)}
                       >
                         {holding === `${activeDay} ${t}` ? (
                           <Loader2 className="h-4 w-4 animate-spin" aria-label="Holding" />
@@ -672,11 +934,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                 </div>
               )}
               {slot && (
-                <p
-                  key={slotText}
-                  className={`qb-held qb-in mt-3 ${holdLive ? "" : "!bg-[#FFD84D]"}`}
-                  role="status"
-                >
+                <p key={slotText} className={`qb-held qb-in mt-3 ${holdLive ? "" : "!bg-[#FFD84D]"}`} role="status">
                   {holdLive
                     ? `✓ ${slotText} is held for you for ${HOLD_MIN} min — just add your details.`
                     : "Hold expired — tap a time again."}
@@ -688,7 +946,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       )}
 
       {slot && (
-        <Block n={4} title="Who's coming?" done={nameOk && phoneOk && emailOk}>
+        <Block n={5} title="Who's coming?" done={nameOk && phoneOk && emailOk}>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="block">
               <span className="mb-1 block text-xs font-extrabold uppercase">Name</span>
@@ -703,7 +961,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
             <label className="block">
               <span className="mb-1 block text-xs font-extrabold uppercase">Mobile</span>
               <span className="flex gap-2">
-                <span className="qb-input !w-auto flex items-center font-extrabold" aria-hidden>
+                <span className="qb-input flex !w-auto items-center font-extrabold" aria-hidden>
                   🇮🇳 +91
                 </span>
                 <input
@@ -739,32 +997,18 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
         <div className="qb-bar">
           <div className="min-w-0">
             <p className="truncate text-sm font-extrabold">
-              {PLANS[plan].name} · {mobile ? "Doorstep" : "Studio"}
+              {PLANS[plan].name}
+              {carName ? ` · ${carName}` : ""} · {mobile ? "Doorstep" : "Studio"}
               {slot ? ` · ${slotText}` : ""}
             </p>
             <p className="truncate text-xs opacity-80">
               {inr(total)} total · {inr(deposit)} now{nextHint ? ` · ${nextHint}` : " · ready!"}
             </p>
           </div>
-          <button
-            type="button"
-            className="qb-pay"
-            disabled={!ready}
-            onClick={() => setPayOpen(true)}
-          >
+          <button type="button" className="qb-pay" disabled={!ready} onClick={() => setPayOpen(true)}>
             Pay {inr(deposit)}
           </button>
         </div>
-      )}
-
-      {onUsePhotoFlow && (
-        <button
-          type="button"
-          onClick={onUsePhotoFlow}
-          className="block text-sm font-bold underline decoration-[#FF5FA2] decoration-[3px] underline-offset-4"
-        >
-          Want the AI glow-up preview first? Book with a photo →
-        </button>
       )}
 
       {payOpen && (
