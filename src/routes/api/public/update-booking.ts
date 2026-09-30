@@ -11,7 +11,6 @@ const planName = (v: string) => {
   return hit?.name ?? null;
 };
 
-
 /**
  * Webhook for the Sarvam agent's `modify_booking` tool and for Sarvam's own
  * instant-outbound call-outcome callback (docs: conversations/api/instant-outbound).
@@ -94,8 +93,6 @@ export const Route = createFileRoute("/api/public/update-booking")({
         const direct = schema.safeParse(raw);
         const d = direct.success ? direct.data : fromOutcome(raw);
         if (!d) return new Response("Bad request", { status: 400 });
-
-
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: b } = await supabaseAdmin
