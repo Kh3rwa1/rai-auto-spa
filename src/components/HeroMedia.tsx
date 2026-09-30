@@ -11,7 +11,8 @@ export function HeroMedia({ poster, video }: { poster: string; video: string }) 
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+      ?.saveData;
     if (reduce || saveData) return;
     const id = window.setTimeout(() => setShowVideo(true), 300);
     return () => window.clearTimeout(id);
@@ -19,10 +20,19 @@ export function HeroMedia({ poster, video }: { poster: string; video: string }) 
 
   return (
     <div className="absolute inset-0" aria-hidden>
-      <img src={poster} alt="" fetchPriority="high" decoding="async" className="h-full w-full object-cover" />
+      <img
+        src={poster}
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        className="h-full w-full object-cover"
+      />
       {showVideo && (
         <video
-          className={cn("absolute inset-0 h-full w-full object-cover transition-opacity duration-700", playing ? "opacity-100" : "opacity-0")}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-700",
+            playing ? "opacity-100" : "opacity-0",
+          )}
           src={video}
           autoPlay
           muted

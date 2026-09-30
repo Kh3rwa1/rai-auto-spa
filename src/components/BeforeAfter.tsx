@@ -55,7 +55,7 @@ export function BeforeAfter({
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
       >
         <img
-        decoding="async"
+          decoding="async"
           src={before}
           alt={beforeLabel}
           className="absolute inset-0 h-full w-full object-cover"
