@@ -239,7 +239,10 @@ test("mobile layout gates the van on a map pin before Details", async ({ page })
     await page.waitForTimeout(1500);
     await expect(page.locator("#step-3-body")).toBeVisible();
     await expect(page.locator("#step-4-body")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Drop a map pin above" })).toBeVisible();
+    // Step body and sticky bottom bar both show the gate; either one proves it.
+    await expect(
+      page.getByRole("button", { name: "Drop a map pin above" }).first(),
+    ).toBeVisible();
   }
 
   // Studio needs no pin: switching advances normally.
