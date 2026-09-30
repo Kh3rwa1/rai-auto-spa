@@ -129,14 +129,20 @@ function OwnerPage() {
       <header className="sticky top-0 z-30 px-3 pt-3 sm:px-5">
         <div className="ras-box mx-auto flex max-w-7xl items-center justify-between gap-2 bg-[var(--cream)] py-1.5 pl-4 pr-2">
           <div className="flex min-w-0 items-center gap-3">
-            <Link to="/" aria-label="Rai's Auto Spa — back to the site" className="flex items-center gap-2">
+            <Link
+              to="/"
+              aria-label="Rai's Auto Spa — back to the site"
+              className="flex items-center gap-2"
+            >
               <span className="ras-display text-2xl">Rai&rsquo;s</span>
               <span className="ras-twinkle text-lg" aria-hidden>
                 ✦
               </span>
               <span className="ras-pill ras-lilac">Owner</span>
             </Link>
-            <span className="hidden text-[11px] font-extrabold uppercase tracking-wider lg:inline">{dateLabel}</span>
+            <span className="hidden text-[11px] font-extrabold uppercase tracking-wider lg:inline">
+              {dateLabel}
+            </span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Link to="/" className="ras-btn ras-white hidden sm:inline-flex">
@@ -164,8 +170,9 @@ function OwnerPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Reset the demo data?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This clears the sample customers, bookings and subscriptions and builds a fresh set dated from
-                    today. Bookings made by visitors are left alone. You can reset again after a minute.
+                    This clears the sample customers, bookings and subscriptions and builds a fresh
+                    set dated from today. Bookings made by visitors are left alone. You can reset
+                    again after a minute.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

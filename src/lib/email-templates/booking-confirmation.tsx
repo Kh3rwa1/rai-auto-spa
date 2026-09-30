@@ -1,5 +1,16 @@
 import React from "react";
-import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Text } from "@react-email/components";
+import {
+  Body,
+  Button,
+  Container,
+  Head,
+  Heading,
+  Hr,
+  Html,
+  Preview,
+  Section,
+  Text,
+} from "@react-email/components";
 import type { TemplateEntry } from "./registry";
 
 interface Props {
@@ -35,7 +46,9 @@ const Email = ({ name, vehicle, plan, date, time, location, total, deposit }: Pr
           <Section style={hero}>
             <Text style={pill}>SLOT LOCKED ✦</Text>
             <Heading style={h1}>You&apos;re booked 🔥</Heading>
-            <Text style={heroText}>Hi{name ? ` ${name}` : ""}, your slot is locked in. Here&apos;s everything:</Text>
+            <Text style={heroText}>
+              Hi{name ? ` ${name}` : ""}, your slot is locked in. Here&apos;s everything:
+            </Text>
           </Section>
 
           {/* details */}
@@ -56,15 +69,16 @@ const Email = ({ name, vehicle, plan, date, time, location, total, deposit }: Pr
               <strong>{typeof deposit === "number" ? inr(deposit) : "—"}</strong>
             </Text>
             <Text style={moneyRow}>
-              <span style={yellowTag}>BALANCE ON THE DAY</span> <strong>{hasMoney ? inr(total - deposit) : "—"}</strong>
+              <span style={yellowTag}>BALANCE ON THE DAY</span>{" "}
+              <strong>{hasMoney ? inr(total - deposit) : "—"}</strong>
             </Text>
           </Section>
 
           {/* note */}
           <Section style={note}>
             <Text style={noteText}>
-              <strong>Free reschedule</strong> till 12 hours before your slot — just reply to this email or WhatsApp
-              Rai.
+              <strong>Free reschedule</strong> till 12 hours before your slot — just reply to this
+              email or WhatsApp Rai.
             </Text>
           </Section>
 

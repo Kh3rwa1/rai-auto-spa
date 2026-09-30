@@ -1,5 +1,16 @@
 import React from "react";
-import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Text } from "@react-email/components";
+import {
+  Body,
+  Button,
+  Container,
+  Head,
+  Heading,
+  Hr,
+  Html,
+  Preview,
+  Section,
+  Text,
+} from "@react-email/components";
 import type { TemplateEntry } from "./registry";
 
 interface Props {
@@ -39,7 +50,11 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) =
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{isVan ? `Rai is coming to transform your ${car}` : `See how Rai will transform your ${car}`}</Preview>
+      <Preview>
+        {isVan
+          ? `Rai is coming to transform your ${car}`
+          : `See how Rai will transform your ${car}`}
+      </Preview>
       <Body style={main}>
         <Container style={container}>
           {/* brand bar */}
@@ -54,10 +69,13 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) =
           <Section style={hero}>
             <Text style={pill}>{isVan ? "BORING → BEAST · VAN" : "BORING → BEAST"}</Text>
             <Heading style={h1}>
-              {isVan ? `Rai is coming to transform your ${car}.` : `Here’s what Rai has planned for your ${car}.`}
+              {isVan
+                ? `Rai is coming to transform your ${car}.`
+                : `Here’s what Rai has planned for your ${car}.`}
             </Heading>
             <Text style={heroText}>
-              Hi{name ? ` ${name}` : ""}, here&apos;s a first look at the transformation Rai has planned for your car.
+              Hi{name ? ` ${name}` : ""}, here&apos;s a first look at the transformation Rai has
+              planned for your car.
             </Text>
             {videoUrl ? (
               <Button href={videoUrl} style={button}>
@@ -69,7 +87,9 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) =
           {/* appointment */}
           <Section style={card}>
             <Text style={cardLabel}>
-              <span style={isVan ? mintTag : yellowTag}>{isVan ? "RAI COMES TO YOU" : "YOUR VISIT TO THE STUDIO"}</span>
+              <span style={isVan ? mintTag : yellowTag}>
+                {isVan ? "RAI COMES TO YOU" : "YOUR VISIT TO THE STUDIO"}
+              </span>
             </Text>
             <Text style={cardTitle}>{plan ?? "Your car care appointment"}</Text>
             <Hr style={hr} />
@@ -79,7 +99,8 @@ const Email = ({ name, vehicle, plan, date, time, location, videoUrl }: Props) =
             </Text>
             <Text style={label}>WHERE</Text>
             <Text style={value}>
-              {location?.replace(/\s*\(Rai's van comes to you\)\s*/i, "") || "Rai’s Auto Spa, MG Marg"}
+              {location?.replace(/\s*\(Rai's van comes to you\)\s*/i, "") ||
+                "Rai’s Auto Spa, MG Marg"}
             </Text>
           </Section>
 
