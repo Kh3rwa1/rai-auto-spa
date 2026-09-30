@@ -36,6 +36,13 @@
       "when": 1790735435441,
       "tag": "0004_demo_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790735785350,
+      "tag": "0005_demo_sandbox_server_only",
+      "breakpoints": true
     }
   ]
 }
