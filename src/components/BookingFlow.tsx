@@ -293,7 +293,7 @@ export function BookingFlow() {
 
       {/* STEP 2 */}
       <div id="step-plans" className="scroll-mt-24">
-        <Step n={2} title="Pick your plan — see it instantly" done={!!previewUrl}>
+        <Step n={2} title="Pick your plan" done={!!previewUrl}>
           <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
             {(Object.keys(PLANS) as PlanId[]).map((id) => {
               const p = PLANS[id];
