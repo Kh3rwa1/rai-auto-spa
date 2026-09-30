@@ -72,6 +72,18 @@ async function bookSlot(
   if (data !== "ok") throw new Error(SLOT_ERRORS[data as string] ?? "That slot isn't available.");
 }
 
+/** Like bookSlot, but returns the "slot just filled up" message instead of throwing it. */
+async function tryBookSlot(...args: Parameters<typeof bookSlot>): Promise<string | null> {
+  try {
+    await bookSlot(...args);
+    return null;
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (msg.startsWith("SLOT_FULL:")) return msg.replace("SLOT_FULL: ", "");
+    throw e;
+  }
+}
+
 export const uploadCar = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({ image: z.string().max(9_000_000), mime: z.string().max(40).optional() }).parse(d),
@@ -303,8 +315,9 @@ export const confirmBooking = createServerFn({ method: "POST" })
       .eq("id", data.bookingId)
       .single();
     if (!existing) throw new Error("Booking not found.");
-    if (existing.deposit_paid) return { ok: true, manageToken: existing.manage_token as string };
-    await bookSlot(
+    if (existing.deposit_paid)
+      return { ok: true, manageToken: existing.manage_token as string, slotFull: null };
+    const slotFull = await tryBookSlot(
       data.bookingId,
       data.date,
       data.time,
@@ -313,6 +326,8 @@ export const confirmBooking = createServerFn({ method: "POST" })
       data.plan === "signature" ? 2 : 1,
       "pending_deposit",
     );
+    // An expected outcome, not a crash: tell the customer to pick another time.
+    if (slotFull) return { ok: false, manageToken: "", slotFull };
     const waterFee = data.mobile && !data.water;
     const total = calcTotal(data.plan, data.mobile, waterFee);
     const { data: client, error: ce } = await sb
@@ -353,6 +368,7 @@ export const confirmBooking = createServerFn({ method: "POST" })
       total,
       deposit: depositOf(total),
       manageToken: existing.manage_token as string,
+      slotFull: null,
     };
   });
 
