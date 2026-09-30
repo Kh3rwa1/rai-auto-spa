@@ -211,10 +211,14 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     setManageToken(resume.token);
     const k = `${resume.plan}|${resume.plan === "signature" ? c + "|" + st : ""}`;
     if (resume.previewUrl) setCache({ [k]: resume.previewUrl });
-    else if (resume.plan !== "signature") void runPreview(resume.plan);
     setActiveStep(3);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resume]);
+  useEffect(() => {
+    if (resume && !resume.previewUrl && booking?.id === resume.id && plan && plan !== "signature" && !previewUrl && !previewing && !previewError)
+      void runPreview(plan);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume, booking, plan]);
 
   async function runPreview(p: PlanId, c?: string, s?: string) {
     if (!booking) return;
