@@ -10,11 +10,6 @@ export default tseslint.config(
     ignores: ["dist", ".output", ".vinxi", "src/integrations/supabase/**", "src/routeTree.gen.ts"],
   },
   {
-    // Scaffolded email registry takes arbitrary per-template props.
-    files: ["src/lib/email-templates/**"],
-    rules: { "@typescript-eslint/no-explicit-any": "off" },
-  },
-  {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -44,4 +39,9 @@ export default tseslint.config(
     },
   },
   eslintPluginPrettier,
+  {
+    // Scaffolded email templates take arbitrary per-template props; shadcn ui files export variants.
+    files: ["src/lib/email-templates/**", "src/components/ui/**"],
+    rules: { "@typescript-eslint/no-explicit-any": "off", "react-refresh/only-export-components": "off" },
+  },
 );
