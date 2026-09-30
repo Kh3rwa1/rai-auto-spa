@@ -20,6 +20,9 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    // react-phone-input-2 is CommonJS; pre-bundling it up front stops Vite from
+    // re-optimizing mid-session, which would load a second copy of React.
+    optimizeDeps: { include: ["react-phone-input-2"] },
     resolve: {
       alias: {
         // Force the hoisted entities v4.5.0 copy — nested v7 copies break
