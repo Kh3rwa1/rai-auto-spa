@@ -368,6 +368,7 @@ export const confirmBooking = createServerFn({ method: "POST" })
       total,
       deposit: depositOf(total),
       manageToken: existing.manage_token as string,
+      slotFull: null,
     };
   });
 
