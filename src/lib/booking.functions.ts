@@ -394,18 +394,27 @@ export const simulatePayment = createServerFn({ method: "POST" })
       .select("*, clients(name, email)")
       .eq("id", data.bookingId)
       .maybeSingle();
-    if (!b || b.manage_token !== data.token) throw new Error("Booking not found.");
-    if (b.deposit_paid) return { ok: true, status: "success" as const };
+    // Expected outcomes are returned, never thrown: a thrown server-fn error
+    // reaches the route error boundary and blanks the checkout screen.
+    if (!b || b.manage_token !== data.token)
+      return { ok: false, status: "error" as const, message: "Booking not found." };
+    if (b.deposit_paid) return { ok: true, status: "success" as const, message: null };
     if (!b.date || !b.time || !b.client_id)
-      throw new Error("Please pick a slot and add your details first.");
+      return {
+        ok: false,
+        status: "error" as const,
+        message: "Please pick a slot and add your details first.",
+      };
     const amount = depositOf(b.total);
     if (data.fail) {
       await sb
         .from("payments")
         .insert({ booking_id: b.id, amount, method: data.method, status: "failed" });
-      throw new Error(
-        "PAYMENT_FAILED: Your bank declined the demo payment. Nothing was charged — please try again.",
-      );
+      return {
+        ok: false,
+        status: "failed" as const,
+        message: "Your bank declined the demo payment. Nothing was charged — please try again.",
+      };
     }
     await sb
       .from("payments")
