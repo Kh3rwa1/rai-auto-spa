@@ -1,27 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, ChevronRight, Droplets, MapPin } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowRight, Camera, Sparkles, CalendarCheck, MapPin, ShieldCheck, Truck, MessageCircle } from "lucide-react";
 import { BookingFlow } from "@/components/BookingFlow";
 import { MOBILE_FEE, PLANS, inr, type PlanId } from "@/lib/plans";
 import heroImg from "@/assets/hero.jpg";
 
+/* ───────── config ───────── */
+const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
+/** Set to e.g. "919800000000" (country code, no +) to show WhatsApp buttons. */
+const WHATSAPP_NUMBER = "";
+const WA_URL = WHATSAPP_NUMBER
+  ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hi Rai's Auto Spa! I'd like to book a wash.")}`
+  : "";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Rai's Auto Spa — Car Care on MG Marg, Gangtok" },
+      { title: "Rai's Auto Spa — Boring to Beast · Car Care on MG Marg, Gangtok" },
       {
         name: "description",
         content:
-          "Wash, full detail or custom wrap in Gangtok — studio or doorstep, priced upfront. Book in five quick steps.",
+          "Snap your car, preview the AI glow-up, book a studio bay or the doorstep van. Wash, detail or custom wrap on MG Marg, Gangtok — priced upfront.",
       },
-      {
-        property: "og:title",
-        content: "Rai's Auto Spa — Your car, cared for. Your booking, sorted.",
-      },
+      { property: "og:title", content: "Rai's Auto Spa — From Boring to Beast" },
       {
         property: "og:description",
-        content:
-          "Two-bay studio on MG Marg or mobile van to your doorstep. Clear prices, live slots.",
+        content: "Two-bay studio on MG Marg or a van to your doorstep. Clear prices, live slots.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -31,266 +35,703 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-/**
- * "The wash line" — the single signature motif: one quiet wave, a reference
- * to water movement and a clean finish. Decorative only (aria-hidden).
- */
-function WashLine({ className = "" }: { className?: string }) {
+/* ───────── styles (scoped with .ras-) ───────── */
+const CSS = `
+.ras{--ink:#111;--cream:#FFF8EC;--pink:#FF5FA2;--yellow:#FFD84D;--lilac:#B9A7FF;--mint:#9EE6C4;background:var(--cream);color:var(--ink)}
+.ras-display{font-family:Outfit,Inter,system-ui,sans-serif;font-weight:800;letter-spacing:-.025em;text-transform:uppercase;line-height:.9}
+.ras-box{border:3px solid var(--ink);border-radius:18px}
+.ras-shadow{box-shadow:5px 5px 0 var(--ink)}
+.ras-yellow{background:var(--yellow)}.ras-pink{background:var(--pink)}.ras-lilac{background:var(--lilac)}.ras-mint{background:var(--mint)}.ras-white{background:#fff}.ras-cream{background:var(--cream)}.ras-ink{background:var(--ink);color:var(--cream)}
+.ras-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:52px;padding:0 1.4rem;border:3px solid var(--ink);border-radius:14px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;box-shadow:4px 4px 0 var(--ink);transition:transform .16s cubic-bezier(.3,1.6,.5,1),box-shadow .16s;will-change:transform}
+.ras-btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+.ras-btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.ras-btn svg{transition:transform .2s}
+.ras-btn:hover svg{transform:translateX(3px)}
+.ras a:focus-visible,.ras button:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
+.ras-lift{transition:transform .22s cubic-bezier(.3,1.5,.5,1),box-shadow .22s}
+.ras-lift:hover{transform:translate(-3px,-3px) rotate(-.35deg);box-shadow:8px 8px 0 var(--ink)}
+.ras-link{position:relative}
+.ras-link::after{content:"";position:absolute;left:12px;right:12px;bottom:8px;height:3px;background:var(--pink);transform:scaleX(0);transform-origin:left;transition:transform .25s}
+.ras-link:hover::after{transform:scaleX(1)}
+.ras-reveal{transition:opacity .6s ease,transform .7s cubic-bezier(.2,.9,.3,1.2)}
+.ras-ready .ras-reveal:not(.ras-in){opacity:0;transform:translateY(24px)}
+.ras-line{display:block;overflow:hidden}
+.ras-line>span{display:block;animation:ras-rise .8s cubic-bezier(.2,.9,.3,1.15) both}
+.ras-bob{animation:ras-bob 3.2s ease-in-out infinite;transform-origin:50% 95%}
+.ras-eye{animation:ras-blink 4.5s infinite;transform-origin:center;transform-box:fill-box}
+.ras-arm{animation:ras-wave 1.3s ease-in-out infinite;transform-origin:0% 100%;transform-box:fill-box}
+.ras-bubble{position:absolute;bottom:8%;border-radius:999px;border:2.5px solid var(--ink);background:rgba(255,255,255,.75);animation:ras-float linear infinite;pointer-events:none}
+.ras-twinkle{display:inline-block;animation:ras-twinkle 2.4s ease-in-out infinite}
+.ras-badge{animation:ras-pop .6s .35s both cubic-bezier(.3,1.6,.5,1)}
+.ras-marquee{display:flex;width:max-content;animation:ras-marquee 26s linear infinite}
+.ras-marquee-wrap:hover .ras-marquee{animation-play-state:paused}
+.ras-shine{position:relative;overflow:hidden}
+.ras-shine::after{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:ras-shine 3.6s ease-in-out infinite;pointer-events:none}
+.ras-row .ras-strip{width:14px;transition:width .25s cubic-bezier(.3,1.5,.5,1)}
+.ras-row:hover .ras-strip{width:30px}
+.ras-row .ras-price{display:inline-block;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.ras-row:hover .ras-price{transform:scale(1.08) rotate(-2deg)}
+.ras-chip{transition:transform .2s}
+.ras-chip:hover{animation:ras-wiggle .4s}
+.ras-compare{touch-action:pan-y}
+.ras-range{-webkit-appearance:none;appearance:none;position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0;z-index:5}
+.ras-knob{position:absolute;left:0;top:50%;transform:translate(-50%,-50%);transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.ras-compare:hover .ras-knob{transform:translate(-50%,-50%) scale(1.12)}
+.ras-range:focus-visible~.ras-handle .ras-knob{outline:3px solid var(--pink);outline-offset:3px}
+.ras-step-num{transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.ras-step:hover .ras-step-num{transform:rotate(-12deg) scale(1.12)}
+.ras-sticky{transition:transform .35s cubic-bezier(.3,1.3,.5,1),opacity .25s}
+@keyframes ras-rise{from{transform:translateY(105%);opacity:0}to{transform:none;opacity:1}}
+@keyframes ras-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+@keyframes ras-float{0%{transform:translateY(0) scale(.7);opacity:0}15%{opacity:.95}100%{transform:translateY(-240px) scale(1.1);opacity:0}}
+@keyframes ras-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes ras-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(-16deg)}}
+@keyframes ras-twinkle{0%,100%{transform:scale(.7) rotate(0);opacity:.5}50%{transform:scale(1.15) rotate(25deg);opacity:1}}
+@keyframes ras-pop{0%{transform:scale(.5) rotate(-10deg);opacity:0}70%{transform:scale(1.1) rotate(2deg)}100%{transform:scale(1) rotate(-3deg);opacity:1}}
+@keyframes ras-marquee{to{transform:translateX(-50%)}}
+@keyframes ras-shine{0%{transform:translateX(-130%) skewX(-20deg)}60%,100%{transform:translateX(300%) skewX(-20deg)}}
+@keyframes ras-wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@media (prefers-reduced-motion:reduce){.ras *,.ras *::before,.ras *::after{animation:none!important;transition:none!important}.ras-ready .ras-reveal:not(.ras-in){opacity:1;transform:none}}
+`;
+
+/* ───────── tiny hooks ───────── */
+const prefersReduced = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+function useInView<T extends Element>(threshold = 0.2) {
+  const ref = useRef<T>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!("IntersectionObserver" in window)) return setInView(true);
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { threshold },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [threshold]);
+  return [ref, inView] as const;
+}
+
+function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
+  const [ref, inView] = useInView<HTMLDivElement>(0.15);
   return (
-    <svg
-      width="30"
-      height="8"
-      viewBox="0 0 30 8"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-      className={className}
+    <div
+      ref={ref}
+      className={`ras-reveal ${inView ? "ras-in" : ""} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
     >
-      <path
-        d="M1.5 5.5C7 2.5 12.5 2.5 18 5.5C21 6.8 24 6.8 28.5 4.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
+      {children}
+    </div>
   );
 }
 
-function Wordmark() {
+function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
+  const [ref, inView] = useInView<HTMLSpanElement>(0.4);
+  const [n, setN] = useState(to); // SSR / no-JS shows the real number
+  const started = useRef(false);
+  useEffect(() => {
+    if (prefersReduced()) return;
+    if (!inView) {
+      if (!started.current) setN(0);
+      return;
+    }
+    if (started.current) return;
+    started.current = true;
+    const t0 = performance.now();
+    const d = 1300;
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / d);
+      setN(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, to]);
   return (
-    <span className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <Droplets className="h-4.5 w-4.5" aria-hidden />
+    <span ref={ref}>
+      {n.toLocaleString("en-IN")}
+      {suffix}
+    </span>
+  );
+}
+
+/* ───────── pieces ───────── */
+function Wordmark({ light = false }: { light?: boolean }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="ras-display text-2xl sm:text-[28px]">Rai&rsquo;s</span>
+      <span className="ras-twinkle text-xl" aria-hidden>
+        ✦
       </span>
-      <span className="leading-none">
-        <span className="block font-display text-lg font-bold tracking-tight">
-          Rai&rsquo;s <span className="font-semibold text-primary">Auto Spa</span>
-        </span>
-        <span className="mt-1 block text-[11px] font-medium tracking-wide text-muted-foreground">
-          MG Marg, Gangtok
-        </span>
+      <span
+        className={`text-[10px] font-extrabold uppercase leading-[1.05] tracking-wider ${light ? "opacity-80" : ""}`}
+      >
+        Auto
+        <br />
+        Spa
       </span>
     </span>
   );
 }
 
-const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
-
 function Nav() {
   return (
-    <header className="fixed inset-x-0 top-0 z-40">
-      <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border/60 bg-background/85 py-2 pl-4 pr-2 backdrop-blur-xl sm:px-5">
+    <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5">
+      <div className="ras-box ras-cream mx-auto flex max-w-6xl items-center justify-between gap-2 py-1.5 pl-4 pr-2">
         <a href="#top" aria-label="Rai's Auto Spa — back to top">
           <Wordmark />
         </a>
-        <nav aria-label="Main" className="flex items-center gap-1 text-sm sm:gap-2">
-          <a
-            href="#services"
-            className="hidden min-h-[44px] items-center rounded-full px-3 py-2 font-medium hover:bg-muted sm:flex"
-          >
-            Services
+        <nav aria-label="Main" className="flex items-center gap-1 text-[13px] font-extrabold uppercase">
+          <a href="#glow" className="ras-link hidden min-h-[44px] items-center px-3 md:flex">
+            Glow-up
           </a>
-          <Button asChild size="sm" className="min-h-[44px] rounded-full font-semibold">
-            <a href="#book">Book now</a>
-          </Button>
+          <a href="#services" className="ras-link hidden min-h-[44px] items-center px-3 sm:flex">
+            Prices
+          </a>
+          <a
+            href={MAPS_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="ras-link hidden min-h-[44px] items-center px-3 md:flex"
+          >
+            Find us
+          </a>
+          <a href="#book" className="ras-btn ras-yellow !min-h-[44px] !px-4 text-[13px]">
+            Book now
+          </a>
         </nav>
       </div>
     </header>
   );
 }
 
-const ASSURANCES = ["2 studio bays", "1 mobile van", "No account needed"] as const;
+function Mascot() {
+  const foam: [number, number, number][] = [
+    [60, 68, 17],
+    [84, 52, 19],
+    [111, 47, 20],
+    [137, 56, 18],
+    [152, 76, 13],
+    [44, 86, 11],
+  ];
+  return (
+    <svg
+      viewBox="0 0 200 220"
+      className="ras-bob relative z-10 h-auto w-[72%] max-w-[300px]"
+      aria-hidden
+      focusable="false"
+    >
+      <ellipse cx="100" cy="210" rx="56" ry="7" fill="#111" />
+      <path d="M80 172v24M120 172v24" stroke="#111" strokeWidth="6" strokeLinecap="round" />
+      <path d="M58 202q0-15 23-13q10 1 10 13z" fill="#B9A7FF" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M109 202q0-12 10-13q23-2 23 13z" fill="#B9A7FF" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
+      {/* left arm – thumbs up */}
+      <path d="M47 122q-22 2-24-18" stroke="#111" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <circle cx="22" cy="98" r="9" fill="#fff" stroke="#111" strokeWidth="4" />
+      {/* right arm – waving mini sponge */}
+      <g className="ras-arm">
+        <path d="M153 122q20-6 26-28" stroke="#111" strokeWidth="5" fill="none" strokeLinecap="round" />
+        <rect x="170" y="72" width="22" height="18" rx="5" fill="#9EE6C4" stroke="#111" strokeWidth="4" />
+      </g>
+      {/* body */}
+      <rect x="45" y="62" width="110" height="114" rx="26" fill="#FFD84D" stroke="#111" strokeWidth="5" />
+      {[
+        [62, 150, 5],
+        [140, 140, 6],
+        [70, 110, 4],
+        [132, 164, 4],
+        [100, 162, 3],
+      ].map(([x, y, r], i) => (
+        <circle key={i} cx={x} cy={y} r={r} fill="#E9B824" />
+      ))}
+      {/* foam (outline pass + fill pass for a clean cloud) */}
+      <g fill="#111">
+        {foam.map(([x, y, r], i) => (
+          <circle key={i} cx={x} cy={y} r={r + 3} />
+        ))}
+      </g>
+      <g fill="#CFF5FF">
+        {foam.map(([x, y, r], i) => (
+          <circle key={i} cx={x} cy={y} r={r} />
+        ))}
+      </g>
+      {/* face */}
+      <g className="ras-eye">
+        <ellipse cx="80" cy="104" rx="12" ry="15" fill="#fff" stroke="#111" strokeWidth="4" />
+        <circle cx="83" cy="107" r="6" fill="#111" />
+      </g>
+      <g className="ras-eye">
+        <ellipse cx="120" cy="104" rx="12" ry="15" fill="#fff" stroke="#111" strokeWidth="4" />
+        <circle cx="123" cy="107" r="6" fill="#111" />
+      </g>
+      <circle cx="63" cy="126" r="7" fill="#FF5FA2" opacity=".7" />
+      <circle cx="137" cy="126" r="7" fill="#FF5FA2" opacity=".7" />
+      <path d="M82 128q18 26 36 0z" fill="#111" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M92 138q8 6 16 0q-2 7-8 7t-8-7z" fill="#FF5FA2" />
+    </svg>
+  );
+}
+
+const BUBBLES = [
+  { l: "10%", s: 18, d: 5, delay: 0 },
+  { l: "26%", s: 10, d: 4, delay: 1.2 },
+  { l: "48%", s: 14, d: 5.5, delay: 2.6 },
+  { l: "70%", s: 24, d: 6, delay: 0.6 },
+  { l: "86%", s: 12, d: 4.5, delay: 2 },
+];
 
 function Hero() {
   return (
-    <section aria-labelledby="hero-title" className="bg-background">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 pb-10 pt-28 sm:pt-32 md:grid-cols-[1.05fr_0.95fr] md:pb-14">
-        <div>
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            <WashLine className="text-primary" /> Car care · MG Marg, Gangtok
-          </p>
-          <h1
-            id="hero-title"
-            className="mt-3 font-display text-4xl font-bold leading-[1.02] tracking-tight sm:text-5xl"
-          >
-            Your car, cared for.
-            <span className="block">Your booking, sorted.</span>
-          </h1>
-          <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Wash, detail or custom wrap — studio or doorstep, priced upfront.
-          </p>
-          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <Button
-              asChild
-              size="lg"
-              className="min-h-[54px] rounded-full px-8 text-base font-bold"
-            >
-              <a href="#book">Book now</a>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="min-h-[54px] rounded-full px-7 text-base font-semibold"
-            >
-              <a href="#services">Services &amp; prices</a>
-            </Button>
+    <section aria-labelledby="hero-title" className="px-3 pt-4 sm:px-5">
+      <div className="ras-box ras-white ras-shadow mx-auto grid max-w-6xl overflow-hidden md:grid-cols-[1.3fr_1fr]">
+        <div className="grid gap-6 p-5 sm:grid-cols-[1fr_auto] sm:p-8">
+          <div>
+            <span className="ras-badge ras-lilac inline-flex items-center gap-1 rounded-full border-[3px] border-[#111] px-3 py-0.5 text-[11px] font-extrabold uppercase">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden /> New · AI glow-up preview
+            </span>
+            <h1 id="hero-title" className="ras-display mt-4 text-[clamp(3rem,8.5vw,5.8rem)]">
+              <span className="ras-line">
+                <span style={{ animationDelay: "60ms" }}>Boring</span>
+              </span>
+              <span className="ras-line">
+                <span style={{ animationDelay: "180ms" }}>to beast.</span>
+              </span>
+            </h1>
+            <p className="mt-4 text-[12px] font-extrabold uppercase tracking-[0.22em]">Wash · Detail · Custom wrap</p>
+            <p className="mt-3 max-w-md text-base leading-relaxed text-[#333]">
+              Snap your car, preview the shine, then book a studio bay on MG Marg or the van to your doorstep. Priced
+              upfront, no account needed.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a href="#book" className="ras-btn ras-yellow">
+                Book now <ArrowRight className="h-5 w-5" aria-hidden />
+              </a>
+              <a href="#services" className="ras-btn ras-white">
+                See prices
+              </a>
+            </div>
           </div>
-          <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-            {ASSURANCES.map((a) => (
-              <li key={a} className="flex items-center gap-1.5">
-                <Check className="h-4 w-4 text-primary" aria-hidden />
-                {a}
-              </li>
-            ))}
+
+          <ul className="grid grid-cols-2 gap-3 self-start sm:w-44 sm:grid-cols-1" aria-label="At a glance">
+            <li className="ras-box ras-white p-3">
+              <div className="ras-display text-3xl">
+                <CountUp to={1500} suffix="+" />
+              </div>
+              <div className="mt-1 text-[10px] font-extrabold uppercase tracking-wider">Appointments done</div>
+            </li>
+            <li className="ras-box ras-white p-3">
+              <div className="ras-display text-3xl">2 + 1</div>
+              <div className="mt-1 text-[10px] font-extrabold uppercase tracking-wider">Studio bays + van</div>
+            </li>
+            <li className="ras-box ras-lilac ras-shine col-span-2 p-3 sm:col-span-1">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider">Starting at</div>
+              <div className="ras-display mt-1 text-4xl">{inr(PLANS.wash.price)}</div>
+            </li>
           </ul>
         </div>
-        <a
-          href="#book"
-          aria-label="Book now — Essential Wash, 499 rupees, 45 minutes"
-          className="group relative block overflow-hidden rounded-3xl shadow-[var(--shadow-soft)]"
-        >
-          <img
-            src={heroImg}
-            alt="Freshly washed car at Rai's Auto Spa"
-            fetchPriority="high"
-            decoding="async"
-            className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] md:aspect-[5/4]"
-          />
-          <span className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 rounded-2xl bg-charcoal/85 px-4 py-3 text-charcoal-foreground backdrop-blur">
-            <span className="text-sm">
-              <span className="block font-display text-base font-bold">
-                Essential Wash · {inr(PLANS.wash.price)}
-              </span>
-              <span className="block text-xs opacity-75">45 min · studio or doorstep</span>
-            </span>
-            <span className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
-              <ChevronRight className="h-5 w-5" aria-hidden />
-            </span>
+
+        <div className="ras-pink relative flex min-h-[300px] items-center justify-center overflow-hidden border-t-[3px] border-[#111] md:border-l-[3px] md:border-t-0">
+          {BUBBLES.map((b, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className="ras-bubble"
+              style={{
+                left: b.l,
+                width: b.s,
+                height: b.s,
+                animationDuration: `${b.d}s`,
+                animationDelay: `${b.delay}s`,
+              }}
+            />
+          ))}
+          <span aria-hidden className="ras-twinkle absolute left-6 top-6 text-3xl">
+            ✦
           </span>
-        </a>
+          <span
+            aria-hidden
+            className="ras-twinkle absolute bottom-10 right-8 text-2xl"
+            style={{ animationDelay: "1s" }}
+          >
+            ✦
+          </span>
+          <Mascot />
+        </div>
       </div>
     </section>
   );
 }
 
+const TICKER = [
+  "Foam wash",
+  "Tyre black",
+  "Ceramic spray",
+  "Custom wraps",
+  "Doorstep van",
+  "MG Marg, Gangtok",
+  "Plate auto-blurred",
+];
+
+function Marquee() {
+  const items = [...TICKER, ...TICKER];
+  return (
+    <div className="ras-marquee-wrap ras-ink mt-5 overflow-hidden border-y-[3px] border-[#111] py-3" aria-hidden>
+      <div className="ras-marquee">
+        {items.map((t, i) => (
+          <span key={i} className="ras-display flex items-center gap-5 px-5 text-xl text-[var(--yellow)]">
+            {t} <span className="text-[var(--pink)]">✦</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const DIRT =
+  "radial-gradient(circle at 18% 72%, rgba(92,64,30,.55) 0 5%, transparent 6%)," +
+  "radial-gradient(circle at 42% 84%, rgba(92,64,30,.5) 0 7%, transparent 8%)," +
+  "radial-gradient(circle at 66% 30%, rgba(92,64,30,.35) 0 4%, transparent 5%)," +
+  "radial-gradient(circle at 82% 76%, rgba(92,64,30,.5) 0 6%, transparent 7%)," +
+  "linear-gradient(to top, rgba(88,60,26,.6), transparent 55%)";
+
+function GlowUp() {
+  const [wrapRef, inView] = useInView<HTMLDivElement>(0.35);
+  const [pos, setPos] = useState(50);
+  const [touched, setTouched] = useState(false);
+
+  // One playful auto-sweep when it scrolls into view, then hands control to the user.
+  useEffect(() => {
+    if (!inView || touched || prefersReduced()) return;
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const e = t - t0;
+      if (e > 3200) return setPos(50);
+      setPos(50 + Math.sin(e / 520) * 30);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, touched]);
+
+  const steps = [
+    {
+      icon: Camera,
+      c: "ras-mint",
+      t: "Snap",
+      d: "One photo, any angle. We blur the number plate before anything is stored.",
+    },
+    {
+      icon: Sparkles,
+      c: "ras-lilac",
+      t: "Preview",
+      d: "See your car's glow-up, and for wraps, try your new colour first.",
+    },
+    {
+      icon: CalendarCheck,
+      c: "ras-yellow",
+      t: "Book",
+      d: "Pick a bay or the doorstep van. A 30% deposit locks your slot.",
+    },
+  ];
+
+  return (
+    <section id="glow" aria-labelledby="glow-title" className="scroll-mt-24 px-3 py-12 sm:px-5 sm:py-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-2">
+        <Reveal>
+          <div ref={wrapRef} className="ras-box ras-white ras-shadow p-2.5">
+            <div className="ras-compare relative aspect-[4/3] select-none overflow-hidden rounded-[12px] border-[3px] border-[#111]">
+              <img
+                src={heroImg}
+                alt="After: glossy, freshly washed car"
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} aria-hidden>
+                <img
+                  src={heroImg}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                  style={{ filter: "grayscale(.5) sepia(.45) brightness(.68) contrast(.85)" }}
+                />
+                <div className="absolute inset-0" style={{ background: DIRT }} />
+              </div>
+              <span className="ras-ink absolute left-3 top-3 z-[4] rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase">
+                Before
+              </span>
+              <span className="ras-yellow absolute right-3 top-3 z-[4] rounded-full border-2 border-[#111] px-2.5 py-1 text-[11px] font-extrabold uppercase">
+                After
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(pos)}
+                onChange={(e) => {
+                  setTouched(true);
+                  setPos(Number(e.target.value));
+                }}
+                onPointerDown={() => setTouched(true)}
+                aria-label="Drag to compare before and after"
+                className="ras-range"
+              />
+              <div
+                className="ras-handle pointer-events-none absolute inset-y-0 z-[4] w-0"
+                style={{ left: `${pos}%` }}
+                aria-hidden
+              >
+                <div className="absolute inset-y-0 -left-[2px] w-[4px] bg-[#111]" />
+                <div className="ras-knob ras-yellow flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-[#111] text-lg font-black">
+                  ↔
+                </div>
+              </div>
+            </div>
+            <p className="px-1 pt-2 text-[11px] font-semibold text-[#555]">
+              Illustration. Upload your own car below to see your real preview.
+            </p>
+          </div>
+        </Reveal>
+
+        <div>
+          <Reveal>
+            <h2 id="glow-title" className="ras-display text-[clamp(2.2rem,5vw,3.6rem)]">
+              See the shine <span className="text-[var(--pink)]">before</span> you pay.
+            </h2>
+          </Reveal>
+          <ol className="mt-6 grid gap-3">
+            {steps.map((s, i) => (
+              <Reveal key={s.t} delay={i * 110}>
+                <li className="ras-step ras-box ras-white ras-lift flex items-start gap-4 p-4">
+                  <span
+                    className={`ras-step-num ${s.c} flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[3px] border-[#111]`}
+                  >
+                    <s.icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <span>
+                    <span className="ras-display block text-xl">
+                      {i + 1}. {s.t}
+                    </span>
+                    <span className="mt-1 block text-sm leading-relaxed text-[#444]">{s.d}</span>
+                  </span>
+                </li>
+              </Reveal>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const PLAN_COLOR: Record<PlanId, string> = { wash: "ras-mint", detail: "ras-lilac", signature: "ras-pink" };
+const PLAN_PITCH: Record<PlanId, string> = {
+  wash: "Quick refresh, studio or doorstep.",
+  detail: "Inside and out, showroom-level.",
+  signature: "A full transformation. Preview your wrap colour with AI before you commit.",
+};
+
 function Services() {
   return (
-    <section
-      id="services"
-      aria-labelledby="services-title"
-      className="scroll-mt-24 border-y border-border bg-card"
-    >
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:py-12">
-        <h2
-          id="services-title"
-          className="font-display text-2xl font-bold tracking-tight sm:text-3xl"
-        >
-          Services &amp; prices
-        </h2>
-        <ul className="mt-5 divide-y divide-border overflow-hidden rounded-3xl border border-border">
-          {(Object.keys(PLANS) as PlanId[]).map((id) => {
+    <section id="services" aria-labelledby="services-title" className="scroll-mt-24 px-3 pb-12 sm:px-5 sm:pb-16">
+      <div className="ras-box ras-white ras-shadow mx-auto max-w-6xl p-4 sm:p-7">
+        <Reveal>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 id="services-title" className="ras-display text-[clamp(2.2rem,5vw,3.4rem)]">
+              Services &amp; prices
+            </h2>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
+              No hidden fees · Priced upfront
+            </span>
+          </div>
+        </Reveal>
+        <ul className="mt-6 grid gap-3">
+          {(Object.keys(PLANS) as PlanId[]).map((id, i) => {
             const p = PLANS[id];
             return (
-              <li key={id}>
-                <a
-                  href="#book"
-                  aria-label={`${p.name}, ${inr(p.price)}, ${p.duration} — book now`}
-                  className="group flex min-h-[64px] items-center justify-between gap-3 bg-background px-4 py-3 transition-colors hover:bg-accent/50 sm:px-6"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-display text-lg font-bold tracking-tight">
-                      {p.name}
+              <Reveal key={id} delay={i * 90}>
+                <li>
+                  <a
+                    href="#book"
+                    aria-label={`${p.name}, ${inr(p.price)}, ${p.duration}. Book now`}
+                    className="ras-row ras-box ras-white ras-lift flex min-h-[84px] items-stretch overflow-hidden"
+                  >
+                    <span className={`ras-strip ${PLAN_COLOR[id]} shrink-0 border-r-[3px] border-[#111]`} aria-hidden />
+                    <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="ras-display text-2xl sm:text-3xl">{p.name}</span>
+                          <span
+                            className={`${PLAN_COLOR[id]} rounded-full border-2 border-[#111] px-2 py-0.5 text-[10px] font-extrabold uppercase`}
+                          >
+                            {p.badge}
+                          </span>
+                        </span>
+                        <span className="mt-1 block text-sm text-[#444]">{PLAN_PITCH[id]}</span>
+                        <span className="mt-2 flex flex-wrap gap-1.5">
+                          {p.features.map((f) => (
+                            <span
+                              key={f}
+                              className="ras-chip ras-cream rounded-full border-2 border-[#111] px-2 py-0.5 text-[11px] font-bold"
+                            >
+                              {f}
+                            </span>
+                          ))}
+                        </span>
+                      </span>
+                      <span className="text-right">
+                        <span className="ras-price ras-display text-4xl sm:text-5xl">{inr(p.price)}</span>
+                        <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
+                          {p.duration}
+                        </span>
+                      </span>
                     </span>
-                    <span className="block text-xs text-muted-foreground">{p.duration}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="font-display text-xl font-bold tracking-tight">
-                      {inr(p.price)}
-                    </span>
-                    <ChevronRight
-                      className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                      aria-hidden
-                    />
-                  </span>
-                </a>
-              </li>
+                  </a>
+                </li>
+              </Reveal>
             );
           })}
         </ul>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Van adds {inr(MOBILE_FEE)} · 30% deposit secures your slot.
+        <p className="mt-4 text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
+          <Truck className="-mt-0.5 mr-1 inline h-4 w-4" aria-hidden /> Doorstep van adds {inr(MOBILE_FEE)} · 30%
+          deposit secures your slot
         </p>
       </div>
     </section>
   );
 }
 
-function BookingEntrance() {
+function Booking() {
   return (
-    <section id="book" aria-labelledby="book-title" className="scroll-mt-20 bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14">
-        <div className="mb-6 max-w-2xl">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            <WashLine className="text-primary" /> Booking
-          </p>
-          <h2
-            id="book-title"
-            className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl"
-          >
-            Book in five quick steps.
-          </h2>
-          <p className="mt-2 leading-relaxed text-muted-foreground">
-            Snap your car, pick a service, grab a slot — done.
-          </p>
+    <section id="book" aria-labelledby="book-title" className="scroll-mt-24 px-3 pb-14 sm:px-5 sm:pb-20">
+      <div className="mx-auto max-w-6xl">
+        <Reveal>
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="book-title" className="ras-display text-[clamp(2.4rem,6vw,4rem)]">
+                Book your wash
+              </h2>
+              <p className="mt-2 text-base text-[#444]">Snap. Pick. Slot. Done. No account, no calls.</p>
+            </div>
+            <ul className="flex flex-wrap gap-2 text-[11px] font-extrabold uppercase">
+              <li className="ras-mint flex items-center gap-1 rounded-full border-2 border-[#111] px-2.5 py-1">
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Plate auto-blurred
+              </li>
+              <li className="ras-yellow flex items-center gap-1 rounded-full border-2 border-[#111] px-2.5 py-1">
+                <CalendarCheck className="h-3.5 w-3.5" aria-hidden /> Live slots
+              </li>
+            </ul>
+          </div>
+        </Reveal>
+        <div className="ras-box ras-white ras-shadow p-2 sm:p-4">
+          <BookingFlow />
         </div>
-        <BookingFlow />
       </div>
     </section>
   );
 }
 
-function Index() {
+function Footer() {
   return (
-    <div id="top" className="min-h-screen bg-background">
+    <footer className="ras-ink border-t-[3px] border-[#111] px-5 pb-28 pt-10 md:pb-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Wordmark light />
+          <p className="mt-2 text-sm opacity-70">MG Marg, Gangtok 737101 · Studio + doorstep van</p>
+        </div>
+        <nav aria-label="Footer" className="flex flex-wrap items-center gap-2 text-sm font-extrabold uppercase">
+          <a href="#book" className="ras-btn ras-yellow !min-h-[44px] text-[#111]">
+            Book now
+          </a>
+          {WA_URL && (
+            <a href={WA_URL} target="_blank" rel="noreferrer" className="ras-btn ras-mint !min-h-[44px] text-[#111]">
+              <MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp
+            </a>
+          )}
+          <a
+            href={MAPS_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="flex min-h-[44px] items-center gap-1 px-3 hover:underline"
+          >
+            <MapPin className="h-4 w-4" aria-hidden /> Map
+          </a>
+        </nav>
+      </div>
+      <p className="mx-auto mt-8 max-w-6xl text-[11px] uppercase tracking-wider opacity-50">
+        © {new Date().getFullYear()} Rai&rsquo;s Auto Spa
+      </p>
+    </footer>
+  );
+}
+
+function StickyCta({ hidden }: { hidden: boolean }) {
+  return (
+    <div
+      className={`ras-sticky fixed inset-x-3 bottom-3 z-40 flex gap-2 md:hidden ${hidden ? "pointer-events-none translate-y-[140%] opacity-0" : ""}`}
+    >
+      <a href="#book" className="ras-btn ras-yellow flex-1">
+        Book · from {inr(PLANS.wash.price)} <ArrowRight className="h-5 w-5" aria-hidden />
+      </a>
+      {WA_URL && (
+        <a
+          href={WA_URL}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Chat on WhatsApp"
+          className="ras-btn ras-mint !px-4"
+        >
+          <MessageCircle className="h-5 w-5" aria-hidden />
+        </a>
+      )}
+    </div>
+  );
+}
+
+/* ───────── page ───────── */
+function Index() {
+  const [ready, setReady] = useState(false);
+  const [bookVisible, setBookVisible] = useState(false);
+
+  useEffect(() => {
+    setReady(true);
+    const el = document.getElementById("book");
+    if (!el || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(([e]) => setBookVisible(e.isIntersecting), { threshold: 0.05 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div id="top" className={`ras min-h-screen ${ready ? "ras-ready" : ""}`}>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <a
         href="#book"
-        className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="sr-only z-50 rounded-full bg-[#111] px-4 py-2 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         Skip to booking
       </a>
       <Nav />
       <main>
         <Hero />
+        <Marquee />
+        <GlowUp />
         <Services />
-        <BookingEntrance />
+        <Booking />
       </main>
-      <footer className="border-t border-border bg-charcoal py-8 text-charcoal-foreground">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-display text-base font-bold">
-            Rai&rsquo;s <span className="font-semibold text-teal">Auto Spa</span>
-            <span className="ml-2 align-middle font-sans text-xs font-medium text-charcoal-foreground/60">
-              MG Marg, Gangtok
-            </span>
-          </p>
-          <nav aria-label="Footer" className="flex items-center gap-1 text-sm">
-            <a
-              href="#book"
-              className="flex min-h-[44px] items-center rounded-full px-3 font-semibold hover:underline"
-            >
-              Book now
-            </a>
-            <a
-              href={MAPS_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-[44px] items-center gap-1 rounded-full px-3 text-charcoal-foreground/70 hover:underline"
-            >
-              <MapPin className="h-4 w-4" aria-hidden /> Map
-            </a>
-          </nav>
-        </div>
-      </footer>
+      <Footer />
+      <StickyCta hidden={bookVisible} />
     </div>
   );
 }
