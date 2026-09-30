@@ -3,9 +3,8 @@ import { CircleCheck, MapPinned } from "lucide-react";
 import { STUDIO } from "@/lib/plans";
 import { planRoute } from "@/lib/ops-config";
 import { RouteMap } from "./shared";
-import { planRoute } from "@/lib/ops-config";
 
-type Route = ReturnType<typeof planRoute>;
+type Route = ReturnType<typeof planRoute<Stop>>;
 
 export function RoutePanel({ route, liters }: { route: Route; liters: number }) {
   return (
