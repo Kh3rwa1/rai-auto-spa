@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BookingFlow } from "@/components/BookingFlow";
 import heroImg from "@/assets/hero.jpg";
 import heroVideo from "@/assets/hero-video.mp4.asset.json";
+import raiFounder from "@/assets/rai-founder.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -84,6 +85,21 @@ function Index() {
               <p className="mt-1 text-muted-foreground">{d}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="border-y border-border bg-charcoal text-charcoal-foreground">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-14 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:py-20">
+          <div className="overflow-hidden rounded-2xl">
+            <img src={raiFounder} alt="Rai, founder of Rai's Auto Spa" loading="lazy" width={1200} height={1008} className="aspect-[6/5] w-full object-cover" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold uppercase text-primary">Meet Rai</p>
+            <h2 className="mt-2 font-display text-4xl font-bold sm:text-5xl">One founder. 200+ cars transformed.</h2>
+            <p className="mt-5 max-w-xl text-lg text-charcoal-foreground/75">
+              Rai runs the studio at MG Marg herself. Before this booking system, she managed 1,500 appointments in a notebook—one customer, one car, and one promise at a time.
+            </p>
+          </div>
         </div>
       </section>
 

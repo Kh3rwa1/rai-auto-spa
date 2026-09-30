@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Start one reveal-video job immediately after the selected plan's preview is created, then reuse it at confirmation to avoid duplicate AI jobs.
+- Keep booking progression as a single-open-step wizard; plan selection starts AI silently and the visual reveal waits for slot selection.
