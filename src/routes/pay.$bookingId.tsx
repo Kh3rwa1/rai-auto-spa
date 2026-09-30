@@ -41,13 +41,13 @@ function PayPage() {
         </Link>
       </header>
       <section className="mx-auto max-w-3xl px-4 py-8">
-        {!t || q.isError ? (
+        {!t || q.isError || q.data?.valid === false ? (
           <div className="rounded-2xl bg-card p-6 text-center">
             <p className="font-semibold">This booking link isn't valid anymore.</p>
             <p className="mt-1 text-sm text-muted-foreground">Ask Rai for a fresh link, or start a new booking.</p>
             <Link to="/" hash="book" className="mt-4 inline-block text-sm font-semibold text-teal underline">Start a new booking</Link>
           </div>
-        ) : q.isLoading || !q.data ? (
+        ) : q.isLoading || !q.data || !q.data.valid ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Opening your booking…
           </div>

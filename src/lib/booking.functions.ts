@@ -352,8 +352,10 @@ export const resumeBooking = createServerFn({ method: "POST" })
       .select("id, vehicle_model, photo_url, clean_preview_url, plan, colour, style, deposit_paid, manage_token")
       .eq("id", data.bookingId)
       .maybeSingle();
-    if (!b || b.manage_token !== data.token) throw new Error("This link is invalid or has expired.");
+    // Expected outcome for stale/guessed links: return a value instead of throwing.
+    if (!b || b.manage_token !== data.token) return { valid: false as const };
     return {
+      valid: true as const,
       id: b.id,
       vehicle: b.vehicle_model ?? "Car",
       photoUrl: await signed(b.photo_url),
