@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import PhoneInput from "react-phone-input-2";
+import type { ComponentType } from "react";
+import * as PhoneInputModule from "react-phone-input-2";
+import type { PhoneInputProps } from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { countryDial, countryIso2, countryLabel, detectCountry, toE164 } from "@/lib/phone";
+
+// react-phone-input-2 ships CommonJS; interop can nest the component one level deep.
+const mod = PhoneInputModule as unknown as {
+  default?: ComponentType<PhoneInputProps> & { default?: ComponentType<PhoneInputProps> };
+};
+const PhoneInput = (mod.default?.default ??
+  mod.default ??
+  PhoneInputModule) as unknown as ComponentType<PhoneInputProps>;
 
 type Props = {
   value: string;
