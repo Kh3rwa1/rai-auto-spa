@@ -102,7 +102,7 @@ export function ProgressBar({
                 aria-current={active === n ? "step" : undefined}
                 onClick={() => onOpen(n)}
                 className={cn(
-                  "relative z-10 h-auto min-h-8 min-w-0 rounded-lg px-1 py-1 text-[10px] leading-tight sm:rounded-full sm:px-2.5 sm:text-xs",
+                  "relative z-10 h-auto min-h-[44px] min-w-[44px] rounded-lg px-1 py-1 text-[10px] leading-tight sm:rounded-full sm:px-2.5 sm:text-xs",
                   active === n &&
                     "bg-charcoal text-charcoal-foreground hover:bg-charcoal hover:text-charcoal-foreground",
                 )}

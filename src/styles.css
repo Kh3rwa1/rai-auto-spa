@@ -128,6 +128,12 @@
   }
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
   html { scroll-behavior: smooth; }
+
+  /* Visible keyboard focus for custom buttons/cards that don't use the shadcn Button. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
 }
 
 @keyframes reveal-curtain {
@@ -150,4 +156,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .reveal-curtain, .shine-shimmer { animation: none; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

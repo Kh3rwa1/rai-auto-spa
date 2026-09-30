@@ -30,6 +30,17 @@ import {
   updateSubscription,
 } from "@/lib/owner.functions";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BeforeAfter } from "@/components/BeforeAfter";
 import { SLOTS, STUDIO, inr } from "@/lib/plans";
@@ -130,9 +141,20 @@ function Stat({
   );
 }
 
+const TABS = [
+  { value: "route", label: "Route" },
+  { value: "calendar", label: "Calendar" },
+  { value: "subs", label: "Subscriptions" },
+  { value: "waitlist", label: "Waitlist" },
+  { value: "leads", label: "Leads" },
+  { value: "wraps", label: "Wrap Approvals" },
+  { value: "gallery", label: "Gallery" },
+] as const;
+
 export function OwnerDashboard() {
   const qc = useQueryClient();
   const today = todayIST();
+  const [tab, setTab] = useState<(typeof TABS)[number]["value"]>("route");
   const load = useServerFn(ownerData);
   const ensure = useServerFn(ensureDemoData);
   const dataQ = useQuery({
@@ -175,19 +197,98 @@ export function OwnerDashboard() {
   const liters = todays.reduce((a, b) => a + litresFor(b.plan), 0);
   const fuelSaved = Math.max(0, (route.naive - route.km) * OPS.fuelLitresPerKm);
 
-  if (bookingsQ.isLoading) return <p className="p-8 text-muted-foreground">Loading…</p>;
+  if (bookingsQ.isLoading)
+    return (
+      <main className="mx-auto max-w-7xl space-y-4 px-4 py-6" aria-busy="true">
+        <p className="text-muted-foreground">Loading guest admin demo…</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl bg-muted" />
+          ))}
+        </div>
+      </main>
+    );
   if (bookingsQ.isError)
     return (
-      <div className="p-8 text-center">
-        <p className="font-medium">Couldn't load the dashboard.</p>
-        <Button className="mt-3" variant="outline" onClick={() => bookingsQ.refetch()}>
-          Try again
-        </Button>
-      </div>
+      <main className="mx-auto max-w-7xl px-4 py-6">
+        <div className="rounded-2xl border border-border bg-card p-8 text-center" role="alert">
+          <p className="font-medium">Couldn&apos;t load the dashboard.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Check your connection — demo data is safe.
+          </p>
+          <Button className="mt-3 min-h-[44px]" variant="outline" onClick={() => bookingsQ.refetch()}>
+            Try again
+          </Button>
+        </div>
+      </main>
     );
+
+  const pendingDeposits = bookings.filter(
+    (b) =>
+      !b.deposit_paid &&
+      !!b.date &&
+      b.date >= today &&
+      ["pending_deposit", "confirmed", "consultation"].includes(b.status),
+  ).length;
+  const wrapApprovals = bookings.filter(
+    (b) => b.plan.startsWith("Signature") && b.approval_status === "pending",
+  ).length;
+  const failedVideos = bookings.filter((b) =>
+    (b as unknown as { video_status?: string }).video_status?.startsWith("failed"),
+  ).length;
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+      <section aria-labelledby="owner-overview" className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-electric px-3 py-1 text-xs font-bold text-electric-foreground">
+            Guest admin demo
+          </span>
+          <span className="text-xs text-muted-foreground">Open sandbox — no sign-in, reset anytime</span>
+        </div>
+        <h1 id="owner-overview" className="mt-2 font-display text-2xl font-bold sm:text-3xl">
+          Today&apos;s operations
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {todays.length} jobs today · {stops.length} van stops · route distances are estimates for
+          hill roads.
+        </p>
+        {(pendingDeposits > 0 || wrapApprovals > 0 || failedVideos > 0) && (
+          <ul className="mt-3 space-y-1 text-sm" aria-label="Today's priorities">
+            {pendingDeposits > 0 && (
+              <li className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+                <span>
+                  <strong>{pendingDeposits}</strong> booking(s) without deposit — see Calendar /
+                  Waitlist.
+                </span>
+              </li>
+            )}
+            {wrapApprovals > 0 && (
+              <li className="flex items-start gap-2">
+                <Palette className="mt-0.5 h-4 w-4 shrink-0 text-electric" aria-hidden />
+                <span>
+                  <strong>{wrapApprovals}</strong> Signature wrap(s) awaiting approval.
+                </span>
+              </li>
+            )}
+            {failedVideos > 0 && (
+              <li className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                <span>
+                  <strong>{failedVideos}</strong> reveal video(s) failed — share via WhatsApp.
+                </span>
+              </li>
+            )}
+          </ul>
+        )}
+        {pendingDeposits === 0 && wrapApprovals === 0 && failedVideos === 0 && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Nothing urgent — all deposits in, wraps approved, videos rendering.
+          </p>
+        )}
+      </section>
+
       <TooltipProvider delayDuration={150}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           <Stat
@@ -225,19 +326,50 @@ export function OwnerDashboard() {
         </div>
       </TooltipProvider>
 
-      <Tabs defaultValue="route">
-        <div className="-mx-4 overflow-x-auto px-4">
-          <TabsList className="w-max">
-            <TabsTrigger value="route">
-              <MapPinned className="mr-1 h-4 w-4" />
+      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+        {/* Mobile: labelled select — avoids a cramped row of tiny tabs */}
+        <div className="md:hidden">
+          <label className="text-sm font-medium" htmlFor="owner-tab-select">
+            Section
+          </label>
+          <select
+            id="owner-tab-select"
+            value={tab}
+            onChange={(e) => setTab(e.target.value as typeof tab)}
+            className="mt-1 block min-h-[48px] w-full rounded-xl border border-input bg-background px-3"
+          >
+            {TABS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {/* Desktop: clear tab navigation */}
+        <div className="hidden md:block">
+          <TabsList>
+            <TabsTrigger value="route" className="min-h-[44px]">
+              <MapPinned className="mr-1 h-4 w-4" aria-hidden />
               Route
             </TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="subs">Subscriptions</TabsTrigger>
-            <TabsTrigger value="waitlist">Waitlist</TabsTrigger>
-            <TabsTrigger value="leads">Leads</TabsTrigger>
-            <TabsTrigger value="wraps">Wrap Approvals</TabsTrigger>
-            <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsTrigger value="calendar" className="min-h-[44px]">
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="subs" className="min-h-[44px]">
+              Subscriptions
+            </TabsTrigger>
+            <TabsTrigger value="waitlist" className="min-h-[44px]">
+              Waitlist
+            </TabsTrigger>
+            <TabsTrigger value="leads" className="min-h-[44px]">
+              Leads
+            </TabsTrigger>
+            <TabsTrigger value="wraps" className="min-h-[44px]">
+              Wrap Approvals
+            </TabsTrigger>
+            <TabsTrigger value="gallery" className="min-h-[44px]">
+              Gallery
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -618,14 +750,29 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
                   {b.date} {b.time} · {b.area} · {b.clients?.name}
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy === b.id}
-                onClick={() => cancel(b)}
-              >
-                {busy === b.id ? "Cancelling…" : "Cancel"}
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={busy === b.id}>
+                    {busy === b.id ? "Cancelling…" : "Cancel"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Cancel {b.vehicle_model} · {b.date} {b.time}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {`The slot opens up and up to ${OPS.offerFanout} waitlisted customers in ${b.area} are offered it automatically. This can't be undone.`}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="min-h-[44px]">Keep booking</AlertDialogCancel>
+                    <AlertDialogAction className="min-h-[44px]" onClick={() => cancel(b)}>
+                      Yes, cancel &amp; offer slot
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </li>
           ))}
           {upcoming.length === 0 && (

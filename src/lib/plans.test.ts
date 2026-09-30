@@ -24,7 +24,7 @@ describe("pricing", () => {
     expect(depositOf(1999)).toBe(600);
     expect(depositOf(25000)).toBe(7500);
   });
-  it("formats rupees Indian-style", () => expect(inr(25000)).toBe("Rs.25,000"));
+  it("formats rupees Indian-style", () => expect(inr(25000)).toBe("₹25,000"));
 });
 
 describe("slot rules", () => {
