@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Droplets, MapPin, Sparkles, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookingFlow } from "@/components/BookingFlow";
+import { DemoRibbon } from "@/components/DemoRibbon";
 import heroImg from "@/assets/hero.jpg";
 import heroVideo from "@/assets/hero-video.mp4.asset.json";
 import raiFounder from "@/assets/rai-founder.jpg";
@@ -117,6 +118,7 @@ function Index() {
           <p className="opacity-70">Premium Car Wash & Super Design Studio · MG Marg, Gangtok, Sikkim 737101</p>
         </div>
       </footer>
+      <DemoRibbon />
     </div>
   );
 }

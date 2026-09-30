@@ -4,9 +4,10 @@ import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { CalendarPlus, MessageCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmailPreviewDialog } from "./EmailPreviewDialog";
 import { checkVideo, rescheduleBooking } from "@/lib/booking.functions";
 import { SLOTS, inr } from "@/lib/plans";
-import { addDays, todayIST } from "./BookingFlow";
+import { addDays, todayIST } from "@/lib/booking-rules";
 
 type Props = {
   bookingId: string;
@@ -89,7 +90,7 @@ export function BookedScreen(p: Props) {
           {p.planName} for your {p.vehicle} · {date} at {time} · {p.location}
         </p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Button asChild size="lg" variant="outline">
             <a href={gcal} target="_blank" rel="noreferrer"><CalendarPlus /> Add to Google Calendar</a>
           </Button>
@@ -97,6 +98,7 @@ export function BookedScreen(p: Props) {
             <a href={`https://wa.me/${p.phone.replace(/\D/g, "")}?text=${encodeURIComponent(waText)}`} target="_blank" rel="noreferrer"><MessageCircle /> Open in WhatsApp</a>
           </Button>
           <Button size="lg" variant="outline" onClick={() => setRsOpen((v) => !v)}><RefreshCw /> Reschedule</Button>
+          <EmailPreviewDialog bookingId={p.bookingId} token={p.manageToken} refreshKey={`${video.status}|${video.email}|${date}|${time}`} />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">Reschedule is free till 12 hours before your slot.</p>
 
@@ -111,6 +113,9 @@ export function BookedScreen(p: Props) {
         <div className="mt-8 rounded-3xl bg-accent/60 p-5">
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold"><MessageCircle className="h-4 w-4 text-primary" /> WhatsApp confirmation</p>
           <div className="max-w-sm whitespace-pre-line rounded-2xl rounded-tl-sm bg-card p-4 text-sm shadow-sm">{waText}</div>
+          <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+            {video.email === "sent" ? "✓✓ Video sent to email" : video.status === "ready" ? "✓ Video ready — sending to email…" : video.status.startsWith("failed") ? "Video couldn't render — Rai will share it on WhatsApp" : "✓ Delivered · transformation video will be sent to email"}
+          </p>
         </div>
 
         {video.status === "ready" && video.url ? (

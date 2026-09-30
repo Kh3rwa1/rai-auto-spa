@@ -11,7 +11,7 @@ import { BeforeAfter } from "@/components/BeforeAfter";
 import { SLOTS, STUDIO, inr } from "@/lib/plans";
 import { OPS, litresFor, planRoute } from "@/lib/ops-config";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { addDays, todayIST } from "@/components/BookingFlow";
+import { addDays, todayIST } from "@/lib/booking-rules";
 import { cn } from "@/lib/utils";
 import type { Stop } from "./RouteMap";
 
