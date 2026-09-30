@@ -32,7 +32,7 @@ async function ownerDb() {
 
 // Never send customer manage tokens to the dashboard.
 const BOOKING_COLS =
-  "id, client_id, vehicle_model, photo_url, clean_preview_url, video_url, video_status, plan, colour, style, location_type, map_pin, area, guard_permission, water_needed, date, end_date, full_day, time, total, deposit_paid, status, approval_status, email_status, created_at, clients(*)";
+  "id, client_id, vehicle_model, photo_url, clean_preview_url, video_url, video_status, plan, colour, style, location_type, map_pin, area, guard_permission, water_needed, date, end_date, full_day, time, total, deposit_paid, status, approval_status, email_status, created_at, subscription_id, clients(*)";
 
 export const ownerData = createServerFn({ method: "POST" }).handler(async () => {
   const sb = await ownerDb();
@@ -98,6 +98,9 @@ export const updateSubscription = createServerFn({ method: "POST" })
     if (data.patch.skip_dates !== undefined) patch.skip_dates = data.patch.skip_dates;
     const { error } = await sb.from("subscriptions").update(patch).eq("id", data.id);
     if (error) throw new Error("Could not update the subscription.");
+    // Reflect Skip / Pause / Change time on today's route + stats immediately.
+    const { materialiseDay, istToday } = await import("./schedule.server");
+    await materialiseDay(sb, istToday(), data.id);
     return { ok: true };
   });
 
@@ -109,19 +112,55 @@ export const setApproval = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const cancelBookingLegacy = createServerFn({ method: "POST" })
+/** Cancel a booking and auto-offer the freed slot to up to 3 waitlisted customers (same area + date first). */
+export const cancelBooking = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const sb = await ownerDb();
-    const { data: b } = await sb.from("bookings").update({ status: "cancelled" }).eq("id", data.id).select("area").maybeSingle();
-    const { data: w } = await sb.from("waitlist").select("clients(name, phone)").eq("area", b?.area ?? "MG Marg").limit(3);
-    let people = (w ?? []).map((x) => x.clients as unknown as { name: string; phone: string }).filter(Boolean);
-    if (people.length < 3) {
-      const { data: more } = await sb.from("waitlist").select("clients(name, phone)").limit(3 - people.length);
-      people = people.concat((more ?? []).map((x) => x.clients as unknown as { name: string; phone: string }).filter(Boolean));
+    const { OPS } = await import("./ops-config");
+    const { data: b } = await sb
+      .from("bookings")
+      .update({ status: "cancelled" })
+      .eq("id", data.id)
+      .in("status", ["confirmed", "pending_deposit", "consultation"])
+      .select("id, area, date, time, location_type, client_id")
+      .maybeSingle();
+    if (!b || !b.date || !b.time) throw new Error("That booking can't be cancelled.");
+    const pick = async (sameDate: boolean, exclude: string[]) => {
+      let q = sb.from("waitlist").select("client_id").eq("area", b.area ?? "MG Marg").order("created_at");
+      if (sameDate) q = q.eq("date", b.date!);
+      const { data: w } = await q.limit(10);
+      return (w ?? []).map((x) => x.client_id).filter((id) => !exclude.includes(id) && id !== b.client_id);
+    };
+    let ids = [...new Set(await pick(true, []))];
+    if (ids.length < OPS.offerFanout) ids = [...new Set([...ids, ...(await pick(false, ids))])];
+    ids = ids.slice(0, OPS.offerFanout);
+    const expires = new Date(Date.now() + OPS.offerMinutes * 60000).toISOString();
+    if (ids.length) {
+      const { error } = await sb.from("waitlist_offers").insert(
+        ids.map((client_id) => ({ cancelled_booking_id: b.id, client_id, date: b.date!, time: b.time!, location_type: b.location_type, area: b.area, expires_at: expires })),
+      );
+      if (error) throw new Error("Could not create waitlist offers.");
     }
-    return { people };
+    return { offered: ids.length };
   });
+
+export const listOffers = createServerFn({ method: "POST" }).handler(async () => {
+  const sb = await ownerDb();
+  const { data } = await sb
+    .from("waitlist_offers")
+    .select("id, date, time, area, status, expires_at, created_at, cancelled_booking_id, clients(name, phone)")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  return data ?? [];
+});
+
+/** Materialise today's subscription visits (same logic as the daily cron). */
+export const runSchedule = createServerFn({ method: "POST" }).handler(async () => {
+  const sb = await ownerDb();
+  const { materialiseDay, istToday } = await import("./schedule.server");
+  return materialiseDay(sb, istToday());
+});
 
 export const resetDemo = createServerFn({ method: "POST" }).handler(async () => {
   const sb = await ownerDb();
