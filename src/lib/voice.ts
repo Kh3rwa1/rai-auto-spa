@@ -28,3 +28,19 @@ export type VoiceContext = {
 export type VoiceCommandResponse = { reply: string; intent: VoiceIntent };
 
 export const VOICE_START_EVENT = "rai-voice:start";
+export const VOICE_PHOTO_FLOW_EVENT = "rai-voice:photo-flow";
+
+let pendingVoiceStart = false;
+
+/** Mascot tap: arm the start flag (BookingFlow may not be mounted yet) and broadcast. */
+export function requestVoiceStart() {
+  pendingVoiceStart = true;
+  window.dispatchEvent(new CustomEvent(VOICE_START_EVENT));
+}
+
+/** Consume the pending start (true exactly once). */
+export function consumeVoiceStart(): boolean {
+  const was = pendingVoiceStart;
+  pendingVoiceStart = false;
+  return was;
+}

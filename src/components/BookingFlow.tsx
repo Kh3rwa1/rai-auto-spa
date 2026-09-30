@@ -7,7 +7,7 @@ import { PLANS, calcTotal, depositOf, inr, isDryWindow, type PlanId } from "@/li
 import { addDays, formatSlot, missingForPay, previewKey, todayIST } from "@/lib/booking-rules";
 import { countryLabel, flagEmoji } from "@/lib/phone";
 import type { VoiceContext, VoiceIntent } from "@/lib/voice";
-import { VOICE_START_EVENT } from "@/lib/voice";
+import { VOICE_START_EVENT, consumeVoiceStart } from "@/lib/voice";
 import { BookedScreen } from "./BookedScreen";
 import { ProgressBar, Step } from "./booking/Step";
 import { CaptureStep } from "./booking/CaptureStep";
@@ -166,9 +166,18 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
 
   // Mascot tap → toggle the voice session (stable listener via ref).
   useEffect(() => {
-    const onStart = () => startVoice.current();
+    const onStart = () => {
+      consumeVoiceStart();
+      startVoice.current();
+    };
     window.addEventListener(VOICE_START_EVENT, onStart);
     return () => window.removeEventListener(VOICE_START_EVENT, onStart);
+  }, []);
+
+  // If the mascot was tapped before this mounted (quick-book was showing),
+  // start the pending voice session now.
+  useEffect(() => {
+    if (consumeVoiceStart()) startVoice.current();
   }, []);
 
   // Booking done → wizard unmounts its steps; end the session too.

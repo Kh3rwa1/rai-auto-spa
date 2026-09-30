@@ -15,7 +15,7 @@ import {
 import { BookingFlow } from "@/components/BookingFlow";
 import { QuickBook } from "@/components/QuickBook";
 import { PLANS, inr } from "@/lib/plans";
-import { VOICE_START_EVENT } from "@/lib/voice";
+import { VOICE_PHOTO_FLOW_EVENT, requestVoiceStart } from "@/lib/voice";
 import heroImg from "@/assets/hero.jpg";
 
 /* ───────── config ───────── */
@@ -447,7 +447,9 @@ function Hero() {
           <button
             type="button"
             onClick={() => {
-              window.dispatchEvent(new CustomEvent(VOICE_START_EVENT));
+              // Voice booking drives the photo wizard — switch to it, then start the session.
+              window.dispatchEvent(new CustomEvent(VOICE_PHOTO_FLOW_EVENT));
+              requestVoiceStart();
               document
                 .getElementById("book")
                 ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -648,6 +650,12 @@ function GlowUp() {
 
 function Booking() {
   const [photoFlow, setPhotoFlow] = useState(false);
+  // Mascot tap → voice booking drives the photo wizard, so switch to it.
+  useEffect(() => {
+    const toPhoto = () => setPhotoFlow(true);
+    window.addEventListener(VOICE_PHOTO_FLOW_EVENT, toPhoto);
+    return () => window.removeEventListener(VOICE_PHOTO_FLOW_EVENT, toPhoto);
+  }, []);
   const switchTo = (v: boolean) => {
     setPhotoFlow(v);
     requestAnimationFrame(() =>
