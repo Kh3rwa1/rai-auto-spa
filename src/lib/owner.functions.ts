@@ -15,7 +15,24 @@ async function ownerDb() {
 
 // Never send customer manage tokens to the dashboard.
 const BOOKING_COLS =
-  "id, client_id, vehicle_model, photo_url, clean_preview_url, video_url, video_status, plan, colour, style, location_type, map_pin, area, guard_permission, water_needed, date, end_date, full_day, time, total, deposit_paid, status, approval_status, email_status, created_at, subscription_id, clients(*)";
+  "id, client_id, vehicle_model, photo_url, clean_preview_url, video_url, video_status, plan, colour, style, location_type, map_pin, area, guard_permission, water_needed, date, end_date, full_day, time, total, deposit_paid, status, approval_status, email_status, created_at, subscription_id, customer_phone_e164, detected_country, call_status, call_transcript, call_duration_seconds, call_from_number, call_attempt_id, call_detail, call_updated_at, notes, clients(*)";
+
+/** Re-runs the Sarvam confirmation call for one booking from the dashboard. */
+export const recallBooking = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ bookingId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await ownerDb();
+    const { callBookingAndRecord, CALL_SELECT } = await import("./call-booking.server");
+    const { data: b } = await sb
+      .from("bookings")
+      .select(CALL_SELECT)
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (!b) throw new Error("Booking not found.");
+    const { requestOrigin } = await import("./booking-core");
+    return callBookingAndRecord(b, await requestOrigin());
+  });
+
 
 export const ownerData = createServerFn({ method: "POST" }).handler(async () => {
   const sb = await ownerDb();
