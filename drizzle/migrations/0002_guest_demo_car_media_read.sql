@@ -1,0 +1,1 @@
+CREATE POLICY "guest demo read car media" ON storage.objects FOR SELECT TO anon USING (bucket_id = 'car-media');
