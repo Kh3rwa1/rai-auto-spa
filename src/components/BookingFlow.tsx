@@ -43,7 +43,7 @@ async function compress(file: File): Promise<{ b64: string; url: string }> {
   c.height = Math.round(img.height * scale);
   c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
   const url = c.toDataURL("image/jpeg", 0.85);
-  return { b64: url.split(",")[1], url };
+  return { b64: url.split(",")[1] ?? "", url };
 }
 
 function Step({ n, title, children, done }: { n: number; title: string; children: React.ReactNode; done?: boolean }) {
@@ -120,7 +120,7 @@ export function BookingFlow() {
   }, [weekStart, mobile, pin, slotsFn]);
 
   // clear a selected slot that became invalid
-  useEffect(() => {
+  useEffect((): void => {
     if (slot && mobile && !water && isDryWindow(slot.time)) setSlot(null);
   }, [mobile, water, slot]);
 

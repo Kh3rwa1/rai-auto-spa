@@ -61,7 +61,7 @@ export async function editCarImage(bytes: Uint8Array, mime: string, prompt: stri
   const form = new FormData();
   form.set("model", IMAGE_MODEL);
   form.set("prompt", prompt);
-  form.set("image", new File([bytes], "car.jpg", { type: mime }));
+  form.set("image", new File([bytes as Uint8Array<ArrayBuffer>], "car.jpg", { type: mime }));
   const res = await fetch(`${BASE}/v1/images/edits`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key()}` },

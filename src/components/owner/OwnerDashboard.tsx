@@ -46,10 +46,11 @@ function planRoute(stops: Stop[]) {
   let km = 0;
   while (left.length) {
     let bi = 0;
-    left.forEach((s, i) => haversineKm(cur, s) < haversineKm(cur, left[bi]) && (bi = i));
-    km += haversineKm(cur, left[bi]);
-    cur = left[bi];
-    order.push(left.splice(bi, 1)[0]);
+    left.forEach((s, i) => haversineKm(cur, s) < haversineKm(cur, left[bi]!) && (bi = i));
+    const next = left.splice(bi, 1)[0]!;
+    km += haversineKm(cur, next);
+    cur = next;
+    order.push(next);
   }
   km += haversineKm(cur, STUDIO);
   const naive = stops.reduce((a, s) => a + 2 * haversineKm(STUDIO, s), 0);
@@ -188,8 +189,8 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
     toast.success(m === "block" ? `Blocked ${keys.length} slot(s) for water shortage` : `Reopened ${keys.length} slot(s)`);
   }
 
-  useEffect(() => {
-    const up = () => commit();
+  useEffect((): (() => void) => {
+    const up = () => void commit();
     window.addEventListener("pointerup", up);
     return () => window.removeEventListener("pointerup", up);
   });
@@ -256,7 +257,7 @@ function Subscriptions({ subs, bookings, onChange }: { subs: Sub[]; bookings: Bo
   const today = todayIST();
   const active = subs.filter((s) => s.active).length;
   const monthly = active * 30 + bookings.filter((b) => b.status !== "lead").length;
-  async function upd(id: string, patch: Partial<Sub>) {
+  async function upd(id: string, patch: { preferred_time?: string; active?: boolean; skip_dates?: string[] }) {
     const { error } = await supabase.from("subscriptions").update(patch).eq("id", id);
     if (error) toast.error(error.message);
     else onChange();
@@ -435,7 +436,7 @@ function Gallery({ bookings }: { bookings: Booking[] }) {
         const s = signed.data ?? {};
         return (
           <div key={i.id} className="rounded-2xl bg-card p-3">
-            {s[i.photo_url!] && s[i.clean_preview_url!] ? <BeforeAfter before={s[i.photo_url!]} after={s[i.clean_preview_url!]} afterLabel={i.plan} /> : <div className="aspect-[4/3] animate-pulse rounded-2xl bg-muted" />}
+            {s[i.photo_url!] && s[i.clean_preview_url!] ? <BeforeAfter before={s[i.photo_url!]!} after={s[i.clean_preview_url!]!} afterLabel={i.plan} /> : <div className="aspect-[4/3] animate-pulse rounded-2xl bg-muted" />}
             {i.video_url && s[i.video_url] && <video src={s[i.video_url]} controls muted playsInline className="mt-2 w-full rounded-xl" />}
             <p className="mt-2 text-sm font-medium">{i.vehicle_model} · {i.plan}</p>
             <p className="text-xs text-muted-foreground">{i.clients?.name ?? "Lead"} {i.video_url ? "· video sent" : ""}</p>
