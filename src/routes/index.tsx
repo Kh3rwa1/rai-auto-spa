@@ -1,7 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, Camera, Sparkles, CalendarCheck, MapPin, ShieldCheck, Truck, MessageCircle } from "lucide-react";
+import {
+  ArrowRight,
+  Camera,
+  Sparkles,
+  CalendarCheck,
+  MapPin,
+  ShieldCheck,
+  Truck,
+  MessageCircle,
+  Zap,
+} from "lucide-react";
 import { BookingFlow } from "@/components/BookingFlow";
+import { QuickBook } from "@/components/QuickBook";
 import { MOBILE_FEE, PLANS, inr, type PlanId } from "@/lib/plans";
 import heroImg from "@/assets/hero.jpg";
 
@@ -20,7 +31,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Snap your car, preview the AI glow-up, book a studio bay or the doorstep van. Wash, detail or custom wrap on MG Marg, Gangtok — priced upfront.",
+          "Wash, full detail or custom wrap on MG Marg, Gangtok — studio or doorstep, priced upfront. Book in 3 taps, your slot is held instantly.",
       },
       { property: "og:title", content: "Rai's Auto Spa — From Boring to Beast" },
       {
@@ -96,7 +107,7 @@ const CSS = `
 
 /* ───────── tiny hooks ───────── */
 const prefersReduced = () =>
-  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 function useInView<T extends Element>(threshold = 0.2) {
   const ref = useRef<T>(null);
@@ -104,10 +115,13 @@ function useInView<T extends Element>(threshold = 0.2) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (!("IntersectionObserver" in window)) return setInView(true);
+    if (!("IntersectionObserver" in window)) {
+      setInView(true);
+      return;
+    }
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e?.isIntersecting) {
+        if (e.isIntersecting) {
           setInView(true);
           io.disconnect();
         }
@@ -234,15 +248,12 @@ function Mascot() {
       <path d="M80 172v24M120 172v24" stroke="#111" strokeWidth="6" strokeLinecap="round" />
       <path d="M58 202q0-15 23-13q10 1 10 13z" fill="#B9A7FF" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
       <path d="M109 202q0-12 10-13q23-2 23 13z" fill="#B9A7FF" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
-      {/* left arm – thumbs up */}
       <path d="M47 122q-22 2-24-18" stroke="#111" strokeWidth="5" fill="none" strokeLinecap="round" />
       <circle cx="22" cy="98" r="9" fill="#fff" stroke="#111" strokeWidth="4" />
-      {/* right arm – waving mini sponge */}
       <g className="ras-arm">
         <path d="M153 122q20-6 26-28" stroke="#111" strokeWidth="5" fill="none" strokeLinecap="round" />
         <rect x="170" y="72" width="22" height="18" rx="5" fill="#9EE6C4" stroke="#111" strokeWidth="4" />
       </g>
-      {/* body */}
       <rect x="45" y="62" width="110" height="114" rx="26" fill="#FFD84D" stroke="#111" strokeWidth="5" />
       {[
         [62, 150, 5],
@@ -253,7 +264,6 @@ function Mascot() {
       ].map(([x, y, r], i) => (
         <circle key={i} cx={x} cy={y} r={r} fill="#E9B824" />
       ))}
-      {/* foam (outline pass + fill pass for a clean cloud) */}
       <g fill="#111">
         {foam.map(([x, y, r], i) => (
           <circle key={i} cx={x} cy={y} r={r + 3} />
@@ -264,7 +274,6 @@ function Mascot() {
           <circle key={i} cx={x} cy={y} r={r} />
         ))}
       </g>
-      {/* face */}
       <g className="ras-eye">
         <ellipse cx="80" cy="104" rx="12" ry="15" fill="#fff" stroke="#111" strokeWidth="4" />
         <circle cx="83" cy="107" r="6" fill="#111" />
@@ -296,7 +305,7 @@ function Hero() {
         <div className="grid gap-6 p-5 sm:grid-cols-[1fr_auto] sm:p-8">
           <div>
             <span className="ras-badge ras-lilac inline-flex items-center gap-1 rounded-full border-[3px] border-[#111] px-3 py-0.5 text-[11px] font-extrabold uppercase">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden /> New · AI glow-up preview
+              <Zap className="h-3.5 w-3.5" aria-hidden /> Book in 3 taps
             </span>
             <h1 id="hero-title" className="ras-display mt-4 text-[clamp(3rem,8.5vw,5.8rem)]">
               <span className="ras-line">
@@ -308,8 +317,8 @@ function Hero() {
             </h1>
             <p className="mt-4 text-[12px] font-extrabold uppercase tracking-[0.22em]">Wash · Detail · Custom wrap</p>
             <p className="mt-3 max-w-md text-base leading-relaxed text-[#333]">
-              Snap your car, preview the shine, then book a studio bay on MG Marg or the van to your doorstep. Priced
-              upfront, no account needed.
+              Pick a service, tap a time, done. Studio bay on MG Marg or the van to your doorstep. Priced upfront, no
+              account needed.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href="#book" className="ras-btn ras-yellow">
@@ -378,7 +387,7 @@ const TICKER = [
   "Custom wraps",
   "Doorstep van",
   "MG Marg, Gangtok",
-  "Plate auto-blurred",
+  "Slot held on tap",
 ];
 
 function Marquee() {
@@ -408,14 +417,16 @@ function GlowUp() {
   const [pos, setPos] = useState(50);
   const [touched, setTouched] = useState(false);
 
-  // One playful auto-sweep when it scrolls into view, then hands control to the user.
   useEffect(() => {
     if (!inView || touched || prefersReduced()) return;
     const t0 = performance.now();
     let raf = 0;
     const tick = (t: number) => {
       const e = t - t0;
-      if (e > 3200) return setPos(50);
+      if (e > 3200) {
+        setPos(50);
+        return;
+      }
       setPos(50 + Math.sin(e / 520) * 30);
       raf = requestAnimationFrame(tick);
     };
@@ -424,23 +435,18 @@ function GlowUp() {
   }, [inView, touched]);
 
   const steps = [
+    { icon: Zap, c: "ras-mint", t: "Pick", d: "Wash, detail or full wrap. Prices shown upfront, no surprises." },
     {
-      icon: Camera,
-      c: "ras-mint",
-      t: "Snap",
-      d: "One photo, any angle. We blur the number plate before anything is stored.",
+      icon: CalendarCheck,
+      c: "ras-yellow",
+      t: "Tap a time",
+      d: "Studio or doorstep van. Your slot is held the second you tap it.",
     },
     {
       icon: Sparkles,
       c: "ras-lilac",
-      t: "Preview",
-      d: "See your car's glow-up, and for wraps, try your new colour first.",
-    },
-    {
-      icon: CalendarCheck,
-      c: "ras-yellow",
-      t: "Book",
-      d: "Pick a bay or the doorstep van. A 30% deposit locks your slot.",
+      t: "Pay & shine",
+      d: "A 30% deposit locks it in. Want an AI preview first? Book with a photo.",
     },
   ];
 
@@ -499,7 +505,7 @@ function GlowUp() {
               </div>
             </div>
             <p className="px-1 pt-2 text-[11px] font-semibold text-[#555]">
-              Illustration. Upload your own car below to see your real preview.
+              Illustration. Book with a photo to see your own car&rsquo;s AI preview.
             </p>
           </div>
         </Reveal>
@@ -507,7 +513,7 @@ function GlowUp() {
         <div>
           <Reveal>
             <h2 id="glow-title" className="ras-display text-[clamp(2.2rem,5vw,3.6rem)]">
-              See the shine <span className="text-[var(--pink)]">before</span> you pay.
+              Dirty to <span className="text-[var(--pink)]">dripping</span> in 3 taps.
             </h2>
           </Reveal>
           <ol className="mt-6 grid gap-3">
@@ -539,7 +545,7 @@ const PLAN_COLOR: Record<PlanId, string> = { wash: "ras-mint", detail: "ras-lila
 const PLAN_PITCH: Record<PlanId, string> = {
   wash: "Quick refresh, studio or doorstep.",
   detail: "Inside and out, showroom-level.",
-  signature: "A full transformation. Preview your wrap colour with AI before you commit.",
+  signature: "A full 2-day transformation. Preview your wrap colour with AI before you commit.",
 };
 
 function Services() {
@@ -613,6 +619,16 @@ function Services() {
 }
 
 function Booking() {
+  const [photoFlow, setPhotoFlow] = useState(false);
+  const switchTo = (v: boolean) => {
+    setPhotoFlow(v);
+    requestAnimationFrame(() =>
+      document
+        .getElementById("book")
+        ?.scrollIntoView({ behavior: prefersReduced() ? "auto" : "smooth", block: "start" }),
+    );
+  };
+
   return (
     <section id="book" aria-labelledby="book-title" className="scroll-mt-24 px-3 pb-14 sm:px-5 sm:pb-20">
       <div className="mx-auto max-w-6xl">
@@ -622,11 +638,15 @@ function Booking() {
               <h2 id="book-title" className="ras-display text-[clamp(2.4rem,6vw,4rem)]">
                 Book your wash
               </h2>
-              <p className="mt-2 text-base text-[#444]">Snap. Pick. Slot. Done. No account, no calls.</p>
+              <p className="mt-2 text-base text-[#444]">
+                {photoFlow
+                  ? "Snap your car, see the glow-up, then book."
+                  : "Pick. Tap. Pay. Your time is held the second you tap it."}
+              </p>
             </div>
             <ul className="flex flex-wrap gap-2 text-[11px] font-extrabold uppercase">
               <li className="ras-mint flex items-center gap-1 rounded-full border-2 border-[#111] px-2.5 py-1">
-                <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Plate auto-blurred
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> No account
               </li>
               <li className="ras-yellow flex items-center gap-1 rounded-full border-2 border-[#111] px-2.5 py-1">
                 <CalendarCheck className="h-3.5 w-3.5" aria-hidden /> Live slots
@@ -635,7 +655,20 @@ function Booking() {
           </div>
         </Reveal>
         <div className="ras-box ras-white ras-shadow p-2 sm:p-4">
-          <BookingFlow />
+          {photoFlow ? (
+            <>
+              <BookingFlow />
+              <button
+                type="button"
+                onClick={() => switchTo(false)}
+                className="mt-4 inline-flex min-h-[44px] items-center gap-2 text-sm font-bold underline decoration-[#FF5FA2] decoration-[3px] underline-offset-4"
+              >
+                <Camera className="h-4 w-4" aria-hidden /> ← Back to quick booking
+              </button>
+            </>
+          ) : (
+            <QuickBook onUsePhotoFlow={() => switchTo(true)} />
+          )}
         </div>
       </div>
     </section>
@@ -708,7 +741,7 @@ function Index() {
     setReady(true);
     const el = document.getElementById("book");
     if (!el || !("IntersectionObserver" in window)) return;
-    const io = new IntersectionObserver(([e]) => setBookVisible(!!e?.isIntersecting), { threshold: 0.05 });
+    const io = new IntersectionObserver(([e]) => setBookVisible(e.isIntersecting), { threshold: 0.05 });
     io.observe(el);
     return () => io.disconnect();
   }, []);
