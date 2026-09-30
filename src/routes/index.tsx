@@ -107,7 +107,7 @@ function useInView<T extends Element>(threshold = 0.2) {
     if (!("IntersectionObserver" in window)) return setInView(true);
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) {
+        if (e?.isIntersecting) {
           setInView(true);
           io.disconnect();
         }
@@ -708,7 +708,7 @@ function Index() {
     setReady(true);
     const el = document.getElementById("book");
     if (!el || !("IntersectionObserver" in window)) return;
-    const io = new IntersectionObserver(([e]) => setBookVisible(e.isIntersecting), { threshold: 0.05 });
+    const io = new IntersectionObserver(([e]) => setBookVisible(!!e?.isIntersecting), { threshold: 0.05 });
     io.observe(el);
     return () => io.disconnect();
   }, []);
