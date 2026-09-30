@@ -295,6 +295,70 @@ export type Database = {
           },
         ]
       }
+      waitlist_offers: {
+        Row: {
+          area: string | null
+          cancelled_booking_id: string | null
+          claimed_booking_id: string | null
+          client_id: string
+          created_at: string
+          date: string
+          expires_at: string
+          id: string
+          location_type: string
+          status: string
+          time: string
+        }
+        Insert: {
+          area?: string | null
+          cancelled_booking_id?: string | null
+          claimed_booking_id?: string | null
+          client_id: string
+          created_at?: string
+          date: string
+          expires_at?: string
+          id?: string
+          location_type?: string
+          status?: string
+          time: string
+        }
+        Update: {
+          area?: string | null
+          cancelled_booking_id?: string | null
+          claimed_booking_id?: string | null
+          client_id?: string
+          created_at?: string
+          date?: string
+          expires_at?: string
+          id?: string
+          location_type?: string
+          status?: string
+          time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_offers_cancelled_booking_id_fkey"
+            columns: ["cancelled_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_offers_claimed_booking_id_fkey"
+            columns: ["claimed_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_offers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -311,7 +375,6 @@ export type Database = {
         }
         Returns: string
       }
-      claim_owner: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
