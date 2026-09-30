@@ -167,8 +167,8 @@ export const makePreview = createServerFn({ method: "POST" })
       "image/jpeg",
       imagePrompt(data.plan, data.colour, data.style),
     );
-    const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.png`;
-    await sb.storage.from(BUCKET).upload(path, out, { contentType: "image/png", upsert: true });
+    const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.jpg`;
+    await sb.storage.from(BUCKET).upload(path, out, { contentType: "image/jpeg", upsert: true });
     await sb
       .from("bookings")
       .update({
@@ -198,7 +198,7 @@ export const makePreview = createServerFn({ method: "POST" })
         try {
           const jobId = await createVideoJob(
             out,
-            "image/png",
+            "image/jpeg",
             videoPrompt(data.plan, data.colour, data.style),
           );
           await sb
@@ -394,18 +394,27 @@ export const simulatePayment = createServerFn({ method: "POST" })
       .select("*, clients(name, email)")
       .eq("id", data.bookingId)
       .maybeSingle();
-    if (!b || b.manage_token !== data.token) throw new Error("Booking not found.");
-    if (b.deposit_paid) return { ok: true, status: "success" as const };
+    // Expected outcomes are returned, never thrown: a thrown server-fn error
+    // reaches the route error boundary and blanks the checkout screen.
+    if (!b || b.manage_token !== data.token)
+      return { ok: false, status: "error" as const, message: "Booking not found." };
+    if (b.deposit_paid) return { ok: true, status: "success" as const, message: null };
     if (!b.date || !b.time || !b.client_id)
-      throw new Error("Please pick a slot and add your details first.");
+      return {
+        ok: false,
+        status: "error" as const,
+        message: "Please pick a slot and add your details first.",
+      };
     const amount = depositOf(b.total);
     if (data.fail) {
       await sb
         .from("payments")
         .insert({ booking_id: b.id, amount, method: data.method, status: "failed" });
-      throw new Error(
-        "PAYMENT_FAILED: Your bank declined the demo payment. Nothing was charged — please try again.",
-      );
+      return {
+        ok: false,
+        status: "failed" as const,
+        message: "Your bank declined the demo payment. Nothing was charged — please try again.",
+      };
     }
     await sb
       .from("payments")
@@ -467,7 +476,7 @@ export const simulatePayment = createServerFn({ method: "POST" })
           .eq("id", b.id);
       }
     }
-    return { ok: true, status: "success" as const };
+    return { ok: true, status: "success" as const, message: null };
   });
 
 /** Owner: build a deep link that reopens a lead's booking at the slot step. */

@@ -29,7 +29,11 @@ async function sampleToPlan(page: import("@playwright/test").Page) {
 
 async function pickStudioSlot(page: import("@playwright/test").Page) {
   await page.getByRole("radio", { name: "Come to Studio" }).click();
-  const free = page.locator("#step-3-body button:not([disabled])").filter({ hasText: /^\d\d:00$/ });
+  // `:visible` matters: the mobile and desktop slot grids are both in the DOM,
+  // only one is shown, so an unfiltered match can resolve to the hidden copy.
+  const free = page
+    .locator("#step-3-body button:visible:not([disabled])")
+    .filter({ hasText: /^\d\d:00$/ });
   // Walk forward a week at a time until a week with free capacity shows up.
   for (let week = 0; week < 8; week++) {
     await page.getByRole("button", { name: "Next →" }).click();
@@ -117,7 +121,7 @@ test("sample car books end to end with preview on the payment screen", async ({ 
   // Step 2 — plan (selecting must not auto-advance; Continue does).
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await expect(page.locator("#step-2-body")).toBeVisible();
   await page
@@ -129,7 +133,9 @@ test("sample car books end to end with preview on the payment screen", async ({ 
   await pickStudioSlot(page);
 
   // Step 4 — preview lives on the payment screen; details + demo payment.
-  await expect(page.locator("#step-4-body").getByText("Your AI preview")).toBeVisible({
+  await expect(
+    page.locator("#step-4-body").getByText("Your AI preview", { exact: true }),
+  ).toBeVisible({
     timeout: 30_000,
   });
   await page.locator("#step-4-body").getByRole("button", { name: "Use demo details" }).click();
@@ -155,7 +161,7 @@ test("sample car books end to end with preview on the payment screen", async ({ 
   await expect(page.getByText("Booking reference:")).toBeVisible();
   await expect(page.getByRole("button", { name: "Reschedule" })).toBeVisible();
   // Video + email states are honest, never implied delivered.
-  await expect(page.getByText(/Reveal video|AI visualization|Video/)).toBeVisible();
+  await expect(page.getByText(/Reveal video|AI visualization|Video/).first()).toBeVisible();
 
   // Email preview
   await page.getByRole("button", { name: "Preview your emails" }).click();
@@ -170,7 +176,7 @@ test("signature keeps colour/style visible and forces studio-only", async ({ pag
   // Selecting Signature must NOT advance away from its customisation controls.
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Signature Super Design/ })
+    .getByRole("radio", { name: /Signature Super Design/ })
     .click();
   await expect(page.locator("#step-2-body")).toBeVisible();
   await expect(page.locator("#step-3-body")).toBeHidden();
@@ -206,7 +212,7 @@ test("mobile layout gates the van on a map pin before Details", async ({ page })
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")
@@ -233,12 +239,15 @@ test("mobile layout gates the van on a map pin before Details", async ({ page })
     await page.waitForTimeout(1500);
     await expect(page.locator("#step-3-body")).toBeVisible();
     await expect(page.locator("#step-4-body")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Drop a map pin above" })).toBeVisible();
+    // Step body and sticky bottom bar both show the gate; either one proves it.
+    await expect(page.getByRole("button", { name: "Drop a map pin above" }).first()).toBeVisible();
   }
 
   // Studio needs no pin: switching advances normally.
   await page.getByRole("radio", { name: "Come to Studio" }).click();
-  const free = page.locator("#step-3-body button:not([disabled])").filter({ hasText: /^\d\d:00$/ });
+  const free = page
+    .locator("#step-3-body button:visible:not([disabled])")
+    .filter({ hasText: /^\d\d:00$/ });
   await expect
     .poll(
       async () => {
@@ -260,7 +269,7 @@ test("simulated payment failure keeps progress and retry succeeds", async ({ pag
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")
@@ -293,7 +302,7 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")
@@ -312,7 +321,12 @@ test("earlier steps stay editable without losing progress", async ({ page }) => 
   await expect(page.locator("#step-2-body")).toBeVisible();
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Full Detail/ })
+    .getByRole("radio", { name: /Full Detail/ })
+    .click();
+  // Reopen Details: the contact fields only render while that step is open.
+  await page
+    .getByRole("navigation", { name: "Booking progress" })
+    .getByRole("button", { name: /Details/ })
     .click();
   await expect(page.getByLabel("Email (for your reveal video)")).toHaveValue("demo@example.com");
 });
@@ -355,7 +369,7 @@ test("idle checkout dialog traps focus and Escape cancels", async ({ page }) => 
   await sampleToPlan(page);
   await page
     .locator("#step-2-body")
-    .getByRole("button", { name: /Essential Wash/ })
+    .getByRole("radio", { name: /Essential Wash/ })
     .click();
   await page
     .locator("#step-2-body")

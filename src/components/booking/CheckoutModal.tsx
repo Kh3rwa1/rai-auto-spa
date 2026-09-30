@@ -91,7 +91,16 @@ export function CheckoutModal({
       }
       await wait(900);
       setStage("verifying");
-      await payFn({ data: { bookingId: booking.id, token, method, fail } });
+      const pay = await payFn({ data: { bookingId: booking.id, token, method, fail } });
+      if (pay.status === "failed") {
+        setStage("failed");
+        return;
+      }
+      if (!pay.ok) {
+        setStage("idle");
+        toast.error(pay.message ?? "Demo payment could not be completed.");
+        return;
+      }
       await wait(700);
       setStage("success");
       await wait(800);

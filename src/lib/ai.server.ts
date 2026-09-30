@@ -1,27 +1,12 @@
+// Vehicle + plate detection runs on the Lovable gateway (instant, at upload time).
+// The car finish and the reveal video are generated on fal.ai — see ./fal.server.
 const BASE = "https://ai.gateway.lovable.dev";
 const CHAT_MODEL = "openai/gpt-6-astra";
-const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
-const VIDEO_MODEL = "google/gemini-omni-1.1-flash";
 
 function key() {
   const k = process.env["LOVABLE_API_KEY"];
   if (!k) throw new Error("AI is not configured");
   return k;
-}
-
-async function gatewayError(res: Response, what: string): Promise<never> {
-  let msg = "";
-  try {
-    const j = await res.json();
-    msg = j?.error?.message ?? j?.message ?? "";
-  } catch {
-    /* non-JSON error body — fall back to the status code */
-  }
-  if (res.status === 429)
-    throw new Error("Rai is busy with lots of cars right now — please try again in a minute.");
-  if (res.status === 402)
-    throw new Error("AI previews are paused right now (credits). Please book without the preview.");
-  throw new Error(`${what} failed${msg ? `: ${msg}` : ""}`);
 }
 
 export async function detectVehicle(b64: string, mime: string) {
@@ -65,56 +50,61 @@ export async function detectVehicle(b64: string, mime: string) {
   }
 }
 
+/** Car finish / wrap rendering — fal.ai FLUX.1 [dev] image-to-image keeps the car's exact geometry. */
 export async function editCarImage(bytes: Uint8Array, mime: string, prompt: string) {
-  const form = new FormData();
-  form.set("model", IMAGE_MODEL);
-  form.set("prompt", prompt);
-  form.set("image", new File([bytes as Uint8Array<ArrayBuffer>], "car.jpg", { type: mime }));
-  const res = await fetch(`${BASE}/v1/images/edits`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key()}` },
-    body: form,
-  });
-  if (!res.ok) await gatewayError(res, "Preview");
-  const j = await res.json();
-  const b64 = j?.data?.[0]?.b64_json as string | undefined;
-  if (!b64) throw new Error("Preview came back empty — please try again.");
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const fal = await import("./fal.server");
+  const id = await fal.submit(
+    fal.IMAGE_MODEL,
+    {
+      image_url: fal.dataUri(bytes, mime),
+      prompt,
+      strength: 0.45,
+      num_images: 1,
+      num_inference_steps: 34,
+      guidance_scale: 3.5,
+      enable_safety_checker: false,
+    },
+    "Preview",
+  );
+  await fal.waitFor(fal.IMAGE_QUEUE, id, "Preview", 1500, 120);
+  const out = await fal.result<{ images?: { url?: string }[] }>(fal.IMAGE_QUEUE, id, "Preview");
+  const url = out.images?.[0]?.url;
+  if (!url) throw new Error("Preview came back empty — please try again.");
+  return fal.fetchBytes(url, "Preview");
 }
 
+/** Reveal video — fal.ai Kling 1.5 holds rigid car geometry across the camera sweep. */
 export async function createVideoJob(bytes: Uint8Array, mime: string, prompt: string) {
-  let bin = "";
-  for (let i = 0; i < bytes.length; i += 0x8000)
-    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  const res = await fetch(`${BASE}/v1/videos`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: VIDEO_MODEL,
-      input: [
-        { type: "text", text: prompt },
-        { type: "image", data: btoa(bin), mime_type: mime },
-      ],
-      response_format: { type: "video", resolution: "720p", duration: "6s", aspect_ratio: "16:9" },
-    }),
-  });
-  if (!res.ok) await gatewayError(res, "Video");
-  const j = await res.json();
-  return j.id as string;
+  const fal = await import("./fal.server");
+  return fal.submit(
+    fal.VIDEO_MODEL,
+    {
+      image_url: fal.dataUri(bytes, mime),
+      prompt,
+      duration: "5",
+      aspect_ratio: "16:9",
+      cfg_scale: 0.5,
+    },
+    "Video",
+  );
 }
 
 export async function getVideoJob(id: string) {
-  const res = await fetch(`${BASE}/v1/videos/${id}`, {
-    headers: { Authorization: `Bearer ${key()}` },
-  });
-  if (!res.ok) await gatewayError(res, "Video status");
-  return (await res.json()) as { status: string; error?: { message?: string } };
+  const fal = await import("./fal.server");
+  const s = await fal.status(fal.VIDEO_QUEUE, id, "Video status");
+  const status =
+    s.status === "COMPLETED"
+      ? "completed"
+      : s.status === "FAILED" || s.status === "ERROR"
+        ? "failed"
+        : "in_progress";
+  return { status, error: s.error };
 }
 
 export async function downloadVideo(id: string) {
-  const res = await fetch(`${BASE}/v1/videos/${id}/content`, {
-    headers: { Authorization: `Bearer ${key()}` },
-  });
-  if (!res.ok) await gatewayError(res, "Video download");
-  return new Uint8Array(await res.arrayBuffer());
+  const fal = await import("./fal.server");
+  const out = await fal.result<{ video?: { url?: string } }>(fal.VIDEO_QUEUE, id, "Video download");
+  const url = out.video?.url;
+  if (!url) throw new Error("Video came back empty — please try again.");
+  return fal.fetchBytes(url, "Video");
 }
