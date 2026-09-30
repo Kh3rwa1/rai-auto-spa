@@ -53,7 +53,7 @@ export function slotUnavailable(o: {
   mobile: boolean;
   water: boolean;
   capacity: number;
-  state?: SlotState;
+  state?: SlotState | undefined;
 }) {
   const past = o.date < o.today || (o.date === o.today && parseInt(o.time, 10) <= o.nowHour);
   const dry = o.mobile && !o.water && isDryWindow(o.time);
