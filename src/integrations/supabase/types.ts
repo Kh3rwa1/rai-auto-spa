@@ -62,6 +62,7 @@ export type Database = {
           location_type: string
           manage_token: string
           map_pin: Json | null
+          notes: string | null
           photo_url: string | null
           plan: string
           status: string
@@ -98,6 +99,7 @@ export type Database = {
           location_type?: string
           manage_token?: string
           map_pin?: Json | null
+          notes?: string | null
           photo_url?: string | null
           plan: string
           status?: string
@@ -134,6 +136,7 @@ export type Database = {
           location_type?: string
           manage_token?: string
           map_pin?: Json | null
+          notes?: string | null
           photo_url?: string | null
           plan?: string
           status?: string
