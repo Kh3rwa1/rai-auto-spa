@@ -101,7 +101,8 @@ export async function seedDemo(sb: DB) {
     mk(7, { vehicle_model: "Swift", plan: d, total: 0, status: "lead", photo_url: swift, client_id: null, area: null, map_pin: null }),
     mk(8, { vehicle_model: "Creta", plan: w, total: 0, status: "lead", photo_url: creta, client_id: null, area: null, map_pin: null }),
   ];
-  const { error: be } = await sb.from("bookings").insert(bookings);
+  const { error: be } = await sb.from("bookings").insert(bookings, { defaultToNull: false });
+  if (be) console.error("seed bookings", be);
   if (be) throw new Error("Seeding bookings failed.");
 
   await sb.from("waitlist").insert(
