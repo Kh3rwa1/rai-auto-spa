@@ -2,6 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { PLANS } from "@/lib/plans";
 
+/** Matches a spoken plan name onto one of our three plans. */
+const planName = (v: string) => {
+  const hit = Object.values(PLANS).find(
+    (p) =>
+      p.name.toLowerCase() === v.toLowerCase() || v.toLowerCase().includes(p.name.toLowerCase()),
+  );
+  return hit?.name ?? null;
+};
+
+
 /**
  * Webhook for the Sarvam agent's `modify_booking` tool and for Sarvam's own
  * instant-outbound call-outcome callback (docs: conversations/api/instant-outbound).
