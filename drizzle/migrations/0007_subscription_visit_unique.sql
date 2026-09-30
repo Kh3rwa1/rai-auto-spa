@@ -1,0 +1,1 @@
+ALTER TABLE public.bookings ADD CONSTRAINT bookings_subscription_day_key UNIQUE (subscription_id, date);
