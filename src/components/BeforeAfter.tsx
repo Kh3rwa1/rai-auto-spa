@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 export function BeforeAfter({
   before,
@@ -12,7 +12,16 @@ export function BeforeAfter({
   afterLabel: string;
 }) {
   const [pos, setPos] = useState(50);
+  const [calm, setCalm] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // Respect prefers-reduced-motion: no animated handle glide, keyboard steps land instantly.
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setCalm(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const dragging = useRef(false);
   const move = (clientX: number) => {
     const r = ref.current?.getBoundingClientRect();
@@ -39,8 +48,22 @@ export function BeforeAfter({
       aria-valuemax={100}
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 5));
-        if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 5));
+        const step = (n: number) => {
+          e.preventDefault();
+          setPos((p) => Math.min(100, Math.max(0, p + n)));
+        };
+        if (e.key === "ArrowLeft") step(-5);
+        if (e.key === "ArrowRight") step(5);
+        if (e.key === "PageDown") step(-20);
+        if (e.key === "PageUp") step(20);
+        if (e.key === "Home") {
+          e.preventDefault();
+          setPos(0);
+        }
+        if (e.key === "End") {
+          e.preventDefault();
+          setPos(100);
+        }
       }}
     >
       <img
@@ -52,7 +75,10 @@ export function BeforeAfter({
       />
       <div
         className="absolute inset-0 overflow-hidden"
-        style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+        style={{
+          clipPath: `inset(0 ${100 - pos}% 0 0)`,
+          transition: calm ? "none" : "clip-path 90ms linear",
+        }}
       >
         <img
           decoding="async"
@@ -68,7 +94,10 @@ export function BeforeAfter({
       <span className="absolute right-3 top-3 rounded-full bg-primary/90 px-3 py-1 text-xs font-medium text-primary-foreground backdrop-blur">
         {afterLabel}
       </span>
-      <div className="absolute inset-y-0 w-0.5 bg-background" style={{ left: `${pos}%` }}>
+      <div
+        className="absolute inset-y-0 w-0.5 bg-background"
+        style={{ left: `${pos}%`, transition: calm ? "none" : "left 90ms linear" }}
+      >
         <div className="absolute top-1/2 left-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-background text-foreground shadow-lg">
           ⟷
         </div>

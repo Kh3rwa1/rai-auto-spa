@@ -57,6 +57,13 @@
       "when": 1790736373026,
       "tag": "0007_subscription_visit_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790738406014,
+      "tag": "0008_book_slot_status_and_seed_tags",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Droplets, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { resetDemo } from "@/lib/owner.functions";
 import { OwnerDashboard } from "@/components/owner/OwnerDashboard";
 import { DemoRibbon } from "@/components/DemoRibbon";
@@ -60,9 +71,27 @@ function OwnerPage() {
             >
               Guest demo
             </span>
-            <Button size="sm" variant="outline" onClick={doReset} disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <RotateCcw />} Reset demo data
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" disabled={busy}>
+                  {busy ? <Loader2 className="animate-spin" /> : <RotateCcw />} Reset demo data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset the demo data?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This clears the sample customers, bookings and subscriptions and builds a fresh
+                    set dated from today. Bookings made by visitors are left alone. You can reset
+                    again after a minute.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={doReset}>Reset demo data</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </header>

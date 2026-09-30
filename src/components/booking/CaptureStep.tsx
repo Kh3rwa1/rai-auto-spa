@@ -35,6 +35,7 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [plateBlurred, setPlateBlurred] = useState<boolean | null>(null);
 
   async function send(f?: Blob) {
     if (!f) return;
@@ -43,8 +44,10 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
     try {
       const { b64, url } = await compress(f);
       onStart(url);
+      setPlateBlurred(null);
       const r = await upload({ data: { image: b64, mime: "image/jpeg" } });
       if (!r.ok) throw new Error(r.error);
+      setPlateBlurred(!!r.plateBlurred);
       if (!r.isCar)
         toast.warning(
           "Hmm, that doesn't look like a car — previews work best with a clear car photo.",
@@ -114,6 +117,14 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
               </>
             )}
           </span>
+          {!uploading && plateBlurred !== null && (
+            <span
+              className="absolute bottom-3 right-3 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur"
+              aria-live="polite"
+            >
+              {plateBlurred ? "Plate blurred" : "Plate not detected"}
+            </span>
+          )}
         </div>
         <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
           Change photo
@@ -130,7 +141,7 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
       <div>
         <p className="text-lg font-semibold">One clear photo, any angle</p>
         <p className="text-sm text-muted-foreground">
-          We'll detect your car, blur the number plate and preview the shine.
+          We'll detect your car, blur the number plate if we find one, and preview the shine.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-3">
