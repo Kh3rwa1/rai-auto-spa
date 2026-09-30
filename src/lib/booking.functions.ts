@@ -200,6 +200,27 @@ export const confirmBooking = createServerFn({ method: "POST" })
       })
       .eq("id", data.bookingId);
     if (error) throw new Error("Could not confirm the booking.");
+    // send the booking confirmation email (non-blocking for the booking itself)
+    try {
+      const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+      const previewUrl = await signed(existing.clean_preview_url);
+      await sendTemplateEmail("booking-confirmation", data.email, {
+        templateData: {
+          name: data.name,
+          vehicle: existing.vehicle_model ?? "car",
+          plan: PLANS[data.plan].name,
+          date: data.date,
+          time: data.time,
+          location: data.mobile ? `${nearestArea(data.pin!)} (Rai's van comes to you)` : "Studio, MG Marg, Gangtok",
+          total,
+          deposit: depositOf(total),
+          previewUrl: previewUrl ?? undefined,
+        },
+        idempotencyKey: `booking-confirmation-${data.bookingId}`,
+      });
+    } catch (e) {
+      console.error("confirmation email failed", e);
+    }
     // kick off the reveal video in the background
     try {
       const { createVideoJob } = await import("./ai.server");
