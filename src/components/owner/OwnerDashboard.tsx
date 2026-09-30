@@ -251,6 +251,10 @@ export function OwnerDashboard() {
         <TabsContent value="calendar" className="mt-4">
           <WeekCalendar bookings={bookings} />
         </TabsContent>
+        <TabsContent value="calls" className="mt-4">
+          <Calls bookings={bookings} onChange={refresh} />
+        </TabsContent>
+
         <TabsContent value="subs" className="mt-4">
           <Subscriptions subs={subs} bookings={bookings} onChange={refresh} />
         </TabsContent>
