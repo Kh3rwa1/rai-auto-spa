@@ -29,6 +29,13 @@
       "when": 1790735257881,
       "tag": "0003_book_slot_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790735435441,
+      "tag": "0004_demo_payments",
+      "breakpoints": true
     }
   ]
 }

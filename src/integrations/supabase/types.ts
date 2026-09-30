@@ -169,6 +169,44 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          demo: boolean
+          id: string
+          method: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          demo?: boolean
+          id?: string
+          method: string
+          status: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          demo?: boolean
+          id?: string
+          method?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           active: boolean
