@@ -116,7 +116,7 @@ export async function seedDemo(sb: DB) {
   if (be) console.error("seed bookings", be);
   if (be) throw new Error("Seeding bookings failed.");
 
-  const { materialiseDay, istToday } = await import("./schedule.server");
-  await materialiseDay(sb, istToday());
+  const { materialiseDay } = await import("./schedule.server");
+  await materialiseDay(sb, today);
   return { ok: true, ms: Date.now() - started };
 }
