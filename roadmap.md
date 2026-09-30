@@ -4,7 +4,7 @@
 - [ ] Phase 1 follow-up: concurrent race test (Phase 8)
 - [x] Phase 2: payments table + simulatePayment, checkout sequence + failure toggle, /pay deep link, real revenue at risk
 - [x] Phase 3: owner.functions.ts, DEMO_MODE, drop claim_owner + anon storage read, seed_demo + reset button, tooltip
-- [ ] Phase 4: subscription cron + button, cancel/waitlist offers + /offer/$id, live blocked slots, stats config + tooltips
+- [x] Phase 4 automation
 - [ ] Phase 5: real plate blur, upload validation
 - [ ] Phase 6: sample cars, email/WhatsApp preview modal, sender config, demo ribbon + GitHub link (needs repo URL)
 - [ ] Phase 7: split BookingFlow, strict TS, eslint zero warnings, drizzle decision, error boundaries
