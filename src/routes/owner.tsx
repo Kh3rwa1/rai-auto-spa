@@ -7,6 +7,7 @@ import { Droplets, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { resetDemo } from "@/lib/owner.functions";
 import { OwnerDashboard } from "@/components/owner/OwnerDashboard";
+import { DemoRibbon } from "@/components/DemoRibbon";
 
 export const Route = createFileRoute("/owner")({
   head: () => ({
@@ -61,6 +62,7 @@ function OwnerPage() {
         </div>
       </header>
       <OwnerDashboard />
+      <DemoRibbon />
     </div>
   );
 }
