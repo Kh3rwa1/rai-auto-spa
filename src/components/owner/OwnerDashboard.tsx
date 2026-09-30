@@ -20,6 +20,8 @@ import { Waitlist } from "./Waitlist";
 import { Leads } from "./Leads";
 import { Wraps } from "./Wraps";
 import { Gallery } from "./Gallery";
+import { Calls } from "./Calls";
+
 
 export function OwnerDashboard() {
   const qc = useQueryClient();

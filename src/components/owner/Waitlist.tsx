@@ -20,6 +20,8 @@ import { OPS } from "@/lib/ops-config";
 import { todayIST } from "@/lib/booking-rules";
 import { cn } from "@/lib/utils";
 import { type Booking, wa, minsLeft } from "./shared";
+import { CallBadge } from "./CallBadge";
+
 
 type Offer = {
   id: string;
