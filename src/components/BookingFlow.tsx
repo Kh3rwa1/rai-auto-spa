@@ -163,7 +163,10 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
         setSlots(r.slots);
         setCapacity(r.capacity);
       })
-      .catch(() => toast.error("Could not load the calendar"));
+      .catch(() => {
+        // Background refreshes fail silently (e.g. a brief server restart); only the first load warns.
+        if (slotsNonce === 0) toast.error("Could not load the calendar");
+      });
   }, [weekStart, mobile, pin, slotsFn, slotsNonce]);
 
   // Live grid: owner blocks/cancellations show up without a reload (poll + on tab focus).
