@@ -38,7 +38,7 @@ export function planRoute<T extends { lat: number; lng: number }>(stops: T[]) {
   while (left.length) {
     let bi = 0;
     left.forEach((s, i) => haversineKm(cur, s) < haversineKm(cur, left[bi]!) && (bi = i));
-    const next = left.splice(bi, 1)[0];
+    const next = left.splice(bi, 1)[0]!;
     km += haversineKm(cur, next);
     cur = next;
     order.push(next);
@@ -50,7 +50,7 @@ export function planRoute<T extends { lat: number; lng: number }>(stops: T[]) {
 
 /** Deterministic pin near an area's centre for customers without a saved map pin. */
 export function areaPin(area: string | null | undefined, seed: string) {
-  const a = AREAS.find((x) => x.name === area) ?? AREAS[0];
+  const a = AREAS.find((x) => x.name === area) ?? AREAS[0]!;
   let h = 0;
   for (const c of seed) h = (h * 31 + c.charCodeAt(0)) | 0;
   const j = (n: number) => (((h >> n) & 0xff) / 255 - 0.5) * 0.006;
