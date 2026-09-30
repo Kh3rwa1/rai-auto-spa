@@ -82,6 +82,42 @@ test("landing is compact and leads straight to booking", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Skip to booking" })).toBeAttached();
 });
 
+test("plan step opens while vehicle detection runs in the background", async ({ page }) => {
+  await page.goto("/#book", { waitUntil: "networkidle" });
+  // The wizard must advance as soon as the upload starts — not after detection.
+  await page.getByRole("button", { name: "Maruti Swift" }).click();
+  await expect(page.locator("#step-2-body")).toBeVisible({ timeout: 15_000 });
+});
+
+test("resizing between mobile and desktop keeps data and the active step", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/#book", { waitUntil: "networkidle" });
+  // Jump straight to Details via the progress bar (no backend needed).
+  await page
+    .getByRole("navigation", { name: "Booking progress" })
+    .getByRole("button", { name: /Pay/ })
+    .click();
+  await expect(page.locator("#step-5-body")).toBeVisible();
+  await page.getByLabel("Your name").fill("Resize Proof");
+  // Desktop shows the persistent summary sidebar.
+  await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeVisible();
+
+  // Shrink to mobile: same step, same typed value, sidebar hides via CSS only.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("#step-5-body")).toBeVisible();
+  await expect(page.getByLabel("Your name")).toHaveValue("Resize Proof");
+  await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeHidden();
+
+  // Grow back to desktop: everything preserved, sidebar returns with the data.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator("#step-5-body")).toBeVisible();
+  await expect(page.getByLabel("Your name")).toHaveValue("Resize Proof");
+  await expect(page.getByRole("complementary", { name: "Booking summary" })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Booking summary" })).toContainText(
+    "Resize Proof",
+  );
+});
+
 test("sample car books end to end, continues while AI pends, pays demo deposit", async ({
   page,
 }) => {

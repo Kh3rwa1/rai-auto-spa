@@ -13,6 +13,7 @@ import { WhereWhenStep } from "./booking/WhereWhenStep";
 import { PreviewStep } from "./booking/PreviewStep";
 import { PayStep } from "./booking/PayStep";
 import { CheckoutModal } from "./booking/CheckoutModal";
+import { SummarySidebar } from "./booking/SummarySidebar";
 import { useBookingDraft, usePreviews } from "./booking/useBookingDraft";
 
 export type ResumeDraft = {
@@ -201,8 +202,10 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
 
   const revealed = !!slot && !!previewUrl;
 
-  // Contextual mobile bottom action — never a lone disabled Pay before Details.
-  const bottomAction = (() => {
+  // Contextual primary action for the current step — shared by the mobile
+  // bottom bar and the desktop summary sidebar. Never a lone disabled Pay
+  // before Details.
+  const stepAction = (() => {
     switch (activeStep) {
       case 1:
         return {
@@ -256,132 +259,156 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
         complete={[!!booking, !!plan, !!slot, revealed, booked]}
       />
 
-      <Step
-        n={1}
-        title="Snap your car"
-        done={!!booking}
-        active={activeStep === 1}
-        onOpen={() => setActiveStep(1)}
-        summary={booking ? `${booking.vehicle} uploaded ✓` : "Add one clear car photo"}
-      >
-        <CaptureStep
-          photo={draft.photo}
-          vehicle={booking?.vehicle}
-          onStart={(url) => {
-            previews.clear();
-            set({ photo: url, plan: null, booking: null, slot: null });
-          }}
-          onUploaded={(b, url) => {
-            set({ booking: b, ...(url ? { photo: url } : {}) });
-            open(2);
-          }}
-          onFailed={() => set({ photo: null })}
-        />
-        {booking && (
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button className="min-h-[44px]" onClick={() => open(2)}>
-              Continue to plan →
-            </Button>
-          </div>
-        )}
-      </Step>
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-4">
+          <Step
+            n={1}
+            title="Snap your car"
+            done={!!booking}
+            active={activeStep === 1}
+            onOpen={() => setActiveStep(1)}
+            summary={
+              booking
+                ? `${booking.vehicle} uploaded ✓`
+                : draft.photo
+                  ? "Detecting vehicle…"
+                  : "Add one clear car photo"
+            }
+          >
+            <CaptureStep
+              photo={draft.photo}
+              vehicle={booking?.vehicle}
+              onStart={(url) => {
+                // Move to Plan immediately; vehicle detection finishes in the background.
+                previews.clear();
+                set({ photo: url, plan: null, booking: null, slot: null });
+                open(2);
+              }}
+              onUploaded={(b, url) => {
+                set({ booking: b, ...(url ? { photo: url } : {}) });
+              }}
+              onFailed={() => {
+                set({ photo: null });
+                open(1);
+              }}
+            />
+            {booking && (
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button className="min-h-[44px]" onClick={() => open(2)}>
+                  Continue to plan →
+                </Button>
+              </div>
+            )}
+          </Step>
 
-      <Step
-        n={2}
-        title="Pick your plan"
-        done={!!plan}
-        active={activeStep === 2}
-        onOpen={() => setActiveStep(2)}
-        summary={plan ? `${PLANS[plan].name} ✓` : "Choose your finish"}
-      >
-        <PlanStep
-          plan={plan}
-          colour={colour}
-          style={style}
-          set={set}
-          onSelect={selectPlan}
-          onContinue={() => open(3)}
-        />
-        <div className="mt-4">
-          <Button variant="ghost" className="min-h-[44px]" onClick={() => open(1)}>
-            ← Back to photo
-          </Button>
+          <Step
+            n={2}
+            title="Pick your plan"
+            done={!!plan}
+            active={activeStep === 2}
+            onOpen={() => setActiveStep(2)}
+            summary={plan ? `${PLANS[plan].name} ✓` : "Choose your finish"}
+          >
+            <PlanStep
+              plan={plan}
+              colour={colour}
+              style={style}
+              set={set}
+              onSelect={selectPlan}
+              onContinue={() => open(3)}
+            />
+            <div className="mt-4">
+              <Button variant="ghost" className="min-h-[44px]" onClick={() => open(1)}>
+                ← Back to photo
+              </Button>
+            </div>
+          </Step>
+
+          <Step
+            n={3}
+            title="Location & time"
+            done={!!slot}
+            active={activeStep === 3}
+            onOpen={() => setActiveStep(3)}
+            summary={
+              slot
+                ? `${mobile ? "Mobile van" : "MG Marg studio"} · ${slotLabel} ✓`
+                : "Choose location and slot"
+            }
+          >
+            <WhereWhenStep
+              draft={draft}
+              set={set}
+              nonce={slotsNonce}
+              total={total}
+              onChooseSlot={chooseSlot}
+            />
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <Button variant="ghost" className="min-h-[44px]" onClick={() => open(2)}>
+                ← Back to plan
+              </Button>
+              <Button className="min-h-[44px]" disabled={!slot} onClick={() => slot && open(4)}>
+                {slot ? `Confirm ${formatSlot(slot.date, slot.time)} →` : "Pick a time above"}
+              </Button>
+            </div>
+          </Step>
+
+          <Step
+            n={4}
+            title="AI reveal"
+            done={revealed}
+            active={activeStep === 4}
+            onOpen={() => setActiveStep(4)}
+            summary={slot && previewUrl ? "Preview ready ✓" : "AI preview (optional)"}
+          >
+            <PreviewStep
+              hasSlot={!!slot}
+              photo={draft.photo}
+              previewUrl={previewUrl}
+              isPending={isPending}
+              error={previewError}
+              planName={plan ? PLANS[plan].name : "service"}
+              colour={plan === "signature" ? colour : undefined}
+              style={plan === "signature" ? style : undefined}
+              onRetry={() => plan && run(plan, colour, style)}
+              onContinue={() => open(5)}
+            />
+            <div className="mt-4">
+              <Button variant="ghost" className="min-h-[44px]" onClick={() => open(3)}>
+                ← Back to time
+              </Button>
+            </div>
+          </Step>
+
+          <Step
+            n={5}
+            title="Details & demo payment"
+            active={activeStep === 5}
+            onOpen={() => setActiveStep(5)}
+            summary={canPay ? `${inr(deposit)} demo deposit ready` : "Add contact details"}
+          >
+            <PayStep
+              draft={draft}
+              set={set}
+              missing={missing}
+              total={total}
+              deposit={deposit}
+              onPay={() => setPayOpen(true)}
+              onBack={() => open(4)}
+            />
+          </Step>
         </div>
-      </Step>
 
-      <Step
-        n={3}
-        title="Location & time"
-        done={!!slot}
-        active={activeStep === 3}
-        onOpen={() => setActiveStep(3)}
-        summary={
-          slot
-            ? `${mobile ? "Mobile van" : "MG Marg studio"} · ${slotLabel} ✓`
-            : "Choose location and slot"
-        }
-      >
-        <WhereWhenStep
+        <SummarySidebar
           draft={draft}
-          set={set}
-          nonce={slotsNonce}
-          total={total}
-          onChooseSlot={chooseSlot}
-        />
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between">
-          <Button variant="ghost" className="min-h-[44px]" onClick={() => open(2)}>
-            ← Back to plan
-          </Button>
-          <Button className="min-h-[44px]" disabled={!slot} onClick={() => slot && open(4)}>
-            {slot ? `Confirm ${formatSlot(slot.date, slot.time)} →` : "Pick a time above"}
-          </Button>
-        </div>
-      </Step>
-
-      <Step
-        n={4}
-        title="AI reveal"
-        done={revealed}
-        active={activeStep === 4}
-        onOpen={() => setActiveStep(4)}
-        summary={slot && previewUrl ? "Preview ready ✓" : "AI preview (optional)"}
-      >
-        <PreviewStep
-          hasSlot={!!slot}
-          photo={draft.photo}
-          previewUrl={previewUrl}
-          isPending={isPending}
-          error={previewError}
-          planName={plan ? PLANS[plan].name : "service"}
-          colour={plan === "signature" ? colour : undefined}
-          style={plan === "signature" ? style : undefined}
-          onRetry={() => plan && run(plan, colour, style)}
-          onContinue={() => open(5)}
-        />
-        <div className="mt-4">
-          <Button variant="ghost" className="min-h-[44px]" onClick={() => open(3)}>
-            ← Back to time
-          </Button>
-        </div>
-      </Step>
-
-      <Step
-        n={5}
-        title="Details & demo payment"
-        active={activeStep === 5}
-        onOpen={() => setActiveStep(5)}
-        summary={canPay ? `${inr(deposit)} demo deposit ready` : "Add contact details"}
-      >
-        <PayStep
-          draft={draft}
-          set={set}
-          missing={missing}
+          slotLabel={slotLabel}
           total={total}
           deposit={deposit}
-          onPay={() => setPayOpen(true)}
-          onBack={() => open(4)}
+          missing={missing}
+          action={stepAction}
+          onEdit={open}
         />
-      </Step>
+      </div>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-15px_var(--foreground)] backdrop-blur-xl md:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -393,16 +420,16 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
             <span className="text-muted-foreground">•</span> {slotLabel}{" "}
             <span className="text-muted-foreground">•</span> {plan ? inr(total) : "—"}
             <span className="block truncate text-[11px] text-muted-foreground">
-              {bottomAction.hint}
+              {stepAction.hint}
             </span>
           </p>
           <Button
             size="sm"
             className="min-h-[44px]"
-            disabled={!bottomAction.enabled}
-            onClick={bottomAction.onClick}
+            disabled={!stepAction.enabled}
+            onClick={stepAction.onClick}
           >
-            {bottomAction.label}
+            {stepAction.label}
           </Button>
         </div>
       </div>

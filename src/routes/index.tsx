@@ -229,7 +229,7 @@ function Services() {
 function BookingEntrance() {
   return (
     <section id="book" aria-labelledby="book-title" className="scroll-mt-20 bg-background">
-      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-5 sm:py-14">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14">
         <div className="mb-6 max-w-2xl">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
             <WashLine className="text-primary" /> Booking
