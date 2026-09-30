@@ -34,10 +34,19 @@ export const VOICE_PHOTO_FLOW_EVENT = "rai-voice:photo-flow";
 
 let pendingVoiceStart = false;
 
-/** Mascot tap: arm the start flag (BookingFlow may not be mounted yet) and broadcast. */
+/**
+ * Mascot tap: arm the start flag (BookingFlow may not be mounted yet) and broadcast.
+ * The dispatch is retried on a short ladder so a deferred React flush / StrictMode
+ * remount can't swallow it — the listener consumes the flag on first contact.
+ */
 export function requestVoiceStart() {
   pendingVoiceStart = true;
-  window.dispatchEvent(new CustomEvent(VOICE_START_EVENT));
+  const fire = () => {
+    if (!pendingVoiceStart) return;
+    window.dispatchEvent(new CustomEvent(VOICE_START_EVENT));
+  };
+  fire();
+  [50, 250, 900].forEach((ms) => window.setTimeout(fire, ms));
 }
 
 /** Consume the pending start (true exactly once). */

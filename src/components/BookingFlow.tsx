@@ -229,10 +229,13 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     return () => window.removeEventListener(VOICE_START_EVENT, onStart);
   }, []);
 
-  // If the mascot was tapped before this mounted (quick-book was showing),
-  // start the pending voice session now.
+  // If the mascot was tapped before this mounted (quick-book was showing), start
+  // the pending session — deferred so StrictMode's simulated unmount can't kill it.
   useEffect(() => {
-    if (consumeVoiceStart()) startVoice.current();
+    const t = window.setTimeout(() => {
+      if (consumeVoiceStart()) startVoice.current();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, []);
 
   // Payment done → the server already emailed the confirmation; Rai announces it aloud.
