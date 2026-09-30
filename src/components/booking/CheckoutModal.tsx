@@ -82,6 +82,10 @@ export function CheckoutModal({
             time: slot.time,
           },
         });
+        if (res.slotFull) {
+          onSlotFull(res.slotFull);
+          return;
+        }
         token = res.manageToken ?? "";
         onToken(token);
         heldFor.current = holdKey;
