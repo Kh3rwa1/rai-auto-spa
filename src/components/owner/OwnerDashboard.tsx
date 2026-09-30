@@ -120,15 +120,18 @@ export function OwnerDashboard() {
   ).length;
   const galleryCount = bookings.filter((b) => b.clean_preview_url && b.photo_url).length;
   const activeSubs = subs.filter((s) => s.active).length;
+  const callRows = bookings.filter((b) => b.deposit_paid || b.call_status).length;
   const counts: Record<(typeof TABS)[number]["value"], number> = {
     route: stops.length,
     calendar: pendingDeposits,
+    calls: callRows,
     subs: activeSubs,
     waitlist: upcomingCount,
     leads: leadsCount,
     wraps: wrapApprovals,
     gallery: galleryCount,
   };
+
   const dateLabel = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
