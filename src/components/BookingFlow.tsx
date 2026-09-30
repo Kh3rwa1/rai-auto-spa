@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PLANS, calcTotal, depositOf, inr, isDryWindow, type PlanId } from "@/lib/plans";
 import { addDays, formatSlot, missingForPay, previewKey, todayIST } from "@/lib/booking-rules";
+import { startQuickBooking } from "@/lib/quickbook.functions";
 import { countryLabel, flagEmoji } from "@/lib/phone";
 import type { VoiceContext, VoiceIntent } from "@/lib/voice";
 import { VOICE_START_EVENT, consumeVoiceStart } from "@/lib/voice";
@@ -88,6 +90,8 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   });
   const stopVoice = useRef<() => void>(() => {});
   const startVoice = useRef<() => void>(() => {});
+  const announceVoice = useRef<(text: string) => void>(() => {});
+  const voiceVehicle = useRef("");
   latest.current = {
     draft,
     activeStep,
@@ -97,6 +101,28 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     set,
     bumpSlots: setSlotsNonce,
   };
+
+  // Voice-driven bookings skip the photo: a photo-less row is created server-side
+  // (startQuickBooking) the moment payment is requested, with the car model heard by voice.
+  const quickBooking = useServerFn(startQuickBooking);
+  const ensureVoiceBooking = useCallback(async () => {
+    const d = latest.current.draft;
+    if (d.booking || d.photo || !d.plan) return;
+    try {
+      const r = await quickBooking({
+        data: {
+          plan: d.plan,
+          ...(voiceVehicle.current ? { vehicle: voiceVehicle.current } : {}),
+        },
+      });
+      if (r.ok)
+        latest.current.set({
+          booking: { id: r.bookingId, vehicle: voiceVehicle.current || "Car" },
+        });
+    } catch {
+      // The pay gate surfaces the missing booking through the wizard itself.
+    }
+  }, [quickBooking]);
 
   const getContext = useCallback((): VoiceContext => {
     const { draft: d, activeStep: step } = latest.current;
@@ -125,44 +151,73 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     };
   }, []);
 
-  const applyIntent = useCallback((intent: VoiceIntent) => {
-    const l = latest.current;
-    switch (intent.type) {
-      case "select_plan":
-        l.selectPlan(intent.plan);
-        l.open(2);
-        break;
-      case "select_slot":
-        l.chooseSlot(intent.date, intent.time);
-        break;
-      case "set_location": {
-        const prev = l.draft.mobile;
-        l.set({ mobile: intent.mobile, slot: null });
-        if (prev !== intent.mobile) l.bumpSlots((n) => n + 1);
-        break;
+  const applyIntent = useCallback(
+    (intent: VoiceIntent) => {
+      const l = latest.current;
+      switch (intent.type) {
+        case "select_plan":
+          l.selectPlan(intent.plan);
+          l.open(2);
+          break;
+        case "select_slot":
+          l.chooseSlot(intent.date, intent.time);
+          break;
+        case "set_location": {
+          const prev = l.draft.mobile;
+          l.set({ mobile: intent.mobile, slot: null });
+          if (prev !== intent.mobile) l.bumpSlots((n) => n + 1);
+          break;
+        }
+        case "set_contact": {
+          const patch: Partial<Draft> = {};
+          if (intent.name) patch.name = intent.name;
+          if (intent.phone) patch.phone = intent.phone;
+          if (intent.email) patch.email = intent.email;
+          if (intent.address) patch.building = intent.address;
+          l.set(patch);
+          break;
+        }
+        case "set_vehicle": {
+          voiceVehicle.current = intent.vehicle;
+          const b = l.draft.booking;
+          if (b) l.set({ booking: { id: b.id, vehicle: intent.vehicle } });
+          break;
+        }
+        case "open_payment":
+          void (async () => {
+            await ensureVoiceBooking();
+            const d = latest.current.draft;
+            const still = missingForPay({
+              hasBooking: !!d.booking,
+              plan: d.plan,
+              hasSlot: !!d.slot,
+              mobile: d.mobile,
+              hasPin: !!d.pin,
+              name: d.name,
+              phone: d.phone,
+              email: d.email,
+            });
+            if (still.length === 0) setPayOpen(true);
+            else latest.current.open(5);
+          })();
+          break;
+        case "go_to_step":
+          l.open(intent.step);
+          break;
+        case "stop":
+          stopVoice.current();
+          break;
+        case "none":
+          break;
       }
-      case "set_contact": {
-        const patch: Partial<Draft> = {};
-        if (intent.name) patch.name = intent.name;
-        if (intent.phone) patch.phone = intent.phone;
-        if (intent.email) patch.email = intent.email;
-        l.set(patch);
-        break;
-      }
-      case "go_to_step":
-        l.open(intent.step);
-        break;
-      case "stop":
-        stopVoice.current();
-        break;
-      case "none":
-        break;
-    }
-  }, []);
+    },
+    [ensureVoiceBooking],
+  );
 
   const voice = useVoiceAgent({ getContext, applyIntent });
   stopVoice.current = voice.stop;
   startVoice.current = voice.start;
+  announceVoice.current = (text) => void voice.announce(text);
 
   // Mascot tap → toggle the voice session (stable listener via ref).
   useEffect(() => {
@@ -180,9 +235,14 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     if (consumeVoiceStart()) startVoice.current();
   }, []);
 
-  // Booking done → wizard unmounts its steps; end the session too.
+  // Payment done → the server already emailed the confirmation; Rai announces it aloud.
   useEffect(() => {
-    if (booked) stopVoice.current();
+    if (!booked) return;
+    const d = latest.current.draft;
+    const name = d.plan ? PLANS[d.plan].name : "Your booking";
+    void announceVoice.current(
+      `Payment done! ${name} is locked in, and a confirmation email is on its way to ${d.email || "your inbox"}. See you soon!`,
+    );
   }, [booked]);
 
   // Live grid: owner blocks/cancellations show up without a reload (poll + on tab focus).
@@ -303,30 +363,34 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
 
   if (booked && booking && plan && slot) {
     return (
-      <BookedScreen
-        bookingId={booking.id}
-        manageToken={draft.manageToken}
-        vehicle={booking.vehicle}
-        planName={PLANS[plan].name}
-        colour={plan === "signature" ? draft.colour : undefined}
-        style={plan === "signature" ? draft.style : undefined}
-        date={slot.date}
-        time={slot.time}
-        location={
-          mobile
-            ? `${draft.building}${draft.floor ? `, Floor ${draft.floor}` : ""} (van comes to you)`
-            : "Studio, MG Marg, Gangtok"
-        }
-        total={total}
-        deposit={deposit}
-        phone={draft.phone}
-        onClose={() => {
-          setBooked(false);
-          reset();
-          previews.clear();
-          setActiveStep(1);
-        }}
-      />
+      <>
+        <BookedScreen
+          bookingId={booking.id}
+          manageToken={draft.manageToken}
+          vehicle={booking.vehicle}
+          planName={PLANS[plan].name}
+          colour={plan === "signature" ? draft.colour : undefined}
+          style={plan === "signature" ? draft.style : undefined}
+          date={slot.date}
+          time={slot.time}
+          location={
+            mobile
+              ? `${draft.building}${draft.floor ? `, Floor ${draft.floor}` : ""} (van comes to you)`
+              : "Studio, MG Marg, Gangtok"
+          }
+          total={total}
+          deposit={deposit}
+          phone={draft.phone}
+          onClose={() => {
+            setBooked(false);
+            reset();
+            previews.clear();
+            setActiveStep(1);
+          }}
+        />
+        {/* Overlay stays mounted so Rai can announce the payment confirmation aloud. */}
+        <VoiceAgentOverlay voice={voice} />
+      </>
     );
   }
 

@@ -14,24 +14,20 @@ const MAX_RECORD_MS = 15_000;
 const MAX_SILENCE_MS = 1_800;
 const MIN_SPEECH_MS = 700;
 const SILENCE_RMS = 0.012;
-
 /** Context-aware opener — Rai reacts to where the customer already is, never a canned line. */
 function greetingFor(ctx: VoiceContext): string {
-  if (!ctx.hasPhoto)
-    return "Hey hey, welcome to Rai's Auto Spa! Grab a photo of your car — or tap a sample — and tell me what we're doing: quick wash, full detail, or a total glow-up?";
-  const car =
-    ctx.vehicle && ctx.vehicle.toLowerCase() !== "car" ? `Oho, a ${ctx.vehicle}! ` : "Nice ride! ";
+  if (ctx.hasSlot && ctx.slotDate && ctx.slotTime && ctx.missing.length === 0)
+    return `Everything's ready for ${formatSlot(ctx.slotDate, ctx.slotTime)} — shall I open payment now?`;
   if (!ctx.plan)
-    return `${car}What's the plan — Essential Wash to freshen it up, Full Detail to really pamper it, or a Signature wrap that turns heads on MG Marg?`;
+    return "Hi! Let's book it in one go — tell me the service: Essential Wash, Full Detail, or a Signature wrap. Then a day and time, and your name with WhatsApp number. No photo needed!";
   if (!ctx.hasSlot)
-    return `${PLANS[ctx.plan].name}, solid choice! When suits you? Tomorrow morning is prime time — and if you want, our van comes right to your doorstep.`;
+    return `${PLANS[ctx.plan].name} it is! What day and time suits you? Mornings are prime — van to your doorstep or the studio on MG Marg, your call.`;
   if (ctx.slotDate && ctx.slotTime) {
-    const left = ctx.missing.length ? `Just need: ${ctx.missing.join(", ")}. ` : "Nearly done! ";
-    return `${formatSlot(ctx.slotDate, ctx.slotTime)} locked in. ${left}Say your name, WhatsApp number and email, and it's yours.`;
+    const left = ctx.missing.length ? `Still need: ${ctx.missing.join(", ")}. ` : "";
+    return `${formatSlot(ctx.slotDate, ctx.slotTime)} looks good. ${left}Give me your name, WhatsApp number and email, and I'll take you straight to payment.`;
   }
-  return "Welcome back! Pick up right where you left off — what's next?";
+  return "Welcome back! Tell me what's next — service, time or your details, any order.";
 }
-
 function pickMime(): string {
   if (typeof MediaRecorder === "undefined") return "";
   const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
@@ -243,6 +239,17 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
     }
   }, [listen, speak]);
 
+  /** One-shot announcement (e.g. payment confirmed) — ends the loop, then goes idle. */
+  const announce = useCallback(
+    async (text: string) => {
+      session.current += 1;
+      teardownMic();
+      await speak(text, session.current);
+      setPhaseSafe("idle");
+    },
+    [speak, teardownMic],
+  );
+
   const start = useCallback(() => {
     if (phaseRef.current !== "idle") {
       stop();
@@ -257,5 +264,5 @@ export function useVoiceAgent({ getContext, applyIntent }: Options) {
   // Unmount / tab hidden: never leave a mic open or audio playing.
   useEffect(() => () => stop(), [stop]);
 
-  return { phase, transcript, reply, error, supported, start, stop, setPhaseSafe };
+  return { phase, transcript, reply, error, supported, start, stop, announce, setPhaseSafe };
 }

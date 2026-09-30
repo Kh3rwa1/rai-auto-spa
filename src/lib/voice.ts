@@ -5,7 +5,9 @@ export type VoiceIntent =
   | { type: "select_plan"; plan: PlanId }
   | { type: "select_slot"; date: string; time: string }
   | { type: "set_location"; mobile: boolean }
-  | { type: "set_contact"; name?: string; phone?: string; email?: string }
+  | { type: "set_contact"; name?: string; phone?: string; email?: string; address?: string }
+  | { type: "set_vehicle"; vehicle: string }
+  | { type: "open_payment" }
   | { type: "go_to_step"; step: 1 | 2 | 3 | 4 | 5 }
   | { type: "stop" }
   | { type: "none" };
