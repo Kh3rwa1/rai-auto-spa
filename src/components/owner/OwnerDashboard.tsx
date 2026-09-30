@@ -705,7 +705,7 @@ function Leads({ bookings, onChange }: { bookings: Booking[]; onChange: () => vo
   async function send(b: Booking) {
     try {
       const { text } = await makeLink({
-        data: { bookingId: b.id, origin: window.location.origin },
+        data: { bookingId: b.id },
       });
       await navigator.clipboard?.writeText(text).catch(() => {});
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");

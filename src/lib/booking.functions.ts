@@ -38,6 +38,16 @@ const SLOT_ERRORS: Record<string, string> = {
   not_found: "Booking not found.",
 };
 
+/** Public origin of the current request — never trust a client-supplied origin for links we hand out. */
+async function requestOrigin() {
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const req = getRequest();
+  const proto = req?.headers.get("x-forwarded-proto") ?? "https";
+  const host = req?.headers.get("x-forwarded-host") ?? req?.headers.get("host");
+  if (host) return `${proto}://${host}`;
+  return new URL(req?.url ?? "http://localhost:8080").origin;
+}
+
 async function bookSlot(
   id: string,
   date: string,
@@ -45,6 +55,7 @@ async function bookSlot(
   mobile: boolean,
   water: boolean,
   days: number,
+  status?: "confirmed" | "pending_deposit" | "consultation",
 ) {
   const sb = await admin();
   const { data, error } = await sb.rpc("book_slot", {
@@ -54,6 +65,8 @@ async function bookSlot(
     p_mobile: mobile,
     p_water: water,
     p_days: days,
+    // Set the status inside the same locked UPDATE, so the slot counts the moment it is reserved.
+    ...(status ? { p_status: status } : {}),
   });
   if (error) throw new Error("Could not reserve the slot. Please try again.");
   if (data !== "ok") throw new Error(SLOT_ERRORS[data as string] ?? "That slot isn't available.");
@@ -298,6 +311,7 @@ export const confirmBooking = createServerFn({ method: "POST" })
       data.mobile,
       data.water,
       data.plan === "signature" ? 2 : 1,
+      "pending_deposit",
     );
     const waterFee = data.mobile && !data.water;
     const total = calcTotal(data.plan, data.mobile, waterFee);
@@ -442,11 +456,11 @@ export const simulatePayment = createServerFn({ method: "POST" })
 
 /** Owner: build a deep link that reopens a lead's booking at the slot step. */
 export const createPaymentLink = createServerFn({ method: "POST" })
-  .inputValidator((d) =>
-    z.object({ bookingId: z.string().uuid(), origin: z.string().url() }).parse(d),
-  )
+  .inputValidator((d) => z.object({ bookingId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    const sb = await admin();
+    // Owner-only action: goes through the same DEMO_MODE / admin gate as the rest of the dashboard.
+    const { ownerDb } = await import("./owner-db.server");
+    const sb = await ownerDb();
     const { data: b } = await sb
       .from("bookings")
       .select("id, manage_token, vehicle_model")
@@ -454,7 +468,8 @@ export const createPaymentLink = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!b) throw new Error("Booking not found.");
     await sb.from("bookings").update({ status: "link_sent" }).eq("id", b.id).eq("status", "lead");
-    const link = `${data.origin}/pay/${b.id}?t=${b.manage_token}`;
+    const origin = await requestOrigin();
+    const link = `${origin}/pay/${b.id}?t=${b.manage_token}`;
     const text = `Hi! Your ${b.vehicle_model ?? "car"} is one tap away from shining ✨ Your photo and plan are saved — just pick a time and pay the 30% deposit here: ${link} — Rai's Auto Spa`;
     return { link, text };
   });

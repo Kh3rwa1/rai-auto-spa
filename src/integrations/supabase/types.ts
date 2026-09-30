@@ -18,18 +18,21 @@ export type Database = {
         Row: {
           date: string
           id: string
+          is_seed: boolean
           reason: string
           time: string
         }
         Insert: {
           date: string
           id?: string
+          is_seed?: boolean
           reason?: string
           time: string
         }
         Update: {
           date?: string
           id?: string
+          is_seed?: boolean
           reason?: string
           time?: string
         }
@@ -50,6 +53,7 @@ export type Database = {
           full_day: boolean
           guard_permission: boolean | null
           id: string
+          is_seed: boolean
           location_type: string
           manage_token: string
           map_pin: Json | null
@@ -80,6 +84,7 @@ export type Database = {
           full_day?: boolean
           guard_permission?: boolean | null
           id?: string
+          is_seed?: boolean
           location_type?: string
           manage_token?: string
           map_pin?: Json | null
@@ -110,6 +115,7 @@ export type Database = {
           full_day?: boolean
           guard_permission?: boolean | null
           id?: string
+          is_seed?: boolean
           location_type?: string
           manage_token?: string
           map_pin?: Json | null
@@ -151,6 +157,7 @@ export type Database = {
           email: string | null
           floor: string | null
           id: string
+          is_seed: boolean
           name: string
           phone: string
           water_access: boolean
@@ -162,6 +169,7 @@ export type Database = {
           email?: string | null
           floor?: string | null
           id?: string
+          is_seed?: boolean
           name: string
           phone: string
           water_access?: boolean
@@ -173,9 +181,25 @@ export type Database = {
           email?: string | null
           floor?: string | null
           id?: string
+          is_seed?: boolean
           name?: string
           phone?: string
           water_access?: boolean
+        }
+        Relationships: []
+      }
+      demo_state: {
+        Row: {
+          id: string
+          last_reset_at: string
+        }
+        Insert: {
+          id: string
+          last_reset_at?: string
+        }
+        Update: {
+          id?: string
+          last_reset_at?: string
         }
         Relationships: []
       }
@@ -223,6 +247,7 @@ export type Database = {
           client_id: string
           created_at: string
           id: string
+          is_seed: boolean
           plan: string
           preferred_time: string
           skip_dates: string[]
@@ -232,6 +257,7 @@ export type Database = {
           client_id: string
           created_at?: string
           id?: string
+          is_seed?: boolean
           plan?: string
           preferred_time?: string
           skip_dates?: string[]
@@ -241,6 +267,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           id?: string
+          is_seed?: boolean
           plan?: string
           preferred_time?: string
           skip_dates?: string[]
@@ -280,6 +307,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          is_seed: boolean
         }
         Insert: {
           area: string
@@ -287,6 +315,7 @@ export type Database = {
           created_at?: string
           date: string
           id?: string
+          is_seed?: boolean
         }
         Update: {
           area?: string
@@ -294,6 +323,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          is_seed?: boolean
         }
         Relationships: [
           {
@@ -315,6 +345,7 @@ export type Database = {
           date: string
           expires_at: string
           id: string
+          is_seed: boolean
           location_type: string
           status: string
           time: string
@@ -328,6 +359,7 @@ export type Database = {
           date: string
           expires_at?: string
           id?: string
+          is_seed?: boolean
           location_type?: string
           status?: string
           time: string
@@ -341,6 +373,7 @@ export type Database = {
           date?: string
           expires_at?: string
           id?: string
+          is_seed?: boolean
           location_type?: string
           status?: string
           time?: string
@@ -380,6 +413,7 @@ export type Database = {
           p_date: string
           p_days?: number
           p_mobile: boolean
+          p_status?: string
           p_time: string
           p_water: boolean
         }

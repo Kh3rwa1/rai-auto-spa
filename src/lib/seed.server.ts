@@ -78,33 +78,36 @@ async function uploadSample(sb: DB, origin: string, name: string, existing: Set<
   return null;
 }
 
-/** Idempotent: wipes demo tables and recreates a fresh, today-relative dataset (IST). */
+/**
+ * Idempotent: removes ONLY the rows a previous seed created (is_seed = true) and recreates a
+ * fresh, today-relative dataset (IST). A real visitor's in-progress booking is never touched.
+ */
 export async function seedDemo(sb: DB) {
   const started = Date.now();
   const { getRequest } = await import("@tanstack/react-start/server");
   const origin = new URL(getRequest()?.url ?? "http://localhost:8080").origin;
   const today = istToday();
 
-  const all = (
-    t:
-      | "waitlist_offers"
-      | "waitlist"
-      | "subscriptions"
-      | "payments"
-      | "bookings"
-      | "clients"
-      | "blocked_slots",
-  ) => sb.from(t).delete().not("id", "is", null);
+  const seeded = (
+    t: "waitlist_offers" | "waitlist" | "subscriptions" | "bookings" | "clients" | "blocked_slots",
+  ) => sb.from(t).delete().eq("is_seed", true);
+
+  // Payments have no seed flag of their own — drop only those attached to seeded bookings.
+  const { data: oldBookings } = await sb.from("bookings").select("id").eq("is_seed", true);
+  const oldIds = (oldBookings ?? []).map((b) => b.id);
+  if (oldIds.length) await sb.from("payments").delete().in("booking_id", oldIds);
+
   // Children first (in parallel), then parents — respects foreign keys while staying fast.
   await Promise.all([
-    all("waitlist_offers"),
-    all("waitlist"),
-    all("subscriptions"),
-    all("payments"),
-    all("blocked_slots"),
+    seeded("waitlist_offers"),
+    seeded("waitlist"),
+    seeded("subscriptions"),
+    seeded("blocked_slots"),
   ]);
-  await all("bookings");
-  await all("clients");
+  // Subscription visits are generated from seeded subscriptions, so they go with them.
+  await sb.from("bookings").delete().eq("status", "subscription");
+  await seeded("bookings");
+  await seeded("clients");
 
   const { data: listed } = await sb.storage.from(BUCKET).list("demo");
   const existing = new Set((listed ?? []).map((f) => f.name));
@@ -132,6 +135,7 @@ export async function seedDemo(sb: DB) {
       floor: String((i % 6) + 1),
       area,
       water_access: i % 5 !== 0,
+      is_seed: true,
     };
   });
   const { data: cRows, error: ce } = await sb.from("clients").insert(clients).select("id, area");
@@ -146,6 +150,7 @@ export async function seedDemo(sb: DB) {
       active: i % 13 !== 12,
       preferred_time: TIMES[i % TIMES.length]!,
       skip_dates: [],
+      is_seed: true,
     })),
   );
 
@@ -160,6 +165,7 @@ export async function seedDemo(sb: DB) {
       map_pin: mobile ? pinFor(c.area ?? "MG Marg", i) : { lat: 27.3314, lng: 88.6138 },
       guard_permission: true,
       water_needed: false,
+      is_seed: true,
       ...r,
     };
   };
@@ -282,6 +288,7 @@ export async function seedDemo(sb: DB) {
         client_id: c.id,
         area: c.area ?? "MG Marg",
         date: plusDays(today, i % 3),
+        is_seed: true,
       })),
     ),
   ]);

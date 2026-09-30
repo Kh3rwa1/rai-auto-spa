@@ -1,38 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-/**
- * DEMO MODE: the owner dashboard is intentionally open to guests for the challenge.
- * Every owner read/write goes through these server functions and this single gate.
- * Flip to `false` to require a signed-in admin (user_roles.role = 'admin').
- */
-export const DEMO_MODE = true;
+export { DEMO_MODE } from "./demo-mode";
 
 const BUCKET = "car-media";
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 const timeRe = /^\d{2}:\d{2}$/;
 
+/** Server-only gate; loaded lazily so this client-reachable module stays browser-safe. */
 async function ownerDb() {
-  if (!DEMO_MODE) {
-    const { getRequest } = await import("@tanstack/react-start/server");
-    const auth = getRequest()?.headers.get("authorization") ?? "";
-    const token = auth.replace(/^Bearer /, "");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: u } = await supabaseAdmin.auth.getUser(token);
-    const uid = u.user?.id;
-    const { data: role } = uid
-      ? await supabaseAdmin
-          .from("user_roles")
-          .select("id")
-          .eq("user_id", uid)
-          .eq("role", "admin")
-          .maybeSingle()
-      : { data: null };
-    if (!role) throw new Error("Owner access only.");
-    return supabaseAdmin;
-  }
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin;
+  const { ownerDb: gate } = await import("./owner-db.server");
+  return gate();
 }
 
 // Never send customer manage tokens to the dashboard.
@@ -215,21 +193,44 @@ export const runSchedule = createServerFn({ method: "POST" }).handler(async () =
   return materialiseDay(sb, istToday());
 });
 
+/** Server-side cooldown so the reset button can't be hammered by visitors. */
+const RESET_COOLDOWN_MS = 60_000;
+
+async function claimResetSlot(sb: Awaited<ReturnType<typeof ownerDb>>) {
+  const { data: row } = await sb
+    .from("demo_state")
+    .select("last_reset_at")
+    .eq("id", "reset")
+    .maybeSingle();
+  const last = row ? new Date(row.last_reset_at).getTime() : 0;
+  const waited = Date.now() - last;
+  if (waited < RESET_COOLDOWN_MS) return Math.ceil((RESET_COOLDOWN_MS - waited) / 1000);
+  await sb
+    .from("demo_state")
+    .upsert({ id: "reset", last_reset_at: new Date().toISOString() }, { onConflict: "id" });
+  return 0;
+}
+
 export const resetDemo = createServerFn({ method: "POST" }).handler(async () => {
   const sb = await ownerDb();
+  const wait = await claimResetSlot(sb);
+  if (wait > 0)
+    throw new Error(`Demo data was just reset. Please wait ${wait}s before resetting again.`);
   const { seedDemo } = await import("./seed.server");
   return seedDemo(sb);
 });
 
-/** Auto-seed when the dashboard would otherwise be empty (no bookings today or later). */
+/** Auto-seed when the dashboard would otherwise be empty (no seeded bookings today or later). */
 export const ensureDemoData = createServerFn({ method: "POST" }).handler(async () => {
   const sb = await ownerDb();
   const today = new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
   const { count } = await sb
     .from("bookings")
     .select("id", { count: "exact", head: true })
+    .eq("is_seed", true)
     .gte("date", today);
   if ((count ?? 0) > 0) return { seeded: false };
+  // seedDemo only ever deletes rows it created, so a visitor's in-progress booking survives.
   const { seedDemo } = await import("./seed.server");
   await seedDemo(sb);
   return { seeded: true };

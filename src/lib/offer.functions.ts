@@ -62,9 +62,10 @@ export const claimOffer = createServerFn({ method: "POST" })
         map_pin: orig?.map_pin ?? null,
         water_needed: orig?.water_needed ?? false,
         total: orig?.total ?? 0,
-        status: "confirmed",
+        // Placeholder status: book_slot promotes it to pending_deposit under the same lock.
+        status: "lead",
       })
-      .select("id")
+      .select("id, manage_token")
       .single();
     if (error || !nb) return { result: "error" as const };
 
@@ -75,6 +76,7 @@ export const claimOffer = createServerFn({ method: "POST" })
       p_mobile: o.location_type === "mobile",
       p_water: true,
       p_days: 1,
+      p_status: "pending_deposit",
     });
     if (code !== "ok") {
       await sb.from("bookings").delete().eq("id", nb.id);
@@ -104,5 +106,6 @@ export const claimOffer = createServerFn({ method: "POST" })
         .eq("status", "offered");
     }
     await sb.from("waitlist").delete().eq("client_id", o.client_id).eq("date", o.date);
-    return { result: "ok" as const };
+    // Same as any normal booking: a manage token so the customer can pay or reschedule.
+    return { result: "ok" as const, bookingId: nb.id, manageToken: nb.manage_token as string };
   });
