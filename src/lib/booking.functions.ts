@@ -490,7 +490,7 @@ export const createPaymentLink = createServerFn({ method: "POST" })
     return { link, text };
   });
 
-/** Customer: reopen a saved booking from a /pay deep link. */
+/** Customer: reopen a saved booking from a /pay deep link (incl. waitlist claims). */
 export const resumeBooking = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({ bookingId: z.string().uuid(), token: z.string().min(16).max(64) }).parse(d),
@@ -500,12 +500,13 @@ export const resumeBooking = createServerFn({ method: "POST" })
     const { data: b } = await sb
       .from("bookings")
       .select(
-        "id, vehicle_model, photo_url, clean_preview_url, plan, colour, style, deposit_paid, manage_token",
+        "id, vehicle_model, photo_url, clean_preview_url, plan, colour, style, deposit_paid, manage_token, date, time, location_type, clients(name, phone, email)",
       )
       .eq("id", data.bookingId)
       .maybeSingle();
     // Expected outcome for stale/guessed links: return a value instead of throwing.
     if (!b || b.manage_token !== data.token) return { valid: false as const };
+    const client = b.clients as unknown as { name: string; phone: string; email: string } | null;
     return {
       valid: true as const,
       id: b.id,
@@ -517,6 +518,11 @@ export const resumeBooking = createServerFn({ method: "POST" })
       style: b.style,
       paid: b.deposit_paid,
       token: b.manage_token as string,
+      date: (b as { date?: string | null }).date ?? null,
+      time: (b as { time?: string | null }).time ?? null,
+      name: client?.name ?? "",
+      phone: client?.phone ?? "",
+      email: client?.email ?? "",
     };
   });
 

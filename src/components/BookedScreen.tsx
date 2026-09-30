@@ -106,18 +106,20 @@ export function BookedScreen(p: Props) {
     }
   }
 
-  const videoState = video.status === "ready" && video.url
-    ? "ready"
-    : video.status.startsWith("failed")
-      ? "failed"
-      : "rendering";
-  const emailState = video.email === "sent"
-    ? "sent"
-    : video.email === "failed"
-      ? "failed"
-      : video.email === "suppressed" || video.email === "no_email"
-        ? "not-sent"
-        : "pending";
+  const videoState =
+    video.status === "ready" && video.url
+      ? "ready"
+      : video.status.startsWith("failed")
+        ? "failed"
+        : "rendering";
+  const emailState =
+    video.email === "sent"
+      ? "sent"
+      : video.email === "failed"
+        ? "failed"
+        : video.email === "suppressed" || video.email === "no_email"
+          ? "not-sent"
+          : "pending";
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -126,7 +128,8 @@ export function BookedScreen(p: Props) {
       </p>
       <h2 className="mt-3 font-display text-4xl font-bold sm:text-5xl">Demo booking confirmed</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Booking reference: <span className="font-mono font-semibold text-foreground">{p.bookingId.slice(0, 8)}</span>
+        Booking reference:{" "}
+        <span className="font-mono font-semibold text-foreground">{p.bookingId.slice(0, 8)}</span>
       </p>
       <div className="mt-4 rounded-2xl border border-border bg-card p-5">
         <dl className="grid gap-2 text-sm sm:grid-cols-2">
@@ -177,7 +180,12 @@ export function BookedScreen(p: Props) {
             <MessageCircle /> Open in WhatsApp
           </a>
         </Button>
-        <Button size="lg" variant="outline" className="min-h-[48px]" onClick={() => setRsOpen((v) => !v)}>
+        <Button
+          size="lg"
+          variant="outline"
+          className="min-h-[48px]"
+          onClick={() => setRsOpen((v) => !v)}
+        >
           <RefreshCw /> Reschedule
         </Button>
         <EmailPreviewDialog
@@ -233,18 +241,25 @@ export function BookedScreen(p: Props) {
           )}
           {videoState === "failed" && (
             <p className="text-destructive">
-              Video couldn&apos;t render — Rai will share it on WhatsApp. Your booking is unaffected.
+              Video couldn&apos;t render — Rai will share it on WhatsApp. Your booking is
+              unaffected.
             </p>
           )}
           {emailState === "sent" && <p className="text-muted-foreground">Email delivery: sent ✓</p>}
           {emailState === "pending" && (
-            <p className="text-muted-foreground">Email delivery: pending — sends when video is ready.</p>
+            <p className="text-muted-foreground">
+              Email delivery: pending — sends when video is ready.
+            </p>
           )}
           {emailState === "failed" && (
-            <p className="text-muted-foreground">Email delivery: failed — check the preview or WhatsApp Rai.</p>
+            <p className="text-muted-foreground">
+              Email delivery: failed — check the preview or WhatsApp Rai.
+            </p>
           )}
           {emailState === "not-sent" && (
-            <p className="text-muted-foreground">Email delivery: not sent (no deliverable address).</p>
+            <p className="text-muted-foreground">
+              Email delivery: not sent (no deliverable address).
+            </p>
           )}
         </div>
         <div className="mt-3 max-w-sm whitespace-pre-line rounded-2xl rounded-tl-sm bg-card p-4 text-sm shadow-sm">

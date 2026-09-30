@@ -23,13 +23,16 @@ export const Route = createFileRoute("/offer/$id")({
 });
 
 const MSG = {
-  ok: "It's yours! Rai will see you then. 🎉",
+  ok: "It's yours! Your slot is held — continue to add details and pay the demo deposit.",
   claimed: "You've already claimed this slot. See you soon!",
   taken: "Sorry — someone else grabbed this slot first.",
   expired: "This offer has expired.",
   not_found: "This offer link isn't valid.",
   error: "Something went wrong. Please try again.",
 };
+
+type ClaimOk = { result: "ok"; bookingId: string; manageToken: string };
+type ClaimOther = { result: Exclude<string, "ok"> };
 
 function OfferPage() {
   const { id } = Route.useParams();
@@ -42,11 +45,14 @@ function OfferPage() {
   });
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [claimData, setClaimData] = useState<ClaimOk | null>(null);
 
   async function onClaim() {
     setBusy(true);
     try {
-      setResult((await claim({ data: { id } })).result);
+      const r = (await claim({ data: { id } })) as ClaimOk | ClaimOther;
+      setResult(r.result);
+      if (r.result === "ok") setClaimData(r as ClaimOk);
     } catch {
       setResult("error");
     } finally {
@@ -60,12 +66,17 @@ function OfferPage() {
     (o?.found ? (o.status === "offered" ? null : o.status) : q.isSuccess ? "not_found" : null);
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
-      <p className="text-sm font-semibold uppercase tracking-widest text-primary">Rai's Auto Spa</p>
+      <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+        Rai&apos;s Auto Spa
+      </p>
+      <p className="mt-1 inline-block w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">
+        Interactive demo · No real charges
+      </p>
       {q.isLoading && <p className="mt-6 text-muted-foreground">Loading your offer…</p>}
       {q.isError && (
         <p className="mt-6">
-          Couldn't load this offer.{" "}
-          <button className="underline" onClick={() => q.refetch()}>
+          Couldn&apos;t load this offer.{" "}
+          <button className="min-h-[44px] underline" onClick={() => q.refetch()}>
             Try again
           </button>
         </p>
@@ -74,7 +85,7 @@ function OfferPage() {
         <div className="mt-4 rounded-2xl bg-card p-6 shadow-[var(--shadow-soft)]">
           <h1 className="font-display text-2xl font-bold">Hi {o.firstName}, a slot just opened!</h1>
           <p className="mt-3 text-muted-foreground">
-            {new Date(o.date + "T00:00:00Z").toLocaleDateString("en-IN", {
+            {new Date(`${o.date}T00:00:00Z`).toLocaleDateString("en-IN", {
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -85,15 +96,42 @@ function OfferPage() {
             {o.locationType === "mobile" ? `Rai's van comes to you in ${o.area}` : "MG Marg studio"}
           </p>
           {status ? (
-            <p
-              role="status"
-              className="mt-5 rounded-xl bg-accent p-3 font-medium text-accent-foreground"
-            >
-              {(MSG as Record<string, string>)[status] ?? MSG.error}
-            </p>
+            <div>
+              <p
+                role="status"
+                className="mt-5 rounded-xl bg-accent p-3 font-medium text-accent-foreground"
+              >
+                {(MSG as Record<string, string>)[status] ?? MSG.error}
+              </p>
+              {status === "ok" && claimData && (
+                <div className="mt-4 rounded-xl border border-border p-4">
+                  <p className="text-sm font-semibold">
+                    Slot {o.date} · {o.time} held for you
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Booking {claimData.bookingId.slice(0, 8)} — your claimed slot and details carry
+                    over. Demo payment only, no real charge.
+                  </p>
+                  <Button asChild size="lg" className="mt-3 min-h-[48px] w-full">
+                    <Link
+                      to="/pay/$bookingId"
+                      params={{ bookingId: claimData.bookingId }}
+                      search={{ t: claimData.manageToken }}
+                    >
+                      Continue to demo payment
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           ) : (
             <>
-              <Button className="mt-5 w-full" size="lg" disabled={busy} onClick={onClaim}>
+              <Button
+                className="mt-5 min-h-[48px] w-full"
+                size="lg"
+                disabled={busy}
+                onClick={onClaim}
+              >
                 {busy ? "Claiming…" : "Claim this slot"}
               </Button>
               <p className="mt-2 text-xs text-muted-foreground">
@@ -108,8 +146,8 @@ function OfferPage() {
         </div>
       )}
       {status === "not_found" && !o?.found && <p className="mt-6">{MSG.not_found}</p>}
-      <Link to="/" className="mt-8 text-sm text-muted-foreground underline">
-        Back to Rai's Auto Spa
+      <Link to="/" className="mt-8 min-h-[44px] text-sm text-muted-foreground underline">
+        Back to Rai&apos;s Auto Spa
       </Link>
     </main>
   );

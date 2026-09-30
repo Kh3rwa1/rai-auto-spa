@@ -1,8 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PLANS, inr } from "@/lib/plans";
 import { confirmBooking, simulatePayment } from "@/lib/booking.functions";
 import type { Draft } from "./useBookingDraft";
@@ -42,19 +49,11 @@ export function CheckoutModal({
   const [method, setMethod] = useState<Method>("upi");
   const [fail, setFail] = useState(false);
   const heldFor = useRef("");
-  const dialogRef = useRef<HTMLDivElement>(null);
   const busy = stage === "processing" || stage === "verifying" || stage === "success";
   const { booking, plan, slot } = draft;
 
-  useEffect(() => {
-    dialogRef.current?.querySelector<HTMLElement>("input,button")?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !busy && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, onClose]);
-
   async function pay() {
-    if (!booking || !plan || !slot) return;
+    if (!booking || !plan || !slot || busy) return;
     setStage("processing");
     try {
       // Reserve the slot + save details once; retries after a failed payment reuse the hold.
@@ -109,68 +108,92 @@ export function CheckoutModal({
   }
 
   const order = STEPS.indexOf(stage as (typeof STEPS)[number]);
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/60 p-4 backdrop-blur-sm sm:items-center"
-      onClick={() => !busy && onClose()}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose();
+      }}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="checkout-title"
-        className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+      <DialogContent
+        className="max-h-[92vh] overflow-y-auto"
+        onEscapeKeyDown={(e) => {
+          if (busy) e.preventDefault();
+        }}
+        onPointerDownOutside={(e) => {
+          if (busy) e.preventDefault();
+        }}
       >
-        <p className="text-xs font-semibold uppercase tracking-wider text-electric">
-          Secure checkout · Demo payment - no real money
-        </p>
-        <h4 id="checkout-title" className="mt-1 text-2xl font-semibold">
-          Pay {inr(deposit)}
-        </h4>
-        <p className="text-sm text-muted-foreground">
-          Deposit for {plan && PLANS[plan].name}. Balance {inr(total - deposit)} after service.
-        </p>
+        <DialogHeader>
+          <p className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900 dark:bg-amber-900/30 dark:text-amber-200">
+            Demo payment — no real money charged
+          </p>
+          <DialogTitle className="mt-2 text-2xl">Pay {inr(deposit)}</DialogTitle>
+          <DialogDescription>
+            Simulated deposit for {plan && PLANS[plan].name}. Balance {inr(total - deposit)} due
+            after service. No card numbers, OTPs, or bank logins are requested.
+          </DialogDescription>
+        </DialogHeader>
+
         {stage === "idle" || stage === "failed" ? (
-          <>
+          <div>
             {stage === "failed" && (
               <p
                 role="alert"
-                className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+                className="mt-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
               >
-                Payment failed — nothing was charged. Your slot is still held, tap retry.
+                Simulated payment failed — nothing was charged and your slot is still held. Your
+                details are kept. Tap retry.
               </p>
             )}
-            <fieldset className="mt-5 space-y-2">
-              <legend className="sr-only">Payment method</legend>
+            <fieldset className="mt-4 space-y-2">
+              <legend className="text-sm font-semibold">Simulated payment method</legend>
               {METHODS.map(([id, label]) => (
                 <label
                   key={id}
-                  className="flex items-center gap-3 rounded-xl border border-border p-3 text-sm"
+                  className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-border p-3 text-sm"
                 >
                   <input
                     type="radio"
                     name="pm"
                     checked={method === id}
                     onChange={() => setMethod(id)}
+                    className="h-4 w-4"
                   />{" "}
                   {label}
                 </label>
               ))}
             </fieldset>
-            <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={fail} onChange={(e) => setFail(e.target.checked)} />{" "}
-              Simulate failure
+            <label className="mt-3 flex min-h-[44px] cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={fail}
+                onChange={(e) => setFail(e.target.checked)}
+                className="h-4 w-4"
+              />{" "}
+              Simulate failure (to test retry)
             </label>
-            <Button size="lg" className="mt-4 w-full" onClick={pay}>
-              {stage === "failed" ? `Retry ${inr(deposit)}` : `Pay ${inr(deposit)}`}
+            <Button size="lg" className="mt-4 min-h-[52px] w-full" onClick={pay} disabled={busy}>
+              {stage === "failed"
+                ? `Retry ${inr(deposit)} (simulated)`
+                : `Pay ${inr(deposit)} (simulated)`}
             </Button>
-            <Button variant="ghost" className="mt-2 w-full" onClick={onClose}>
+            <Button
+              variant="ghost"
+              className="mt-2 min-h-[44px] w-full"
+              onClick={onClose}
+              disabled={busy}
+            >
               Cancel
             </Button>
-          </>
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+              Demo checkout — simulated only. Success appears only after the server confirms your
+              persisted booking.
+            </p>
+          </div>
         ) : (
-          <ol className="mt-6 space-y-3 text-sm" aria-live="polite">
+          <ol className="mt-4 space-y-3 text-sm" aria-live="polite">
             {STEPS.map((st, i) => {
               const done = i < order || stage === "success";
               return (
@@ -187,22 +210,22 @@ export function CheckoutModal({
                   ) : i === order ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                   ) : (
-                    <span className="h-4 w-4 rounded-full border border-border" />
+                    <span className="h-4 w-4 rounded-full border border-border" aria-hidden />
                   )}
                   {st === "processing"
-                    ? "Processing"
+                    ? "Reserving your slot (simulated)"
                     : st === "verifying"
-                      ? "Verifying with bank"
-                      : "Success"}
+                      ? "Simulated verification with bank — no real charge"
+                      : "Confirmed by server"}
                 </li>
               );
             })}
+            <li className="text-xs text-muted-foreground">
+              Do not close — finishing the simulated payment.
+            </li>
           </ol>
         )}
-        <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          Demo payment - no real money is charged.
-        </p>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

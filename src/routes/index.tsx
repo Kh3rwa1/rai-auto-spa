@@ -42,20 +42,23 @@ function Nav() {
           <span className="hidden sm:inline">Rai's Auto Spa</span>
           <span className="sr-only sm:hidden">Rai's Auto Spa home</span>
         </a>
-        <nav aria-label="Main" className="flex items-center gap-1 text-sm sm:gap-4">
-          <a href="#services" className="rounded-full px-3 py-1.5 hover:bg-muted">
+        <nav aria-label="Main" className="flex items-center gap-1 text-sm sm:gap-2">
+          <a
+            href="#services"
+            className="hidden rounded-full px-3 py-2 hover:bg-muted sm:block min-h-[44px] items-center"
+          >
             Services
           </a>
           <a
             href="https://maps.google.com/?q=MG+Marg+Gangtok+737101"
             target="_blank"
             rel="noreferrer"
-            className="hidden items-center gap-1 rounded-full px-3 py-1.5 hover:bg-muted md:flex"
+            className="hidden items-center gap-1 rounded-full px-3 py-2 hover:bg-muted md:flex min-h-[44px]"
           >
             <MapPin className="h-4 w-4" aria-hidden /> MG Marg, Gangtok
           </a>
-          <Button asChild size="sm" variant="outline" className="rounded-full">
-            <Link to="/owner">Owner Dashboard</Link>
+          <Button asChild size="sm" variant="outline" className="rounded-full min-h-[44px]">
+            <Link to="/owner">Explore Admin Demo</Link>
           </Button>
         </nav>
       </div>
@@ -78,25 +81,42 @@ function Index() {
           <HeroMedia poster={heroImg} video={heroVideo.url} />
           <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/30 to-transparent" />
           <div className="relative mx-auto w-full max-w-6xl px-5 pb-16 pt-32 text-charcoal-foreground">
-            <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-background/15 px-3 py-1 text-xs font-medium backdrop-blur">
+            <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1.5 text-xs font-bold text-charcoal backdrop-blur">
+              Interactive demo · No real charges
+            </p>
+            <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-background/15 px-3 py-1 text-xs font-medium backdrop-blur ml-2">
               <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI-powered car spa · Gangtok
             </p>
             <h1 className="max-w-3xl font-display text-5xl font-bold leading-[0.95] sm:text-7xl">
-              RAI'S AUTO SPA
+              RAI&apos;S AUTO SPA
               <span className="block text-primary">From Boring to Beast</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg opacity-90 sm:text-xl">
-              Snap your dirty car. See it shine or super-designed instantly with AI.
+              Snap your dirty car. See it shine or super-designed instantly with AI. No upload
+              needed — try a sample car, no personal info required.
             </p>
-            <Button
-              asChild
-              size="lg"
-              className="mt-8 h-14 rounded-full px-8 text-base shadow-[var(--shadow-glow)]"
-            >
-              <a href="#book">
-                <span aria-hidden>📸</span> Snap Your Ride
-              </a>
-            </Button>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button
+                asChild
+                size="lg"
+                className="h-14 rounded-full px-8 text-base shadow-[var(--shadow-glow)] min-h-[56px]"
+              >
+                <a href="#book">
+                  <span aria-hidden>📸</span> Try a sample booking
+                </a>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="secondary"
+                className="h-14 rounded-full px-8 text-base min-h-[56px]"
+              >
+                <Link to="/owner">Explore admin demo</Link>
+              </Button>
+            </div>
+            <p className="mt-3 text-sm opacity-80">
+              Demo only: simulated payments, fictional contacts. Guest access — no sign-in.
+            </p>
           </div>
         </section>
 
@@ -162,9 +182,13 @@ function Index() {
 
         <section id="book" className="mx-auto max-w-4xl scroll-mt-20 px-4 pb-24 sm:px-5">
           <div className="mb-8 text-center">
-            <h2 className="font-display text-4xl font-bold sm:text-5xl">Book in 4 taps</h2>
+            <p className="mb-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 dark:bg-amber-900/30 dark:text-amber-200">
+              Interactive demo · No real charges · No sign-in
+            </p>
+            <h2 className="font-display text-4xl font-bold sm:text-5xl">Book in 5 steps</h2>
             <p className="mt-2 text-muted-foreground">
-              Snap, preview, pick a slot, pay 30% deposit.
+              Snap → Plan → Location &amp; time → AI reveal → Details &amp; demo payment. Try a
+              sample car — no upload or personal info needed.
             </p>
           </div>
           <BookingFlow />

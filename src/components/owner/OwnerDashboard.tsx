@@ -216,7 +216,11 @@ export function OwnerDashboard() {
           <p className="mt-1 text-sm text-muted-foreground">
             Check your connection — demo data is safe.
           </p>
-          <Button className="mt-3 min-h-[44px]" variant="outline" onClick={() => bookingsQ.refetch()}>
+          <Button
+            className="mt-3 min-h-[44px]"
+            variant="outline"
+            onClick={() => bookingsQ.refetch()}
+          >
             Try again
           </Button>
         </div>
@@ -239,12 +243,17 @@ export function OwnerDashboard() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
-      <section aria-labelledby="owner-overview" className="rounded-2xl border border-border bg-card p-5">
+      <section
+        aria-labelledby="owner-overview"
+        className="rounded-2xl border border-border bg-card p-5"
+      >
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-electric px-3 py-1 text-xs font-bold text-electric-foreground">
             Guest admin demo
           </span>
-          <span className="text-xs text-muted-foreground">Open sandbox — no sign-in, reset anytime</span>
+          <span className="text-xs text-muted-foreground">
+            Open sandbox — no sign-in, reset anytime
+          </span>
         </div>
         <h1 id="owner-overview" className="mt-2 font-display text-2xl font-bold sm:text-3xl">
           Today&apos;s operations

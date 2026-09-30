@@ -66,28 +66,30 @@ export function usePreviews(bookingId: string | undefined) {
   const preview = useServerFn(makePreview);
   const [cache, setCache] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorFor, setErrorFor] = useState<{ key: string; message: string } | null>(null);
   const started = useRef(new Set<string>());
 
   const run = useCallback(
     async (p: PlanId, c?: string, s?: string) => {
       if (!bookingId) return;
       const k = previewKey(p, c, s);
+      if (cache[k]) return;
       if (started.current.has(k)) return;
       started.current.add(k);
       setPending(k);
-      setError(null);
+      setErrorFor(null);
       try {
         const r = await preview({ data: { bookingId, plan: p, colour: c, style: s } });
         if (r.previewUrl) setCache((m) => ({ ...m, [k]: r.previewUrl! }));
+        else throw new Error("Preview came back empty. Retry or continue without it.");
       } catch (e) {
         started.current.delete(k);
-        setError((e as Error).message);
+        setErrorFor({ key: k, message: (e as Error).message });
       } finally {
         setPending((cur) => (cur === k ? null : cur));
       }
     },
-    [bookingId, preview],
+    [bookingId, preview, cache],
   );
 
   const seed = useCallback((k: string, url: string) => {
@@ -97,8 +99,20 @@ export function usePreviews(bookingId: string | undefined) {
   const clear = useCallback(() => {
     started.current.clear();
     setCache({});
-    setError(null);
+    setErrorFor(null);
+    setPending(null);
   }, []);
 
-  return { cache, pending, error, run, seed, clear };
+  // Only surface the error when it belongs to the currently requested key;
+  // callers pass the current key's error via `errorForKey`.
+  return {
+    cache,
+    pending,
+    errorFor,
+    error: errorFor?.message ?? null,
+    errorKey: errorFor?.key ?? null,
+    run,
+    seed,
+    clear,
+  };
 }

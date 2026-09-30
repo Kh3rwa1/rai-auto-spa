@@ -43,7 +43,9 @@ export function PreviewStep({
         )}
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-charcoal/35 px-5 text-center text-charcoal-foreground">
           <Sparkles className="h-9 w-9 text-electric" aria-hidden />
-          <p className="font-display text-xl font-semibold">Pick your slot first to reveal your car</p>
+          <p className="font-display text-xl font-semibold">
+            Pick your slot first to reveal your car
+          </p>
           <p className="max-w-sm text-sm opacity-80">
             Your AI preview starts in the background and is waiting on the next step.
           </p>
@@ -57,10 +59,18 @@ export function PreviewStep({
       <div>
         {showAnimation ? (
           <div className="reveal-curtain">
-            <BeforeAfter before={photo} after={previewUrl} afterLabel={`After Rai's ${designLabel}`} />
+            <BeforeAfter
+              before={photo}
+              after={previewUrl}
+              afterLabel={`After Rai's ${designLabel}`}
+            />
           </div>
         ) : (
-          <BeforeAfter before={photo} after={previewUrl} afterLabel={`After Rai's ${designLabel}`} />
+          <BeforeAfter
+            before={photo}
+            after={previewUrl}
+            afterLabel={`After Rai's ${designLabel}`}
+          />
         )}
         <p className="mt-3 text-xs text-muted-foreground">
           AI visualization of {designLabel} on your car — an artistic preview, not a guaranteed

@@ -94,7 +94,7 @@ export function videoPrompt(plan: PlanId, colour?: string, style?: string) {
   );
 }
 
-export const inr = (n: number) => "Rs." + n.toLocaleString("en-IN");
+export const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 export function calcTotal(plan: PlanId, mobile: boolean, waterFee: boolean) {
   return PLANS[plan].price + (mobile ? MOBILE_FEE : 0) + (mobile && waterFee ? WATER_FEE : 0);

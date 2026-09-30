@@ -47,7 +47,9 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
   const slotsFn = useServerFn(getSlots);
   const { mobile, water, pin, slot, plan } = draft;
   const [weekStart, setWeekStart] = useState(todayIST());
-  const [selectedDate, setSelectedDate] = useState<string>(() => slot?.date ?? addDays(todayIST(), 1));
+  const [selectedDate, setSelectedDate] = useState<string>(
+    () => slot?.date ?? addDays(todayIST(), 1),
+  );
   const [grid, setGrid] = useState<{ slots: Record<string, SlotState>; capacity: number }>({
     slots: {},
     capacity: 1,
@@ -183,7 +185,9 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
             onClick={() => set({ mobile: m })}
             className={cn(
               "flex min-h-[44px] items-start gap-3 rounded-2xl border-2 p-4 text-left transition",
-              mobile === m ? "border-primary bg-accent/50" : "border-border hover:border-primary/40",
+              mobile === m
+                ? "border-primary bg-accent/50"
+                : "border-border hover:border-primary/40",
             )}
           >
             <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
@@ -208,7 +212,8 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
             </Suspense>
             {pin ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Pinned at {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)} — van route time is an estimate.
+                Pinned at {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)} — van route time is an
+                estimate.
               </p>
             ) : (
               <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
@@ -290,7 +295,10 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
         </div>
 
         {loadError ? (
-          <div role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
+          <div
+            role="alert"
+            className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5"
+          >
             <p className="text-sm font-medium text-destructive">{loadError}</p>
             <Button
               variant="outline"
@@ -321,19 +329,15 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
             ) : (
               !loading && (
                 <p className="mb-3 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
-                  No free slots this week{mobile && !water ? " (11am–4pm blocked without water)" : ""}
-                  . Try the next week.
+                  No free slots this week
+                  {mobile && !water ? " (11am–4pm blocked without water)" : ""}. Try the next week.
                 </p>
               )
             )}
 
             {/* Mobile: date chips + time grid (no horizontal page scroll) */}
             <div className="md:hidden">
-              <div
-                className="flex flex-wrap gap-2"
-                role="radiogroup"
-                aria-label="Choose a date"
-              >
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Choose a date">
                 {days.map((d) => {
                   const dt = new Date(`${d}T00:00:00Z`);
                   const dayName = dt.toLocaleDateString("en-IN", {
@@ -371,18 +375,24 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
 
               <p className="mt-4 text-sm font-semibold" aria-live="polite">
                 {formatDateLong(selectedDate)}
-                {slot?.date === selectedDate && slot
-                  ? ` · selected ${slot.time}`
-                  : " · tap a time"}
+                {slot?.date === selectedDate && slot ? ` · selected ${slot.time}` : " · tap a time"}
               </p>
               {loading ? (
-                <div className="mt-2 grid grid-cols-3 gap-2" aria-busy="true" aria-label="Loading slots">
+                <div
+                  className="mt-2 grid grid-cols-3 gap-2"
+                  aria-busy="true"
+                  aria-label="Loading slots"
+                >
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="h-[52px] animate-pulse rounded-xl bg-muted" />
                   ))}
                 </div>
               ) : (
-                <div className="mt-2 grid grid-cols-3 gap-2" role="group" aria-label={`Times for ${formatDateLong(selectedDate)}`}>
+                <div
+                  className="mt-2 grid grid-cols-3 gap-2"
+                  role="group"
+                  aria-label={`Times for ${formatDateLong(selectedDate)}`}
+                >
                   {SLOTS.map((t) => timeButton(selectedDate, t))}
                 </div>
               )}
@@ -415,7 +425,10 @@ export function WhereWhenStep({ draft, set, nonce, total, onChooseSlot }: Props)
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <div className="grid min-w-[640px] grid-cols-7 gap-2" aria-labelledby="slot-grid-label">
+                  <div
+                    className="grid min-w-[640px] grid-cols-7 gap-2"
+                    aria-labelledby="slot-grid-label"
+                  >
                     {days.map((d) => {
                       const dt = new Date(`${d}T00:00:00Z`);
                       const dayName = dt.toLocaleDateString("en-IN", {

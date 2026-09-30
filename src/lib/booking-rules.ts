@@ -22,6 +22,41 @@ export const nowISTHour = () =>
 export const PHONE_RE = /^[+\d][\d\s-]{8,15}$/;
 export const EMAIL_RE = /\S+@\S+\.\S+/;
 
+/** Clearly fictional demo contact — never a real recipient. */
+export const DEMO_CONTACT = {
+  name: "Demo Judge",
+  phone: "+91 90000 00000",
+  email: "demo@example.com",
+} as const;
+
+/** Human-readable date + time, e.g. "Tue, 7 Oct · 08:00". */
+export function formatSlot(date: string, time: string): string {
+  try {
+    const label = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+    return `${label} · ${time}`;
+  } catch {
+    return `${date} · ${time}`;
+  }
+}
+
+export function formatDateLong(date: string): string {
+  try {
+    return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    });
+  } catch {
+    return date;
+  }
+}
+
 export const previewKey = (plan: PlanId, colour?: string, style?: string) =>
   `${plan}|${plan === "signature" ? `${colour}|${style}` : ""}`;
 

@@ -214,7 +214,9 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
       case 2:
         return {
           label: plan ? "Continue to location" : "Pick a plan above",
-          hint: plan ? `${PLANS[plan].name} · ${inr(PLANS[plan].price)}+` : "Choose Essential, Detail or Signature",
+          hint: plan
+            ? `${PLANS[plan].name} · ${inr(PLANS[plan].price)}+`
+            : "Choose Essential, Detail or Signature",
           enabled: !!plan,
           onClick: () => plan && open(3),
         };
@@ -228,7 +230,11 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
       case 4:
         return {
           label: "Continue to details",
-          hint: previewUrl ? "Preview ready" : isPending ? "Preview still creating — no need to wait" : "Preview optional",
+          hint: previewUrl
+            ? "Preview ready"
+            : isPending
+              ? "Preview still creating — no need to wait"
+              : "Preview optional",
           enabled: !!slot,
           onClick: () => open(5),
         };
