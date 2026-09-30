@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OwnerRouteImport } from './routes/owner'
+import { Route as OfferIdRouteImport } from './routes/offer.$id'
 import { Route as PayBookingIdRouteImport } from './routes/pay.$bookingId'
+import { Route as ApiPublicHooksRunScheduleRouteImport } from './routes/api/public/hooks/run-schedule'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
@@ -24,11 +26,22 @@ const OwnerRoute = OwnerRouteImport.update({
   path: '/owner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OfferIdRoute = OfferIdRouteImport.update({
+  id: '/offer/$id',
+  path: '/offer/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PayBookingIdRoute = PayBookingIdRouteImport.update({
   id: '/pay/$bookingId',
   path: '/pay/$bookingId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksRunScheduleRoute =
+  ApiPublicHooksRunScheduleRouteImport.update({
+    id: '/api/public/hooks/run-schedule',
+    path: '/api/public/hooks/run-schedule',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
@@ -39,41 +52,61 @@ const LovableEmailTransactionalPreviewRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
+  '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
+  '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
+  '/offer/$id': typeof OfferIdRoute
   '/pay/$bookingId': typeof PayBookingIdRoute
+  '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/owner' | '/pay/$bookingId' | '/lovable/email/transactional/preview'
+    | '/'
+    | '/owner'
+    | '/offer/$id'
+    | '/pay/$bookingId'
+    | '/api/public/hooks/run-schedule'
+    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/owner' | '/pay/$bookingId' | '/lovable/email/transactional/preview'
+    | '/'
+    | '/owner'
+    | '/offer/$id'
+    | '/pay/$bookingId'
+    | '/api/public/hooks/run-schedule'
+    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
     | '/owner'
+    | '/offer/$id'
     | '/pay/$bookingId'
+    | '/api/public/hooks/run-schedule'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OwnerRoute: typeof OwnerRoute
+  OfferIdRoute: typeof OfferIdRoute
   PayBookingIdRoute: typeof PayBookingIdRoute
+  ApiPublicHooksRunScheduleRoute: typeof ApiPublicHooksRunScheduleRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
@@ -93,11 +126,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/offer/$id': {
+      id: '/offer/$id'
+      path: '/offer/$id'
+      fullPath: '/offer/$id'
+      preLoaderRoute: typeof OfferIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pay/$bookingId': {
       id: '/pay/$bookingId'
       path: '/pay/$bookingId'
       fullPath: '/pay/$bookingId'
       preLoaderRoute: typeof PayBookingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/run-schedule': {
+      id: '/api/public/hooks/run-schedule'
+      path: '/api/public/hooks/run-schedule'
+      fullPath: '/api/public/hooks/run-schedule'
+      preLoaderRoute: typeof ApiPublicHooksRunScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/transactional/preview': {
@@ -113,7 +160,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OwnerRoute: OwnerRoute,
+  OfferIdRoute: OfferIdRoute,
   PayBookingIdRoute: PayBookingIdRoute,
+  ApiPublicHooksRunScheduleRoute: ApiPublicHooksRunScheduleRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport

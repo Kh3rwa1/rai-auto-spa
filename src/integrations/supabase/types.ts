@@ -57,6 +57,7 @@ export type Database = {
           plan: string
           status: string
           style: string | null
+          subscription_id: string | null
           time: string | null
           total: number
           vehicle_model: string | null
@@ -86,6 +87,7 @@ export type Database = {
           plan: string
           status?: string
           style?: string | null
+          subscription_id?: string | null
           time?: string | null
           total?: number
           vehicle_model?: string | null
@@ -115,6 +117,7 @@ export type Database = {
           plan?: string
           status?: string
           style?: string | null
+          subscription_id?: string | null
           time?: string | null
           total?: number
           vehicle_model?: string | null
@@ -129,6 +132,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
             referencedColumns: ["id"]
           },
         ]
