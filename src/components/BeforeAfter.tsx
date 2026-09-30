@@ -43,9 +43,22 @@ export function BeforeAfter({
         if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 5));
       }}
     >
-      <img src={after} alt={afterLabel} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
-      <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-        <img src={before} alt={beforeLabel} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+      <img
+        src={after}
+        alt={afterLabel}
+        className="absolute inset-0 h-full w-full object-cover"
+        draggable={false}
+      />
+      <div
+        className="absolute inset-0 overflow-hidden"
+        style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+      >
+        <img
+          src={before}
+          alt={beforeLabel}
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
       </div>
       <span className="absolute left-3 top-3 rounded-full bg-charcoal/80 px-3 py-1 text-xs font-medium text-charcoal-foreground backdrop-blur">
         {beforeLabel}

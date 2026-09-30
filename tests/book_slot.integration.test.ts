@@ -10,16 +10,38 @@ const KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 const sb = URL && KEY ? createClient(URL, KEY, { auth: { persistSession: false } }) : null;
 const TAG = "vitest-book-slot";
 const ids: string[] = [];
-const day = (n: number, from = new Date()) => { const d = new Date(from); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const day = (n: number, from = new Date()) => {
+  const d = new Date(from);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
 
 async function lead() {
-  const { data, error } = await sb!.from("bookings").insert({ plan: "Essential Wash", status: "confirmed", vehicle_model: TAG }).select("id").single();
+  const { data, error } = await sb!
+    .from("bookings")
+    .insert({ plan: "Essential Wash", status: "confirmed", vehicle_model: TAG })
+    .select("id")
+    .single();
   if (error) throw error;
   ids.push(data.id);
   return data.id;
 }
-async function book(date: string, time: string, mobile: boolean, water = true, days = 1, id?: string) {
-  const { data, error } = await sb!.rpc("book_slot", { p_booking_id: id ?? (await lead()), p_date: date, p_time: time, p_mobile: mobile, p_water: water, p_days: days });
+async function book(
+  date: string,
+  time: string,
+  mobile: boolean,
+  water = true,
+  days = 1,
+  id?: string,
+) {
+  const { data, error } = await sb!.rpc("book_slot", {
+    p_booking_id: id ?? (await lead()),
+    p_date: date,
+    p_time: time,
+    p_mobile: mobile,
+    p_water: water,
+    p_days: days,
+  });
   if (error) throw error;
   return data;
 }
@@ -47,7 +69,10 @@ describe.skipIf(!sb)("book_slot", () => {
 
   it("never double-books the last van slot when two requests race", async () => {
     const [a, b] = [await lead(), await lead()];
-    const r = await Promise.all([book(D, "07:00", true, true, 1, a), book(D, "07:00", true, true, 1, b)]);
+    const r = await Promise.all([
+      book(D, "07:00", true, true, 1, a),
+      book(D, "07:00", true, true, 1, b),
+    ]);
     expect(r.sort()).toEqual(["full", "ok"]);
   });
 

@@ -45,7 +45,10 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
       onStart(url);
       const r = await upload({ data: { image: b64, mime: "image/jpeg" } });
       if (!r.ok) throw new Error(r.error);
-      if (!r.isCar) toast.warning("Hmm, that doesn't look like a car — previews work best with a clear car photo.");
+      if (!r.isCar)
+        toast.warning(
+          "Hmm, that doesn't look like a car — previews work best with a clear car photo.",
+        );
       onUploaded({ id: r.bookingId, vehicle: r.vehicle }, r.photoUrl ?? null);
     } catch (e) {
       toast.error((e as Error).message);
@@ -67,8 +70,23 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
 
   const inputs = (
     <>
-      <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" aria-label="Take a photo" onChange={(e) => send(e.target.files?.[0])} />
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Upload a photo" onChange={(e) => send(e.target.files?.[0])} />
+      <input
+        ref={camRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        aria-label="Take a photo"
+        onChange={(e) => send(e.target.files?.[0])}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-label="Upload a photo"
+        onChange={(e) => send(e.target.files?.[0])}
+      />
     </>
   );
 
@@ -77,33 +95,74 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
         {inputs}
         <div className="relative overflow-hidden rounded-2xl">
-          <img src={photo} alt={vehicle ? `Your ${vehicle}` : "Your car"} className="aspect-[4/3] w-full object-cover" />
-          <span className="absolute bottom-3 left-3 rounded-full bg-charcoal/85 px-3 py-1.5 text-sm font-medium text-charcoal-foreground backdrop-blur" aria-live="polite">
-            {uploading ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Detecting vehicle…</span> : <>Detected: <strong>{vehicle}</strong></>}
+          <img
+            src={photo}
+            alt={vehicle ? `Your ${vehicle}` : "Your car"}
+            className="aspect-[4/3] w-full object-cover"
+          />
+          <span
+            className="absolute bottom-3 left-3 rounded-full bg-charcoal/85 px-3 py-1.5 text-sm font-medium text-charcoal-foreground backdrop-blur"
+            aria-live="polite"
+          >
+            {uploading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Detecting vehicle…
+              </span>
+            ) : (
+              <>
+                Detected: <strong>{vehicle}</strong>
+              </>
+            )}
           </span>
         </div>
-        <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>Change photo</Button>
+        <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+          Change photo
+        </Button>
       </div>
     );
 
   return (
     <div className="flex flex-col items-center justify-center gap-5 rounded-2xl border-2 border-dashed border-primary/40 bg-accent/40 px-6 py-12 text-center">
       {inputs}
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"><Camera className="h-7 w-7" aria-hidden /></div>
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
+        <Camera className="h-7 w-7" aria-hidden />
+      </div>
       <div>
         <p className="text-lg font-semibold">One clear photo, any angle</p>
-        <p className="text-sm text-muted-foreground">We'll detect your car, blur the number plate and preview the shine.</p>
+        <p className="text-sm text-muted-foreground">
+          We'll detect your car, blur the number plate and preview the shine.
+        </p>
       </div>
       <div className="flex flex-wrap justify-center gap-3">
-        <Button size="lg" onClick={() => camRef.current?.click()} disabled={uploading}><Camera /> Take photo</Button>
-        <Button size="lg" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}><Upload /> Upload</Button>
+        <Button size="lg" onClick={() => camRef.current?.click()} disabled={uploading}>
+          <Camera /> Take photo
+        </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+        >
+          <Upload /> Upload
+        </Button>
       </div>
       <div className="w-full border-t border-border pt-5">
         <p className="mb-3 text-sm font-medium">No car handy? Try with a sample car</p>
         <div className="flex justify-center gap-3">
           {SAMPLES.map((s) => (
-            <button key={s.file} type="button" disabled={uploading} onClick={() => sample(s.file)} className="group w-24 overflow-hidden rounded-xl border border-border bg-card text-xs font-medium transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
-              <img src={`/samples/${s.file}`} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
+            <button
+              key={s.file}
+              type="button"
+              disabled={uploading}
+              onClick={() => sample(s.file)}
+              className="group w-24 overflow-hidden rounded-xl border border-border bg-card text-xs font-medium transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            >
+              <img
+                src={`/samples/${s.file}`}
+                alt=""
+                loading="lazy"
+                className="aspect-[4/3] w-full object-cover"
+              />
               <span className="block px-1 py-1.5">{s.label}</span>
             </button>
           ))}

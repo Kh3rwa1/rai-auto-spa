@@ -12,7 +12,9 @@ export const istToday = () => new Date(Date.now() + 5.5 * 3600000).toISOString()
  * and keeps the time in sync with preferred_time.
  */
 export async function materialiseDay(sb: Sb, date: string, onlySubId?: string) {
-  let q = sb.from("subscriptions").select("id, client_id, plan, active, skip_dates, preferred_time, clients(area, name)");
+  let q = sb
+    .from("subscriptions")
+    .select("id, client_id, plan, active, skip_dates, preferred_time, clients(area, name)");
   if (onlySubId) q = q.eq("id", onlySubId);
   const { data: subs, error } = await q;
   if (error) throw new Error("Could not read subscriptions.");
@@ -20,7 +22,12 @@ export async function materialiseDay(sb: Sb, date: string, onlySubId?: string) {
   const notDue = (subs ?? []).filter((s) => !due.includes(s)).map((s) => s.id);
 
   if (notDue.length) {
-    await sb.from("bookings").delete().eq("date", date).eq("status", "subscription").in("subscription_id", notDue);
+    await sb
+      .from("bookings")
+      .delete()
+      .eq("date", date)
+      .eq("status", "subscription")
+      .in("subscription_id", notDue);
   }
   if (due.length) {
     const rows = due.map((s) => {
@@ -40,7 +47,9 @@ export async function materialiseDay(sb: Sb, date: string, onlySubId?: string) {
         status: "subscription",
       };
     });
-    const { error: upErr } = await sb.from("bookings").upsert(rows, { onConflict: "subscription_id,date" });
+    const { error: upErr } = await sb
+      .from("bookings")
+      .upsert(rows, { onConflict: "subscription_id,date" });
     if (upErr) throw new Error("Could not create today's visits.");
   }
   return { date, created: due.length, removed: notDue.length };

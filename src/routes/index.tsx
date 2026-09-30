@@ -11,9 +11,17 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Rai's Auto Spa — Premium Car Wash & Super Design, Gangtok" },
-      { name: "description", content: "Snap your car and see it shine with AI. Foam wash, full detail and custom wraps at MG Marg, Gangtok — or our van comes to you." },
+      {
+        name: "description",
+        content:
+          "Snap your car and see it shine with AI. Foam wash, full detail and custom wraps at MG Marg, Gangtok — or our van comes to you.",
+      },
       { property: "og:title", content: "Rai's Auto Spa — From Boring to Beast" },
-      { property: "og:description", content: "Premium car wash & super design studio in MG Marg, Gangtok. Instant AI previews, mobile van service." },
+      {
+        property: "og:description",
+        content:
+          "Premium car wash & super design studio in MG Marg, Gangtok. Instant AI previews, mobile van service.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -26,12 +34,21 @@ function Nav() {
     <header className="fixed inset-x-0 top-0 z-40">
       <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-border/60 bg-background/80 px-4 py-2 backdrop-blur-xl sm:px-6">
         <a href="#top" className="flex items-center gap-2 font-display text-lg font-bold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"><Droplets className="h-4 w-4" /></span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <Droplets className="h-4 w-4" />
+          </span>
           <span className="hidden sm:inline">Rai's Auto Spa</span>
         </a>
         <nav className="flex items-center gap-1 text-sm sm:gap-4">
-          <a href="#services" className="rounded-full px-3 py-1.5 hover:bg-muted">Services</a>
-          <a href="https://maps.google.com/?q=MG+Marg+Gangtok+737101" target="_blank" rel="noreferrer" className="hidden items-center gap-1 rounded-full px-3 py-1.5 hover:bg-muted md:flex">
+          <a href="#services" className="rounded-full px-3 py-1.5 hover:bg-muted">
+            Services
+          </a>
+          <a
+            href="https://maps.google.com/?q=MG+Marg+Gangtok+737101"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden items-center gap-1 rounded-full px-3 py-1.5 hover:bg-muted md:flex"
+          >
             <MapPin className="h-4 w-4" /> MG Marg, Gangtok
           </a>
           <Button asChild size="sm" variant="outline" className="rounded-full">
@@ -66,8 +83,14 @@ function Index() {
             RAI'S AUTO SPA
             <span className="block text-primary">From Boring to Beast</span>
           </h1>
-          <p className="mt-5 max-w-xl text-lg opacity-90 sm:text-xl">Snap your dirty car. See it shine or super-designed instantly with AI.</p>
-          <Button asChild size="lg" className="mt-8 h-14 rounded-full px-8 text-base shadow-[var(--shadow-glow)]">
+          <p className="mt-5 max-w-xl text-lg opacity-90 sm:text-xl">
+            Snap your dirty car. See it shine or super-designed instantly with AI.
+          </p>
+          <Button
+            asChild
+            size="lg"
+            className="mt-8 h-14 rounded-full px-8 text-base shadow-[var(--shadow-glow)]"
+          >
             <a href="#book">📸 Snap Your Ride</a>
           </Button>
         </div>
@@ -76,9 +99,21 @@ function Index() {
       <section id="services" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { icon: Droplets, t: "Studio, 2 bays", d: "MG Marg, Gangtok. Drop in, sip a tea, drive out gleaming." },
-            { icon: Truck, t: "Van comes to you", d: "Tadong, Deorali, Development Area — water-aware scheduling around municipal supply." },
-            { icon: Sparkles, t: "Super design", d: "Full colour wraps and body kits, previewed on your own car with AI first." },
+            {
+              icon: Droplets,
+              t: "Studio, 2 bays",
+              d: "MG Marg, Gangtok. Drop in, sip a tea, drive out gleaming.",
+            },
+            {
+              icon: Truck,
+              t: "Van comes to you",
+              d: "Tadong, Deorali, Development Area — water-aware scheduling around municipal supply.",
+            },
+            {
+              icon: Sparkles,
+              t: "Super design",
+              d: "Full colour wraps and body kits, previewed on your own car with AI first.",
+            },
           ].map(({ icon: I, t, d }) => (
             <div key={t} className="rounded-3xl bg-muted/60 p-6">
               <I className="h-6 w-6 text-primary" />
@@ -92,13 +127,23 @@ function Index() {
       <section className="border-y border-border bg-charcoal text-charcoal-foreground">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-14 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:py-20">
           <div className="overflow-hidden rounded-2xl">
-            <img src={raiFounder} alt="Rai, founder of Rai's Auto Spa" loading="lazy" width={1200} height={1008} className="aspect-[6/5] w-full object-cover" />
+            <img
+              src={raiFounder}
+              alt="Rai, founder of Rai's Auto Spa"
+              loading="lazy"
+              width={1200}
+              height={1008}
+              className="aspect-[6/5] w-full object-cover"
+            />
           </div>
           <div>
             <p className="text-sm font-semibold uppercase text-primary">Meet Rai</p>
-            <h2 className="mt-2 font-display text-4xl font-bold sm:text-5xl">One founder. 200+ cars transformed.</h2>
+            <h2 className="mt-2 font-display text-4xl font-bold sm:text-5xl">
+              One founder. 200+ cars transformed.
+            </h2>
             <p className="mt-5 max-w-xl text-lg text-charcoal-foreground/75">
-              Rai runs the studio at MG Marg herself. Before this booking system, she managed 1,500 appointments in a notebook—one customer, one car, and one promise at a time.
+              Rai runs the studio at MG Marg herself. Before this booking system, she managed 1,500
+              appointments in a notebook—one customer, one car, and one promise at a time.
             </p>
           </div>
         </div>
@@ -115,7 +160,9 @@ function Index() {
       <footer className="border-t border-border bg-charcoal py-10 text-charcoal-foreground">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 text-sm sm:flex-row sm:justify-between">
           <p className="font-display text-lg font-semibold">Rai's Auto Spa</p>
-          <p className="opacity-70">Premium Car Wash & Super Design Studio · MG Marg, Gangtok, Sikkim 737101</p>
+          <p className="opacity-70">
+            Premium Car Wash & Super Design Studio · MG Marg, Gangtok, Sikkim 737101
+          </p>
         </div>
       </footer>
       <DemoRibbon />

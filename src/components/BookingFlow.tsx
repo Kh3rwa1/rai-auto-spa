@@ -25,7 +25,10 @@ export type ResumeDraft = {
   token: string;
 };
 
-const scrollTo = (n: number) => requestAnimationFrame(() => document.getElementById(`step-${n}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+const scrollTo = (n: number) =>
+  requestAnimationFrame(() =>
+    document.getElementById(`step-${n}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+  );
 
 export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   const { draft, set, reset } = useBookingDraft();
@@ -42,7 +45,16 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   const previewUrl = key ? previews.cache[key] : undefined;
   const total = plan ? calcTotal(plan, mobile, mobile && !water) : 0;
   const deposit = depositOf(total);
-  const missing = missingForPay({ hasBooking: !!booking, plan, hasSlot: !!slot, mobile, hasPin: !!draft.pin, name: draft.name, phone: draft.phone, email: draft.email });
+  const missing = missingForPay({
+    hasBooking: !!booking,
+    plan,
+    hasSlot: !!slot,
+    mobile,
+    hasPin: !!draft.pin,
+    name: draft.name,
+    phone: draft.phone,
+    email: draft.email,
+  });
   const canPay = missing.length === 0;
   const open = (n: number) => {
     setActiveStep(n);
@@ -68,8 +80,19 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   // /pay deep link: keep photo, plan and preview, jump to Where & When.
   useEffect(() => {
     if (!resume) return;
-    set({ booking: { id: resume.id, vehicle: resume.vehicle }, photo: resume.photoUrl, plan: resume.plan, colour: resume.colour ?? draft.colour, style: resume.style ?? draft.style, manageToken: resume.token });
-    if (resume.previewUrl) previews.seed(previewKey(resume.plan, resume.colour ?? draft.colour, resume.style ?? draft.style), resume.previewUrl);
+    set({
+      booking: { id: resume.id, vehicle: resume.vehicle },
+      photo: resume.photoUrl,
+      plan: resume.plan,
+      colour: resume.colour ?? draft.colour,
+      style: resume.style ?? draft.style,
+      manageToken: resume.token,
+    });
+    if (resume.previewUrl)
+      previews.seed(
+        previewKey(resume.plan, resume.colour ?? draft.colour, resume.style ?? draft.style),
+        resume.previewUrl,
+      );
     setActiveStep(3);
     // Run once per resume payload; draft defaults are stable initial values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,7 +113,12 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     if (confettiKey.current === k) return;
     confettiKey.current = k;
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: ["#0D9488", "#2563EB", "#FFFFFF"] });
+      confetti({
+        particleCount: 90,
+        spread: 70,
+        origin: { y: 0.7 },
+        colors: ["#0D9488", "#2563EB", "#FFFFFF"],
+      });
   }, [key, previewUrl, revealHold, slot]);
 
   function chooseSlot(date: string, time: string) {
@@ -114,7 +142,11 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
         planName={PLANS[plan].name}
         date={slot.date}
         time={slot.time}
-        location={mobile ? `${draft.building}${draft.floor ? ", Floor " + draft.floor : ""} (van comes to you)` : "Studio, MG Marg, Gangtok"}
+        location={
+          mobile
+            ? `${draft.building}${draft.floor ? ", Floor " + draft.floor : ""} (van comes to you)`
+            : "Studio, MG Marg, Gangtok"
+        }
         total={total}
         deposit={deposit}
         phone={draft.phone}
@@ -131,9 +163,20 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   const revealed = !!slot && !!previewUrl && !revealHold;
   return (
     <div className="space-y-4 pb-20 md:pb-0">
-      <ProgressBar active={activeStep} onOpen={setActiveStep} complete={[!!booking, !!plan, !!slot, revealed, booked]} />
+      <ProgressBar
+        active={activeStep}
+        onOpen={setActiveStep}
+        complete={[!!booking, !!plan, !!slot, revealed, booked]}
+      />
 
-      <Step n={1} title="Snap your dirty / boring car" done={!!booking} active={activeStep === 1} onOpen={() => setActiveStep(1)} summary={booking ? `${booking.vehicle} uploaded ✓` : "Add one clear car photo"}>
+      <Step
+        n={1}
+        title="Snap your dirty / boring car"
+        done={!!booking}
+        active={activeStep === 1}
+        onOpen={() => setActiveStep(1)}
+        summary={booking ? `${booking.vehicle} uploaded ✓` : "Add one clear car photo"}
+      >
         <CaptureStep
           photo={draft.photo}
           vehicle={booking?.vehicle}
@@ -149,29 +192,96 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
         />
       </Step>
 
-      <Step n={2} title="Pick your plan" done={!!plan} active={activeStep === 2} onOpen={() => setActiveStep(2)} summary={plan ? `${PLANS[plan].name} ✓` : "Choose your finish"}>
-        <PlanStep plan={plan} colour={colour} style={style} set={set} onChoose={(p) => { set({ plan: p }); open(3); }} />
+      <Step
+        n={2}
+        title="Pick your plan"
+        done={!!plan}
+        active={activeStep === 2}
+        onOpen={() => setActiveStep(2)}
+        summary={plan ? `${PLANS[plan].name} ✓` : "Choose your finish"}
+      >
+        <PlanStep
+          plan={plan}
+          colour={colour}
+          style={style}
+          set={set}
+          onChoose={(p) => {
+            set({ plan: p });
+            open(3);
+          }}
+        />
       </Step>
 
-      <Step n={3} title="Where & when" done={!!slot} active={activeStep === 3} onOpen={() => setActiveStep(3)} summary={slot ? `${mobile ? "Mobile van" : "MG Marg studio"} · ${slotLabel} ✓` : "Choose location and slot"}>
-        <WhereWhenStep draft={draft} set={set} nonce={slotsNonce} total={total} onChooseSlot={chooseSlot} />
+      <Step
+        n={3}
+        title="Where & when"
+        done={!!slot}
+        active={activeStep === 3}
+        onOpen={() => setActiveStep(3)}
+        summary={
+          slot
+            ? `${mobile ? "Mobile van" : "MG Marg studio"} · ${slotLabel} ✓`
+            : "Choose location and slot"
+        }
+      >
+        <WhereWhenStep
+          draft={draft}
+          set={set}
+          nonce={slotsNonce}
+          total={total}
+          onChooseSlot={chooseSlot}
+        />
       </Step>
 
-      <Step n={4} title="Your car, after Rai" done={revealed} active={activeStep === 4} onOpen={() => setActiveStep(4)} summary={slot && previewUrl ? "Surprise revealed ✓" : "Your surprise is waiting"}>
-        <PreviewStep hasSlot={!!slot} photo={draft.photo} previewUrl={previewUrl} holding={revealHold} error={previews.error} planName={plan ? PLANS[plan].name : "service"} onRetry={() => plan && run(plan, colour, style)} />
+      <Step
+        n={4}
+        title="Your car, after Rai"
+        done={revealed}
+        active={activeStep === 4}
+        onOpen={() => setActiveStep(4)}
+        summary={slot && previewUrl ? "Surprise revealed ✓" : "Your surprise is waiting"}
+      >
+        <PreviewStep
+          hasSlot={!!slot}
+          photo={draft.photo}
+          previewUrl={previewUrl}
+          holding={revealHold}
+          error={previews.error}
+          planName={plan ? PLANS[plan].name : "service"}
+          onRetry={() => plan && run(plan, colour, style)}
+        />
       </Step>
 
-      <Step n={5} title="Pay & confirm" active={activeStep === 5} onOpen={() => setActiveStep(5)} summary={canPay ? `${inr(deposit)} deposit ready` : "Add your contact details"}>
-        <PayStep draft={draft} set={set} missing={missing} total={total} deposit={deposit} onPay={() => setPayOpen(true)} />
+      <Step
+        n={5}
+        title="Pay & confirm"
+        active={activeStep === 5}
+        onOpen={() => setActiveStep(5)}
+        summary={canPay ? `${inr(deposit)} deposit ready` : "Add your contact details"}
+      >
+        <PayStep
+          draft={draft}
+          set={set}
+          missing={missing}
+          total={total}
+          deposit={deposit}
+          onPay={() => setPayOpen(true)}
+        />
       </Step>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-15px_var(--foreground)] backdrop-blur-xl md:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <p className="min-w-0 truncate text-xs font-medium">
-            {plan ? PLANS[plan].name : "Choose plan"} <span className="text-muted-foreground">•</span> {slotLabel} <span className="text-muted-foreground">•</span> {plan ? inr(total) : "—"}
-            <span className="block truncate text-[11px] text-muted-foreground">{plan ? `Pay ${inr(deposit)} Deposit` : "Complete the steps to book"}</span>
+            {plan ? PLANS[plan].name : "Choose plan"}{" "}
+            <span className="text-muted-foreground">•</span> {slotLabel}{" "}
+            <span className="text-muted-foreground">•</span> {plan ? inr(total) : "—"}
+            <span className="block truncate text-[11px] text-muted-foreground">
+              {plan ? `Pay ${inr(deposit)} Deposit` : "Complete the steps to book"}
+            </span>
           </p>
-          <Button size="sm" disabled={!canPay} onClick={() => setPayOpen(true)}>Pay{plan ? ` ${inr(deposit)}` : ""}</Button>
+          <Button size="sm" disabled={!canPay} onClick={() => setPayOpen(true)}>
+            Pay{plan ? ` ${inr(deposit)}` : ""}
+          </Button>
         </div>
       </div>
 

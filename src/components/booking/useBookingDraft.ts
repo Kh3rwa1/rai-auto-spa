@@ -47,7 +47,8 @@ export const initialDraft: Draft = {
 type Action = { type: "patch"; patch: Partial<Draft> } | { type: "reset" };
 
 export function draftReducer(state: Draft, a: Action): Draft {
-  if (a.type === "reset") return { ...initialDraft, name: state.name, phone: state.phone, email: state.email };
+  if (a.type === "reset")
+    return { ...initialDraft, name: state.name, phone: state.phone, email: state.email };
   return { ...state, ...a.patch };
 }
 

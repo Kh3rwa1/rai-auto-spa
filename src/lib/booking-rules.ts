@@ -10,7 +10,14 @@ export function addDays(ds: string, n: number) {
 }
 
 export const nowISTHour = () =>
-  parseInt(new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false }), 10);
+  parseInt(
+    new Date().toLocaleTimeString("en-GB", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      hour12: false,
+    }),
+    10,
+  );
 
 export const PHONE_RE = /^[+\d][\d\s-]{8,15}$/;
 export const EMAIL_RE = /\S+@\S+\.\S+/;
@@ -58,5 +65,11 @@ export function slotUnavailable(o: {
   const past = o.date < o.today || (o.date === o.today && parseInt(o.time, 10) <= o.nowHour);
   const dry = o.mobile && !o.water && isDryWindow(o.time);
   const full = (o.state?.taken ?? 0) >= o.capacity;
-  return { past, dry, full, blocked: !!o.state?.blocked, disabled: past || dry || full || !!o.state?.blocked };
+  return {
+    past,
+    dry,
+    full,
+    blocked: !!o.state?.blocked,
+    disabled: past || dry || full || !!o.state?.blocked,
+  };
 }

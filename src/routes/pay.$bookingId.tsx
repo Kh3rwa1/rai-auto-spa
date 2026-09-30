@@ -11,9 +11,16 @@ export const Route = createFileRoute("/pay/$bookingId")({
   head: () => ({
     meta: [
       { title: "Finish your booking — Rai's Auto Spa" },
-      { name: "description", content: "Your car photo and plan are saved. Pick a time and pay your deposit to book Rai's Auto Spa." },
+      {
+        name: "description",
+        content:
+          "Your car photo and plan are saved. Pick a time and pay your deposit to book Rai's Auto Spa.",
+      },
       { property: "og:title", content: "Finish your booking — Rai's Auto Spa" },
-      { property: "og:description", content: "Your photo and plan are saved — pick a slot and pay the 30% deposit." },
+      {
+        property: "og:description",
+        content: "Your photo and plan are saved — pick a slot and pay the 30% deposit.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -44,8 +51,16 @@ function PayPage() {
         {!t || q.isError || q.data?.valid === false ? (
           <div className="rounded-2xl bg-card p-6 text-center">
             <p className="font-semibold">This booking link isn't valid anymore.</p>
-            <p className="mt-1 text-sm text-muted-foreground">Ask Rai for a fresh link, or start a new booking.</p>
-            <Link to="/" hash="book" className="mt-4 inline-block text-sm font-semibold text-teal underline">Start a new booking</Link>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ask Rai for a fresh link, or start a new booking.
+            </p>
+            <Link
+              to="/"
+              hash="book"
+              className="mt-4 inline-block text-sm font-semibold text-teal underline"
+            >
+              Start a new booking
+            </Link>
           </div>
         ) : q.isLoading || !q.data || !q.data.valid ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
@@ -54,11 +69,15 @@ function PayPage() {
         ) : q.data.paid ? (
           <div className="rounded-2xl bg-card p-6 text-center">
             <p className="font-semibold">Your {q.data.vehicle} is already booked 🎉</p>
-            <p className="mt-1 text-sm text-muted-foreground">The deposit is paid — see you soon.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The deposit is paid — see you soon.
+            </p>
           </div>
         ) : (
           <>
-            <h1 className="mb-4 font-display text-2xl font-semibold">Welcome back — your {q.data.vehicle} is saved</h1>
+            <h1 className="mb-4 font-display text-2xl font-semibold">
+              Welcome back — your {q.data.vehicle} is saved
+            </h1>
             <BookingFlow resume={q.data} />
           </>
         )}

@@ -3,7 +3,9 @@ import { z } from "zod";
 
 /** Renders the exact customer emails for one booking (token-gated) so the in-app preview matches what was sent. */
 export const previewEmails = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ bookingId: z.string().uuid(), token: z.string().min(8) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ bookingId: z.string().uuid(), token: z.string().min(8) }).parse(d),
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
     const { data: b } = await sb
@@ -13,22 +15,28 @@ export const previewEmails = createServerFn({ method: "POST" })
       .eq("manage_token", data.token)
       .maybeSingle();
     if (!b) throw new Error("Booking not found");
-    const [{ createElement }, { render }, { TEMPLATES }, { depositOf }, { BRAND }] = await Promise.all([
-      import("react"),
-      import("@react-email/components"),
-      import("./email-templates/registry"),
-      import("./plans"),
-      import("./brand"),
-    ]);
+    const [{ createElement }, { render }, { TEMPLATES }, { depositOf }, { BRAND }] =
+      await Promise.all([
+        import("react"),
+        import("@react-email/components"),
+        import("./email-templates/registry"),
+        import("./plans"),
+        import("./brand"),
+      ]);
     const client = b.clients as { name: string; email: string | null } | null;
-    const video = b.video_url ? (await sb.storage.from("car-media").createSignedUrl(b.video_url, 3600)).data?.signedUrl : null;
+    const video = b.video_url
+      ? (await sb.storage.from("car-media").createSignedUrl(b.video_url, 3600)).data?.signedUrl
+      : null;
     const props = {
       name: client?.name,
       vehicle: b.vehicle_model ?? "car",
       plan: b.plan,
       date: b.date ?? "",
       time: b.time ?? "",
-      location: b.location_type === "mobile" ? `${b.area ?? "Your place"} (Rai's van comes to you)` : "Studio, MG Marg, Gangtok",
+      location:
+        b.location_type === "mobile"
+          ? `${b.area ?? "Your place"} (Rai's van comes to you)`
+          : "Studio, MG Marg, Gangtok",
       total: b.total,
       deposit: depositOf(b.total),
       videoUrl: video ?? "https://rai-auto-spa.lovable.app",

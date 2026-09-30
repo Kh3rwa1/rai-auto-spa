@@ -43,10 +43,28 @@ export const STYLES = ["Racing Stripes", "Blacked Out", "Carbon Hood", "Lowered 
 export const MOBILE_FEE = 200;
 export const WATER_FEE = 150;
 export const STUDIO_BAYS = 2;
-export const STUDIO = { lat: 27.3314, lng: 88.6138, name: "Rai's Auto Spa, MG Marg, Gangtok 737101" };
+export const STUDIO = {
+  lat: 27.3314,
+  lng: 88.6138,
+  name: "Rai's Auto Spa, MG Marg, Gangtok 737101",
+};
 
-export const SLOTS = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
-export const isPrime = (t: string) => ["07:00", "08:00", "09:00", "10:00", "17:00", "18:00"].includes(t);
+export const SLOTS = [
+  "07:00",
+  "08:00",
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+];
+export const isPrime = (t: string) =>
+  ["07:00", "08:00", "09:00", "10:00", "17:00", "18:00"].includes(t);
 export const isDryWindow = (t: string) => {
   const h = parseInt(t, 10);
   return h >= 11 && h < 16;
@@ -61,10 +79,19 @@ export function imagePrompt(plan: PlanId, colour?: string, style?: string) {
 }
 
 export function videoPrompt(plan: PlanId, colour?: string, style?: string) {
-  const tail = " Keep the car's shape and proportions unchanged. Single continuous shot, no scene cuts. Audio: soft studio ambience and gentle water drips. No dialogue. No on-screen text.";
-  if (plan === "wash") return "Cinematic 6s slow dolly, foam dripping, water beading on glossy paint, professional car commercial." + tail;
-  if (plan === "detail") return "Cinematic interior + exterior spin, light gliding over glossy paint, 6s." + tail;
-  return `Cinematic 6s, car colour shimmering in its new ${colour ?? "electric blue"} wrap with ${style ?? "black stripes"}, slow spin, dramatic studio light, water beading, supercar reveal.` + tail;
+  const tail =
+    " Keep the car's shape and proportions unchanged. Single continuous shot, no scene cuts. Audio: soft studio ambience and gentle water drips. No dialogue. No on-screen text.";
+  if (plan === "wash")
+    return (
+      "Cinematic 6s slow dolly, foam dripping, water beading on glossy paint, professional car commercial." +
+      tail
+    );
+  if (plan === "detail")
+    return "Cinematic interior + exterior spin, light gliding over glossy paint, 6s." + tail;
+  return (
+    `Cinematic 6s, car colour shimmering in its new ${colour ?? "electric blue"} wrap with ${style ?? "black stripes"}, slow spin, dramatic studio light, water beading, supercar reveal.` +
+    tail
+  );
 }
 
 export const inr = (n: number) => "Rs." + n.toLocaleString("en-IN");
