@@ -11,3 +11,7 @@
 
 - Start one reveal-video job immediately after the selected plan's preview is created, then reuse it at confirmation to avoid duplicate AI jobs.
 - Keep booking progression as a single-open-step wizard; plan selection starts AI silently and the visual reveal waits for slot selection.
+- Booking wizard state lives in `useBookingDraft` (reducer) with one component per step under src/components/booking/ — keeps each step small and testable.
+- Pure booking rules (pay gate, slot availability, dates) live in src/lib/booking-rules.ts — shared by UI, owner dashboard and unit tests.
+- Brand/sender identity and the GitHub link live only in src/lib/brand.ts — one place to rebrand.
+- Tests: `bun run test` (vitest; book_slot integration runs against the live backend with far-future dates and cleans up), `bun run test:e2e` (Playwright sample-car smoke).
