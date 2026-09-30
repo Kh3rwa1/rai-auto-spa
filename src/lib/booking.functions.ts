@@ -75,33 +75,6 @@ export const makePreview = createServerFn({ method: "POST" })
     if (file.error) throw new Error("Could not read your photo.");
     const bytes = new Uint8Array(await file.data.arrayBuffer());
 
-    // Start the reveal first, while the customer continues through the booking flow.
-    if (!b.video_job_id && !b.video_status?.startsWith("starting")) {
-      const generationKey = `${data.plan}-${data.colour ?? ""}-${data.style ?? ""}`.replace(/[^a-zA-Z0-9-]/g, "");
-      const { data: locked } = await sb
-        .from("bookings")
-        .update({ video_status: `starting:${generationKey}` })
-        .eq("id", data.bookingId)
-        .is("video_job_id", null)
-        .or("video_status.is.null,video_status.not.like.starting:%")
-        .select("id")
-        .maybeSingle();
-      if (locked) {
-        try {
-          const jobId = await createVideoJob(bytes, "image/jpeg", videoPrompt(data.plan, data.colour, data.style));
-          await sb
-            .from("bookings")
-            .update({ video_job_id: jobId, video_status: "rendering" })
-            .eq("id", data.bookingId);
-        } catch (error) {
-          await sb
-            .from("bookings")
-            .update({ video_status: `failed: ${(error as Error).message.slice(0, 120)}` })
-            .eq("id", data.bookingId);
-        }
-      }
-    }
-
     const out = await editCarImage(bytes, "image/jpeg", imagePrompt(data.plan, data.colour, data.style));
     const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.png`;
     await sb.storage.from(BUCKET).upload(path, out, { contentType: "image/png", upsert: true });
@@ -114,6 +87,34 @@ export const makePreview = createServerFn({ method: "POST" })
         style: data.style ?? null,
       })
       .eq("id", data.bookingId);
+
+    // Use the finished design as the reveal's opening frame, then let both results
+    // continue through the booking without showing generation status to customers.
+    if (!b.video_job_id && !b.video_status?.startsWith("starting")) {
+      const generationKey = `${data.plan}-${data.colour ?? ""}-${data.style ?? ""}`.replace(/[^a-zA-Z0-9-]/g, "");
+      const { data: locked } = await sb
+        .from("bookings")
+        .update({ video_status: `starting:${generationKey}` })
+        .eq("id", data.bookingId)
+        .is("video_job_id", null)
+        .or("video_status.is.null,video_status.not.like.starting:%")
+        .select("id")
+        .maybeSingle();
+      if (locked) {
+        try {
+          const jobId = await createVideoJob(out, "image/png", videoPrompt(data.plan, data.colour, data.style));
+          await sb
+            .from("bookings")
+            .update({ video_job_id: jobId, video_status: "rendering" })
+            .eq("id", data.bookingId);
+        } catch (error) {
+          await sb
+            .from("bookings")
+            .update({ video_status: `failed: ${(error as Error).message.slice(0, 120)}` })
+            .eq("id", data.bookingId);
+        }
+      }
+    }
     return { previewUrl: await signed(path), path };
   });
 
