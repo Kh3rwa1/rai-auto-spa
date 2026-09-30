@@ -247,53 +247,125 @@ export const confirmBooking = createServerFn({ method: "POST" })
         guard_permission: data.guard,
         water_needed: waterFee,
         total,
-        deposit_paid: true,
-        status: data.plan === "signature" ? "consultation" : "confirmed",
+        status: "pending_deposit",
         approval_status: data.plan === "signature" ? "pending" : null,
       })
       .eq("id", data.bookingId);
-    if (error) throw new Error("Could not confirm the booking.");
-    // send the booking confirmation email (non-blocking for the booking itself)
-    try {
-      const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
-      await sendTemplateEmail("booking-confirmation", data.email, {
-        templateData: {
-          name: data.name,
-          vehicle: existing.vehicle_model ?? "car",
-          plan: PLANS[data.plan].name,
-          date: data.date,
-          time: data.time,
-          location: data.mobile ? `${nearestArea(data.pin!)} (Rai's van comes to you)` : "Studio, MG Marg, Gangtok",
-          total,
-          deposit: depositOf(total),
-        },
-        idempotencyKey: `booking-confirmation-${data.bookingId}`,
-      });
-    } catch (e) {
-      console.error("confirmation email failed", e);
+    if (error) throw new Error("Could not save the booking.");
+    return { ok: true, total, deposit: depositOf(total), manageToken: existing.manage_token as string };
+  });
+
+const planIdByName = (name: string): PlanId =>
+  (Object.keys(PLANS) as PlanId[]).find((k) => PLANS[k].name === name) ?? "wash";
+
+/** Demo checkout. The ONLY code path that may set deposit_paid=true (a DB trigger blocks browser clients). */
+export const simulatePayment = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        bookingId: z.string().uuid(),
+        token: z.string().min(16).max(64),
+        method: z.enum(["upi", "card", "netbanking"]),
+        fail: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const sb = await admin();
+    const { data: b } = await sb.from("bookings").select("*, clients(name, email)").eq("id", data.bookingId).maybeSingle();
+    if (!b || b.manage_token !== data.token) throw new Error("Booking not found.");
+    if (b.deposit_paid) return { ok: true, status: "success" as const };
+    if (!b.date || !b.time || !b.client_id) throw new Error("Please pick a slot and add your details first.");
+    const amount = depositOf(b.total);
+    if (data.fail) {
+      await sb.from("payments").insert({ booking_id: b.id, amount, method: data.method, status: "failed" });
+      throw new Error("PAYMENT_FAILED: Your bank declined the demo payment. Nothing was charged — please try again.");
+    }
+    await sb.from("payments").insert({ booking_id: b.id, amount, method: data.method, status: "success" });
+    const plan = planIdByName(b.plan);
+    await sb
+      .from("bookings")
+      .update({ deposit_paid: true, status: plan === "signature" ? "consultation" : "confirmed" })
+      .eq("id", b.id);
+    const client = b.clients as { name: string; email: string | null } | null;
+    if (client?.email) {
+      try {
+        const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+        await sendTemplateEmail("booking-confirmation", client.email, {
+          templateData: {
+            name: client.name,
+            vehicle: b.vehicle_model ?? "car",
+            plan: b.plan,
+            date: b.date,
+            time: b.time,
+            location: b.location_type === "mobile" ? `${b.area} (Rai's van comes to you)` : "Studio, MG Marg, Gangtok",
+            total: b.total,
+            deposit: amount,
+          },
+          idempotencyKey: `booking-confirmation-${b.id}`,
+        });
+      } catch (e) {
+        console.error("confirmation email failed", e);
+      }
     }
     // Older or interrupted bookings may not have started their reveal before payment.
-    if (!existing.video_job_id && !existing.video_status?.startsWith("starting")) {
+    if (!b.video_job_id && !b.video_status?.startsWith("starting")) {
       try {
         const { createVideoJob } = await import("./ai.server");
-        const src = existing.clean_preview_url ?? existing.photo_url;
+        const src = b.clean_preview_url ?? b.photo_url;
         if (src) {
           const file = await sb.storage.from(BUCKET).download(src);
           if (!file.error) {
             const bytes = new Uint8Array(await file.data.arrayBuffer());
             const mime = src.endsWith(".png") ? "image/png" : "image/jpeg";
-            const jobId = await createVideoJob(bytes, mime, videoPrompt(data.plan, data.colour, data.style));
-            await sb.from("bookings").update({ video_job_id: jobId, video_status: "rendering" }).eq("id", data.bookingId);
+            const jobId = await createVideoJob(bytes, mime, videoPrompt(plan, b.colour ?? undefined, b.style ?? undefined));
+            await sb.from("bookings").update({ video_job_id: jobId, video_status: "rendering" }).eq("id", b.id);
           }
         }
       } catch (e) {
-        await sb
-          .from("bookings")
-          .update({ video_status: "failed: " + (e as Error).message.slice(0, 120) })
-          .eq("id", data.bookingId);
+        await sb.from("bookings").update({ video_status: "failed: " + (e as Error).message.slice(0, 120) }).eq("id", b.id);
       }
     }
-    return { ok: true, total, deposit: depositOf(total), manageToken: existing.manage_token as string };
+    return { ok: true, status: "success" as const };
+  });
+
+/** Owner: build a deep link that reopens a lead's booking at the slot step. */
+export const createPaymentLink = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ bookingId: z.string().uuid(), origin: z.string().url() }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await admin();
+    const { data: b } = await sb.from("bookings").select("id, manage_token, vehicle_model").eq("id", data.bookingId).maybeSingle();
+    if (!b) throw new Error("Booking not found.");
+    await sb.from("bookings").update({ status: "link_sent" }).eq("id", b.id).eq("status", "lead");
+    const link = `${data.origin}/pay/${b.id}?t=${b.manage_token}`;
+    const text = `Hi! Your ${b.vehicle_model ?? "car"} is one tap away from shining ✨ Your photo and plan are saved — just pick a time and pay the 30% deposit here: ${link} — Rai's Auto Spa`;
+    return { link, text };
+  });
+
+/** Customer: reopen a saved booking from a /pay deep link. */
+export const resumeBooking = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ bookingId: z.string().uuid(), token: z.string().min(16).max(64) }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await admin();
+    const { data: b } = await sb
+      .from("bookings")
+      .select("id, vehicle_model, photo_url, clean_preview_url, plan, colour, style, deposit_paid, manage_token")
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    // Expected outcome for stale/guessed links: return a value instead of throwing.
+    if (!b || b.manage_token !== data.token) return { valid: false as const };
+    return {
+      valid: true as const,
+      id: b.id,
+      vehicle: b.vehicle_model ?? "Car",
+      photoUrl: await signed(b.photo_url),
+      previewUrl: await signed(b.clean_preview_url),
+      plan: planIdByName(b.plan),
+      colour: b.colour,
+      style: b.style,
+      paid: b.deposit_paid,
+      token: b.manage_token as string,
+    };
   });
 
 export const checkVideo = createServerFn({ method: "POST" })

@@ -2,7 +2,7 @@
 
 - [x] Phase 1: book_slot (advisory lock, IST past check, slot list, blocked, dry window, capacity, 2-day Signature), confirm/reschedule use it, manage_token, slot-full recovery
 - [ ] Phase 1 follow-up: hide manage_token from guest reads (done with Phase 3 server-side owner reads); concurrent race test (Phase 8)
-- [ ] Phase 2: payments table + simulatePayment, checkout sequence + failure toggle, /pay deep link, real revenue at risk
+- [x] Phase 2: payments table + simulatePayment, checkout sequence + failure toggle, /pay deep link, real revenue at risk
 - [ ] Phase 3: owner.functions.ts, DEMO_MODE, drop claim_owner + anon storage read, seed_demo + reset button, tooltip
 - [ ] Phase 4: subscription cron + button, cancel/waitlist offers + /offer/$id, live blocked slots, stats config + tooltips
 - [ ] Phase 5: real plate blur, upload validation
