@@ -29,7 +29,11 @@ async function sampleToPlan(page: import("@playwright/test").Page) {
 
 async function pickStudioSlot(page: import("@playwright/test").Page) {
   await page.getByRole("radio", { name: "Come to Studio" }).click();
-  const free = page.locator("#step-3-body button:not([disabled])").filter({ hasText: /^\d\d:00$/ });
+  // `:visible` matters: the mobile and desktop slot grids are both in the DOM,
+  // only one is shown, so an unfiltered match can resolve to the hidden copy.
+  const free = page
+    .locator("#step-3-body button:visible:not([disabled])")
+    .filter({ hasText: /^\d\d:00$/ });
   // Walk forward a week at a time until a week with free capacity shows up.
   for (let week = 0; week < 8; week++) {
     await page.getByRole("button", { name: "Next →" }).click();
