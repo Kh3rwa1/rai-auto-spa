@@ -161,7 +161,7 @@ test("sample car books end to end with preview on the payment screen", async ({ 
   await expect(page.getByText("Booking reference:")).toBeVisible();
   await expect(page.getByRole("button", { name: "Reschedule" })).toBeVisible();
   // Video + email states are honest, never implied delivered.
-  await expect(page.getByText(/Reveal video|AI visualization|Video/)).toBeVisible();
+  await expect(page.getByText(/Reveal video|AI visualization|Video/).first()).toBeVisible();
 
   // Email preview
   await page.getByRole("button", { name: "Preview your emails" }).click();
