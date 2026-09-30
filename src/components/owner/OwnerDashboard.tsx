@@ -4,11 +4,13 @@ import { toast } from "sonner";
 import { AlertTriangle, CalendarDays, Droplets, Fuel, Inbox, Image as ImageIcon, MapPinned, MessageCircle, Palette, Route as RouteIcon, Users, Wallet } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { createPaymentLink } from "@/lib/booking.functions";
-import { cancelBookingLegacy, ensureDemoData, listBlocked, ownerData, ownerSignedUrls, setApproval, setBlocked, updateSubscription } from "@/lib/owner.functions";
+import { cancelBooking, ensureDemoData, listOffers, runSchedule, listBlocked, ownerData, ownerSignedUrls, setApproval, setBlocked, updateSubscription } from "@/lib/owner.functions";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BeforeAfter } from "@/components/BeforeAfter";
-import { SLOTS, STUDIO, haversineKm, inr } from "@/lib/plans";
+import { SLOTS, STUDIO, inr } from "@/lib/plans";
+import { OPS, litresFor, planRoute } from "@/lib/ops-config";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { addDays, todayIST } from "@/components/BookingFlow";
 import { cn } from "@/lib/utils";
 import type { Stop } from "./RouteMap";
@@ -19,7 +21,7 @@ type Client = { id: string; name: string; phone: string; area: string | null; bu
 type Booking = {
   id: string; client_id: string | null; vehicle_model: string | null; photo_url: string | null; clean_preview_url: string | null; video_url: string | null;
   plan: string; colour: string | null; style: string | null; location_type: string; map_pin: { lat: number; lng: number } | null; area: string | null;
-  date: string | null; time: string | null; total: number; deposit_paid: boolean; status: string; approval_status: string | null; water_needed: boolean | null; created_at: string;
+  date: string | null; end_date?: string | null; full_day?: boolean; subscription_id?: string | null; time: string | null; total: number; deposit_paid: boolean; status: string; approval_status: string | null; water_needed: boolean | null; created_at: string;
   clients: Client | null;
 };
 type Sub = { id: string; client_id: string; plan: string; active: boolean; skip_dates: string[]; preferred_time: string; clients: Client | null };
@@ -37,31 +39,18 @@ function useSigned(paths: (string | null | undefined)[]) {
   });
 }
 
-function planRoute(stops: Stop[]) {
-  const left = [...stops];
-  const order: Stop[] = [];
-  let cur = { lat: STUDIO.lat, lng: STUDIO.lng };
-  let km = 0;
-  while (left.length) {
-    let bi = 0;
-    left.forEach((s, i) => haversineKm(cur, s) < haversineKm(cur, left[bi]!) && (bi = i));
-    const next = left.splice(bi, 1)[0]!;
-    km += haversineKm(cur, next);
-    cur = next;
-    order.push(next);
-  }
-  km += haversineKm(cur, STUDIO);
-  const naive = stops.reduce((a, s) => a + 2 * haversineKm(STUDIO, s), 0);
-  return { order, km, naive };
-}
-
-function Stat({ icon: I, label, value, tone }: { icon: typeof Users; label: string; value: string; tone?: string }) {
+function Stat({ icon: I, label, value, tone, formula }: { icon: typeof Users; label: string; value: string; tone?: string; formula: string }) {
   return (
-    <div className="rounded-2xl bg-card p-4 shadow-[var(--shadow-soft)]">
+    <Tooltip>
+    <TooltipTrigger asChild>
+    <div tabIndex={0} aria-label={`${label}: ${value}. ${formula}`} className="cursor-help rounded-2xl bg-card p-4 shadow-[var(--shadow-soft)]">
       <I className={cn("h-5 w-5", tone ?? "text-primary")} />
       <p className="mt-3 font-display text-2xl font-bold">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label} ⓘ</p>
     </div>
+    </TooltipTrigger>
+    <TooltipContent className="max-w-xs">{formula}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -82,7 +71,7 @@ export function OwnerDashboard() {
   const subs = (dataQ.data?.subs ?? []) as unknown as Sub[];
   const refresh = () => qc.invalidateQueries();
 
-  const todays = bookings.filter((b) => b.date === today && ["confirmed", "pending_deposit", "consultation"].includes(b.status));
+  const todays = bookings.filter((b) => b.date === today && ["confirmed", "pending_deposit", "consultation", "subscription"].includes(b.status));
   const stops: Stop[] = todays
     .filter((b) => b.location_type === "mobile" && b.map_pin)
     .map((b) => ({ lat: b.map_pin!.lat, lng: b.map_pin!.lng, label: `${b.time} ${b.vehicle_model} · ${b.clients?.name ?? ""}`, area: b.area ?? "" }));
@@ -91,9 +80,9 @@ export function OwnerDashboard() {
   const atRisk = bookings
     .filter((b) => !b.deposit_paid && !!b.date && b.date >= todayIST() && ["pending_deposit", "confirmed", "consultation"].includes(b.status))
     .reduce((a, b) => a + b.total, 0);
-  const activeToday = subs.filter((s) => s.active && !s.skip_dates.includes(today));
-  const liters = todays.reduce((a, b) => a + (b.plan.startsWith("Full") ? 60 : b.plan.startsWith("Signature") ? 20 : 40), 0) + activeToday.length * 30;
-  const fuelSaved = Math.max(0, (route.naive - route.km) * 0.1);
+  const subVisits = todays.filter((b) => b.status === "subscription").length;
+  const liters = todays.reduce((a, b) => a + litresFor(b.plan), 0);
+  const fuelSaved = Math.max(0, (route.naive - route.km) * OPS.fuelLitresPerKm);
 
   if (bookingsQ.isLoading) return <p className="p-8 text-muted-foreground">Loading…</p>;
   if (bookingsQ.isError)
@@ -106,13 +95,15 @@ export function OwnerDashboard() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+      <TooltipProvider delayDuration={150}>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Stat icon={CalendarDays} label="Today's bookings" value={String(todays.length + activeToday.length)} />
-        <Stat icon={RouteIcon} label="Total KM today" value={`${route.km.toFixed(1)} km`} />
-        <Stat icon={Fuel} label="Fuel saved by clustering" value={`${fuelSaved.toFixed(1)} L`} />
-        <Stat icon={Wallet} label="Revenue at risk (no deposit)" value={inr(atRisk)} tone="text-destructive" />
-        <Stat icon={Droplets} label="Water needed today" value={`${liters} L`} tone="text-electric" />
+        <Stat icon={CalendarDays} label="Today's bookings" value={String(todays.length)} formula={`${todays.length - subVisits} customer bookings + ${subVisits} subscription visits (paused and skipped customers excluded).`} />
+        <Stat icon={RouteIcon} label="Total KM today" value={`${route.km.toFixed(1)} km`} formula={`Nearest-stop route Studio → ${route.order.length} van stops → Studio. Straight-line distance × ${OPS.roadMultiplier} for hill roads.`} />
+        <Stat icon={Fuel} label="Fuel saved by clustering" value={`${fuelSaved.toFixed(1)} L`} formula={`(separate round trips ${route.naive.toFixed(1)} km − clustered ${route.km.toFixed(1)} km) × ${OPS.fuelLitresPerKm} L/km.`} />
+        <Stat icon={Wallet} label="Revenue at risk (no deposit)" value={inr(atRisk)} tone="text-destructive" formula="Sum of totals for bookings dated today or later whose deposit is not paid yet." />
+        <Stat icon={Droplets} label="Water needed today" value={`${liters} L`} tone="text-electric" formula={`Per job: Essential ${OPS.litresPerWash.essential} L, Full Detail ${OPS.litresPerWash.detail} L, Signature ${OPS.litresPerWash.signature} L, Daily wash ${OPS.litresPerWash.daily} L.`} />
       </div>
+      </TooltipProvider>
 
       <Tabs defaultValue="route">
         <div className="-mx-4 overflow-x-auto px-4">
@@ -215,7 +206,7 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
               <div className="py-2 text-muted-foreground">{t}</div>
               {days.map((d) => {
                 const k = `${d} ${t}`;
-                const bs = bookings.filter((b) => b.date === d && b.time === t && b.status !== "cancelled" && b.status !== "lead");
+                const bs = bookings.filter((b) => !!b.date && d >= b.date && d <= (b.end_date ?? b.date) && (b.time === t || b.full_day) && ["confirmed", "pending_deposit", "consultation"].includes(b.status));
                 const studio = bs.filter((b) => b.location_type === "studio").length;
                 const van = bs.filter((b) => b.location_type === "mobile").length;
                 const isB = effective(k);
@@ -232,8 +223,8 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
                   >
                     {isB ? "💧 blocked" : (
                       <>
-                        {studio > 0 && <div>Bay {studio}/2</div>}
-                        {van > 0 && <div className="text-electric">Van ✓</div>}
+                        <div className={studio >= 2 ? "font-semibold text-foreground" : "text-muted-foreground"}>Bays {studio}/2</div>
+                        <div className={van ? "text-electric" : "text-muted-foreground"}>Van {van}/1</div>
                       </>
                     )}
                   </div>
@@ -250,8 +241,23 @@ function WeekCalendar({ bookings }: { bookings: Booking[] }) {
 function Subscriptions({ subs, bookings, onChange }: { subs: Sub[]; bookings: Booking[]; onChange: () => void }) {
   const today = todayIST();
   const active = subs.filter((s) => s.active).length;
-  const monthly = active * 30 + bookings.filter((b) => b.status !== "lead").length;
+  const month = today.slice(0, 7);
+  const monthly = bookings.filter((b) => b.date?.startsWith(month) && !["lead", "link_sent", "cancelled"].includes(b.status)).length;
   const updSub = useServerFn(updateSubscription);
+  const run = useServerFn(runSchedule);
+  const [running, setRunning] = useState(false);
+  async function runToday() {
+    setRunning(true);
+    try {
+      const r = await run();
+      toast.success(`Today's schedule: ${r.created} visits on the route`);
+      onChange();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setRunning(false);
+    }
+  }
   async function upd(id: string, patch: { preferred_time?: string; active?: boolean; skip_dates?: string[] }) {
     try {
       await updSub({ data: { id, patch } });
@@ -264,7 +270,10 @@ function Subscriptions({ subs, bookings, onChange }: { subs: Sub[]; bookings: Bo
     <div className="rounded-2xl bg-card p-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold">{subs.length} daily wash customers · {active} active</p>
-        <span className="rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">{monthly.toLocaleString("en-IN")} appointments/mo handled automatically</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground" title="Real count of bookings and generated subscription visits dated this month">{monthly.toLocaleString("en-IN")} appointments this month</span>
+          <Button size="sm" onClick={runToday} disabled={running}>{running ? "Running…" : "Run today's schedule"}</Button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
@@ -299,19 +308,28 @@ function Subscriptions({ subs, bookings, onChange }: { subs: Sub[]; bookings: Bo
   );
 }
 
+type Offer = { id: string; date: string; time: string; area: string | null; status: string; expires_at: string; cancelled_booking_id: string | null; clients: { name: string; phone: string } | null };
+
 function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () => void }) {
-  const [offer, setOffer] = useState<{ booking: Booking; people: { name: string; phone: string }[] } | null>(null);
   const upcoming = bookings.filter((b) => b.date && b.date >= todayIST() && ["confirmed", "pending_deposit"].includes(b.status));
-  const cancelFn = useServerFn(cancelBookingLegacy);
+  const cancelFn = useServerFn(cancelBooking);
+  const offersFn = useServerFn(listOffers);
+  const offersQ = useQuery({ queryKey: ["offers"], queryFn: () => offersFn() as Promise<Offer[]>, refetchInterval: 10000 });
+  const [busy, setBusy] = useState<string | null>(null);
   async function cancel(b: Booking) {
+    setBusy(b.id);
     try {
-      const { people } = await cancelFn({ data: { id: b.id } });
-      setOffer({ booking: b, people });
+      const { offered } = await cancelFn({ data: { id: b.id } });
+      toast.success(offered ? `Cancelled — offered to ${offered} waitlisted customer(s)` : "Cancelled — nobody waitlisted in that area");
       onChange();
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
     }
   }
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const offers = offersQ.data ?? [];
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="rounded-2xl bg-card p-4">
@@ -320,33 +338,44 @@ function Waitlist({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
           {upcoming.map((b) => (
             <li key={b.id} className="flex items-center justify-between gap-2 py-2">
               <div><p className="font-medium">{b.vehicle_model} · {b.plan}</p><p className="text-xs text-muted-foreground">{b.date} {b.time} · {b.area} · {b.clients?.name}</p></div>
-              <Button size="sm" variant="outline" onClick={() => cancel(b)}>Cancel</Button>
+              <Button size="sm" variant="outline" disabled={busy === b.id} onClick={() => cancel(b)}>{busy === b.id ? "Cancelling…" : "Cancel"}</Button>
             </li>
           ))}
           {upcoming.length === 0 && <li className="py-4 text-muted-foreground">No upcoming bookings.</li>}
         </ul>
       </div>
       <div className="rounded-2xl bg-card p-4">
-        <p className="mb-3 flex items-center gap-2 font-semibold"><Users className="h-4 w-4" /> Auto-backfill</p>
-        {offer ? (
-          <>
-            <p className="rounded-xl bg-accent p-3 text-sm text-accent-foreground">Auto-offering to {offer.people.length} waitlisted in {offer.booking.area} for {offer.booking.date} {offer.booking.time}</p>
-            <ul className="mt-3 space-y-2">
-              {offer.people.map((p, i) => {
-                const text = `Hi ${p.name.split(" ")[0]}! A ${offer.booking.time} slot on ${offer.booking.date} just opened near ${offer.booking.area}. Want it? Reply YES and it's yours — Rai's Auto Spa 🚿`;
-                return (
-                  <li key={i} className="rounded-xl border border-border p-3 text-sm">
-                    <p className="font-medium">{p.name}</p>
-                    <p className="mt-1 text-muted-foreground">{text}</p>
-                    <Button asChild size="sm" className="mt-2"><a href={wa(p.phone, text)} target="_blank" rel="noreferrer"><MessageCircle /> Send on WhatsApp</a></Button>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">When a booking is cancelled, the 3 nearest waitlisted customers get an instant offer.</p>
+        <p className="mb-3 flex items-center gap-2 font-semibold"><Users className="h-4 w-4" /> Auto-backfill offers</p>
+        {offersQ.isLoading && <p className="text-sm text-muted-foreground">Loading offers…</p>}
+        {offersQ.isError && <p className="text-sm text-destructive">Couldn't load offers.</p>}
+        {!offersQ.isLoading && offers.length === 0 && (
+          <p className="text-sm text-muted-foreground">Cancel a booking and up to {OPS.offerFanout} waitlisted customers in the same area get a {OPS.offerMinutes}-minute claim link. First to claim wins.</p>
         )}
+        <ul className="space-y-2">
+          {offers.map((o) => {
+            const expired = o.status === "offered" && new Date(o.expires_at).getTime() < Date.now();
+            const st = expired ? "expired" : o.status;
+            const link = `${origin}/offer/${o.id}`;
+            const text = `Hi ${(o.clients?.name ?? "").split(" ")[0]}! A ${o.time} slot on ${o.date} just opened near ${o.area}. First to claim gets it (15 min): ${link} — Rai's Auto Spa`;
+            return (
+              <li key={o.id} className="rounded-xl border border-border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{o.clients?.name} · {o.date} {o.time}</p>
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs", st === "claimed" ? "bg-primary text-primary-foreground" : st === "offered" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground")}>{st === "taken" ? "slot taken" : st}</span>
+                </div>
+                {st === "offered" && (
+                  <>
+                    <p className="mt-1 text-muted-foreground">{text}</p>
+                    <div className="mt-2 flex gap-2">
+                      <Button asChild size="sm"><a href={wa(o.clients?.phone, text)} target="_blank" rel="noreferrer"><MessageCircle /> WhatsApp</a></Button>
+                      <Button asChild size="sm" variant="outline"><a href={link} target="_blank" rel="noreferrer">Open claim link</a></Button>
+                    </div>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
