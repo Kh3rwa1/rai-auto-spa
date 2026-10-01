@@ -56,8 +56,11 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
         toast.warning(
           "Hmm, that doesn't look like a car — previews work best with a clear car photo.",
         );
+      const mt = (r as { manageToken?: string }).manageToken;
       onUploaded(
-        { id: r.bookingId, vehicle: r.vehicle, token: (r as { manageToken?: string }).manageToken },
+        mt
+          ? { id: r.bookingId, vehicle: r.vehicle, token: mt }
+          : { id: r.bookingId, vehicle: r.vehicle },
         r.photoUrl ?? null,
       );
     } catch (e) {

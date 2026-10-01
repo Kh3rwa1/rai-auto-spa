@@ -57,6 +57,7 @@ export type Database = {
           date: string | null
           deposit_paid: boolean
           detected_country: string | null
+          duration_slots: number
           email_status: string | null
           end_date: string | null
           full_day: boolean
@@ -99,6 +100,7 @@ export type Database = {
           date?: string | null
           deposit_paid?: boolean
           detected_country?: string | null
+          duration_slots?: number
           email_status?: string | null
           end_date?: string | null
           full_day?: boolean
@@ -141,6 +143,7 @@ export type Database = {
           date?: string | null
           deposit_paid?: boolean
           detected_country?: string | null
+          duration_slots?: number
           email_status?: string | null
           end_date?: string | null
           full_day?: boolean
@@ -446,6 +449,7 @@ export type Database = {
           p_date: string
           p_days?: number
           p_mobile: boolean
+          p_slots?: number
           p_status?: string
           p_time: string
           p_water: boolean
@@ -453,6 +457,10 @@ export type Database = {
         Returns: string
       }
       check_cron_token: { Args: { p_token: string }; Returns: boolean }
+      confirm_demo_payment: {
+        Args: { p_amount: number; p_booking_id: string; p_method: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

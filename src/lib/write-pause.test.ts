@@ -25,28 +25,29 @@ describe("assertManageToken (ownership rule)", () => {
   });
 });
 
-describe("write pause (fail-closed default)", () => {
+describe("write pause (fail-open default)", () => {
   afterEach(() => {
-    delete process.env["BOOKING_WRITES_OPEN"];
+    delete process.env["BOOKING_WRITES_PAUSED"];
   });
 
-  it("writes are PAUSED by default (env unset)", () => {
-    expect(pause.writesPaused()).toBe(true);
-  });
-
-  it("opens only when BOOKING_WRITES_OPEN=1", () => {
-    process.env["BOOKING_WRITES_OPEN"] = "1";
+  it("writes are OPEN by default (env unset)", () => {
     expect(pause.writesPaused()).toBe(false);
   });
 
-  it("any other value stays paused", () => {
-    for (const v of ["0", "true", "open", ""]) {
-      process.env["BOOKING_WRITES_OPEN"] = v;
-      expect(pause.writesPaused()).toBe(true);
+  it("pauses only when BOOKING_WRITES_PAUSED=1", () => {
+    process.env["BOOKING_WRITES_PAUSED"] = "1";
+    expect(pause.writesPaused()).toBe(true);
+  });
+
+  it("any other value stays open", () => {
+    for (const v of ["0", "true", "paused", ""]) {
+      process.env["BOOKING_WRITES_PAUSED"] = v;
+      expect(pause.writesPaused()).toBe(false);
     }
   });
 
-  it("assertWritesOpen rejects with the MAINTENANCE_PAUSED-tagged error", () => {
+  it("assertWritesOpen rejects with the MAINTENANCE_PAUSED-tagged error when paused", () => {
+    process.env["BOOKING_WRITES_PAUSED"] = "1";
     let thrown: unknown;
     try {
       pause.assertWritesOpen();
@@ -58,19 +59,21 @@ describe("write pause (fail-closed default)", () => {
     expect((thrown as Error).message).toContain("paused for a quick upgrade");
   });
 
-  it("assertWritesOpen does not throw while the pause is open", () => {
-    process.env["BOOKING_WRITES_OPEN"] = "1";
+  it("assertWritesOpen does not throw while writes are open", () => {
     expect(() => pause.assertWritesOpen()).not.toThrow();
   });
 });
 
 describe("pause recognition on the client", () => {
   it("recognizes the thrown 503 Response", () => {
+    process.env["BOOKING_WRITES_PAUSED"] = "1";
     let thrown: unknown;
     try {
       pause.assertWritesOpen();
     } catch (e) {
       thrown = e;
+    } finally {
+      delete process.env["BOOKING_WRITES_PAUSED"];
     }
     expect(ui.isPausedError(thrown)).toBe(true);
   });
