@@ -36,7 +36,8 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:description",
-        content: "One owner. Two studio bays. One van. Car-care booking without the back-and-forth.",
+        content:
+          "One owner. Two studio bays. One van. Car-care booking without the back-and-forth.",
       },
       {
         property: "og:type",
@@ -859,7 +860,7 @@ function Navigation() {
 }
 
 function Mascot() {
-  const foam = [
+  const foam: Array<[number, number, number]> = [
     [60, 68, 17],
     [84, 52, 19],
     [111, 47, 20],
@@ -892,9 +893,27 @@ function Mascot() {
 
       <circle cx="22" cy="98" r="9" fill="#fff" stroke="#111" strokeWidth="4" />
 
-      <rect x="170" y="72" width="22" height="18" rx="5" fill="#9ee6c4" stroke="#111" strokeWidth="4" />
+      <rect
+        x="170"
+        y="72"
+        width="22"
+        height="18"
+        rx="5"
+        fill="#9ee6c4"
+        stroke="#111"
+        strokeWidth="4"
+      />
 
-      <rect x="45" y="62" width="110" height="114" rx="26" fill="#ffd84d" stroke="#111" strokeWidth="5" />
+      <rect
+        x="45"
+        y="62"
+        width="110"
+        height="114"
+        rx="26"
+        fill="#ffd84d"
+        stroke="#111"
+        strokeWidth="5"
+      />
 
       <circle cx="62" cy="150" r="5" fill="#e9b824" />
       <circle cx="140" cy="140" r="6" fill="#e9b824" />
@@ -916,7 +935,13 @@ function Mascot() {
       <circle cx="63" cy="126" r="7" fill="#ff5fa2" />
       <circle cx="137" cy="126" r="7" fill="#ff5fa2" />
 
-      <path d="M82 128q18 26 36 0z" fill="#111" stroke="#111" strokeWidth="4" strokeLinejoin="round" />
+      <path
+        d="M82 128q18 26 36 0z"
+        fill="#111"
+        stroke="#111"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
       <path d="M92 138q8 6 16 0q-2 7-8 7t-8-7z" fill="#ff5fa2" />
     </svg>
   );
@@ -947,8 +972,8 @@ function Hero() {
           </p>
 
           <p className="ras-hero-description">
-            One owner, two studio bays, one van. See the times that actually work, book in a few taps, and lock it in
-            with a 30% deposit. No calling Rai, no waiting for a reply.
+            One owner, two studio bays, one van. See the times that actually work, book in a few
+            taps, and lock it in with a 30% deposit. No calling Rai, no waiting for a reply.
           </p>
 
           <div className="ras-hero-actions">
@@ -1054,7 +1079,9 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
   function switchFlow(next: boolean) {
     if (next === photoFlow) return;
 
-    const confirmed = window.confirm("Switch booking modes? Any unfinished selections in this form will be cleared.");
+    const confirmed = window.confirm(
+      "Switch booking modes? Any unfinished selections in this form will be cleared.",
+    );
 
     if (!confirmed) return;
 
@@ -1062,7 +1089,12 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
   }
 
   return (
-    <section id="book" ref={sectionRef} className="ras-wrap ras-section ras-book-section" aria-labelledby="book-title">
+    <section
+      id="book"
+      ref={sectionRef}
+      className="ras-wrap ras-section ras-book-section"
+      aria-labelledby="book-title"
+    >
       <div className="ras-heading-row">
         <div>
           <p className="ras-eyebrow mb-3">Less messaging. More moving.</p>
@@ -1112,11 +1144,14 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
         <p className="font-bold">Contest judges, start here.</p>
 
         <p className="mt-2">
-          Pick a plan, then tap a sample car (or type a model). Choose a time and pay in the simulated checkout. No real
-          money moves. Then open the owner demo to see the route, calendar, waitlist and leads from Rai&rsquo;s side.
+          Pick a plan, then tap a sample car (or type a model). Choose a time and pay in the
+          simulated checkout. No real money moves. Then open the owner demo to see the route,
+          calendar, waitlist and leads from Rai&rsquo;s side.
         </p>
 
-        <p className="mt-2">AI previews are illustrative. You can still book if a preview is unavailable.</p>
+        <p className="mt-2">
+          AI previews are illustrative. You can still book if a preview is unavailable.
+        </p>
       </div>
     </section>
   );
@@ -1148,7 +1183,11 @@ function RaiRules() {
   ];
 
   return (
-    <section id="rules" className="ras-wrap ras-section ras-rules-section" aria-labelledby="rules-title">
+    <section
+      id="rules"
+      className="ras-wrap ras-section ras-rules-section"
+      aria-labelledby="rules-title"
+    >
       <p className="ras-eyebrow mb-3">Rai&rsquo;s rules, built in</p>
 
       <h2 id="rules-title" className="ras-display ras-section-heading">
@@ -1158,8 +1197,8 @@ function RaiRules() {
       </h2>
 
       <p className="ras-muted mt-3 max-w-xl text-sm leading-relaxed">
-        Rai used to explain all of this on the phone, one customer at a time. Now the booking form handles it before
-        anyone has to ask.
+        Rai used to explain all of this on the phone, one customer at a time. Now the booking form
+        handles it before anyone has to ask.
       </p>
 
       <div className="ras-rules-grid">
@@ -1198,7 +1237,8 @@ function RaiRules() {
           </div>
 
           <figcaption className="ras-muted pt-4 text-xs leading-relaxed">
-            Illustration of the rule the live grid applies. Struck-out times are unavailable for the van without water.
+            Illustration of the rule the live grid applies. Struck-out times are unavailable for the
+            van without water.
           </figcaption>
         </figure>
 
@@ -1233,13 +1273,15 @@ function Transformation() {
     },
     {
       title: "Choose where and when",
-      description: "Studio or doorstep. Choose from available times, with water constraints handled.",
+      description:
+        "Studio or doorstep. Choose from available times, with water constraints handled.",
       icon: CalendarCheck,
       color: "var(--yellow)",
     },
     {
       title: "Confirm your booking",
-      description: "Add your details and complete the 30% deposit checkout. Photo previews are optional.",
+      description:
+        "Add your details and complete the 30% deposit checkout. Photo previews are optional.",
       icon: Check,
       color: "var(--lilac)",
     },
@@ -1249,7 +1291,12 @@ function Transformation() {
     <section id="glow" className="ras-wrap ras-section ras-glow-grid" aria-labelledby="glow-title">
       <figure className="ras-panel ras-compare-frame">
         <div className="ras-compare">
-          <img src={heroImg} alt="Illustration of a car-care transformation" loading="lazy" decoding="async" />
+          <img
+            src={heroImg}
+            alt="Illustration of a car-care transformation"
+            loading="lazy"
+            decoding="async"
+          />
 
           <div
             className="absolute inset-0"
@@ -1302,7 +1349,8 @@ function Transformation() {
         </div>
 
         <figcaption className="ras-muted px-1 pb-1 pt-3 text-xs leading-relaxed">
-          Illustration, not a customer result. Add a photo during booking to generate your own car&rsquo;s AI preview.
+          Illustration, not a customer result. Add a photo during booking to generate your own
+          car&rsquo;s AI preview.
         </figcaption>
       </figure>
 
@@ -1355,7 +1403,11 @@ function OwnerStory() {
   ];
 
   return (
-    <section id="owner-story" className="ras-section ras-owner-section" aria-labelledby="owner-title">
+    <section
+      id="owner-story"
+      className="ras-section ras-owner-section"
+      aria-labelledby="owner-title"
+    >
       <div className="ras-wrap">
         <div className="ras-owner-heading">
           <div>
@@ -1368,8 +1420,8 @@ function OwnerStory() {
             </h2>
 
             <p className="mt-3 max-w-xl text-sm leading-relaxed">
-              Rai is one owner juggling two bays and a mobile van. The booking flow does the confirming, the backfilling
-              and the chasing. The dashboard keeps the day in view.
+              Rai is one owner juggling two bays and a mobile van. The booking flow does the
+              confirming, the backfilling and the chasing. The dashboard keeps the day in view.
             </p>
           </div>
 
@@ -1429,7 +1481,9 @@ function Footer() {
         <div className="ras-footer-row">
           <div>
             <Wordmark />
-            <p className="mt-2 text-xs leading-relaxed text-[#e5dfd4]">MG Marg, Gangtok · Studio + doorstep van</p>
+            <p className="mt-2 text-xs leading-relaxed text-[#e5dfd4]">
+              MG Marg, Gangtok · Studio + doorstep van
+            </p>
           </div>
 
           <nav className="ras-footer-links" aria-label="Footer navigation">
@@ -1451,8 +1505,8 @@ function Footer() {
         </div>
 
         <p className="mt-6 border-t border-[#777] pt-4 text-xs leading-relaxed text-[#d5cec2]">
-          Contest demo for a hypothetical small business. Payments are simulated. AI previews illustrate a possible
-          finish and do not guarantee service results.
+          Contest demo for a hypothetical small business. Payments are simulated. AI previews
+          illustrate a possible finish and do not guarantee service results.
         </p>
       </div>
     </footer>
