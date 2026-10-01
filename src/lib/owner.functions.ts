@@ -399,8 +399,25 @@ export const resetDemo = createServerFn({ method: "POST" }).handler(async () => 
   if (wait > 0)
     throw new Error(`Demo data was just reset. Please wait ${wait}s before resetting again.`);
   const { seedDemo } = await import("./seed.server");
-  return seedDemo(sb);
+  return seedOnce(() => seedDemo(sb));
 });
+
+/**
+ * Single-flight guard: concurrent dashboard loads each call ensureDemoData, and
+ * overlapping seed runs used to double every seeded row. Overlapping calls now
+ * share one in-flight run; the result promise is reused until it settles.
+ */
+let seedInFlight: Promise<unknown> | null = null;
+function seedOnce<T>(run: () => Promise<T>): Promise<T> {
+  if (!seedInFlight) {
+    seedInFlight = run().finally(() => {
+      seedInFlight = null;
+    });
+  }
+  // Overlapping callers share whatever run is in flight; its concrete shape is
+  // the same seed result, so the cast only bridges the shared-storage type.
+  return seedInFlight as Promise<T>;
+}
 
 /** Auto-seed when the dashboard would otherwise be empty (no seeded bookings today or later). */
 export const ensureDemoData = createServerFn({ method: "POST" }).handler(async () => {
@@ -414,6 +431,6 @@ export const ensureDemoData = createServerFn({ method: "POST" }).handler(async (
   if ((count ?? 0) > 0) return { seeded: false };
   // seedDemo only ever deletes rows it created, so a visitor's in-progress booking survives.
   const { seedDemo } = await import("./seed.server");
-  await seedDemo(sb);
+  await seedOnce(() => seedDemo(sb));
   return { seeded: true };
 });

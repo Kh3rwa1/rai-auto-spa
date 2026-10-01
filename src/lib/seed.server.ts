@@ -49,7 +49,9 @@ const BUILDINGS = [
   "Palzor Court",
   "Denzong Homes",
 ];
-const TIMES = ["06:30", "07:00", "07:30", "08:00", "08:30"];
+const TIMES = ["06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00"];
+/** Daily-wash subscription count: ~13 active stops/day spread over 06:30–10:00, ≤2 per half hour. */
+const SUB_COUNT = 14;
 const areaNames = ["Tadong", "MG Marg", "Deorali", "Development Area"] as const;
 
 const istToday = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
@@ -82,6 +84,48 @@ async function uploadSample(sb: DB, origin: string, name: string, existing: Set<
  * Idempotent: removes ONLY the rows a previous seed created (is_seed = true) and recreates a
  * fresh, today-relative dataset (IST). A real visitor's in-progress booking is never touched.
  */
+/**
+ * Pure plan for the seeded daily-wash subscriptions: one per client, times
+ * spread across 06:30–10:00 with at most 2 per half-hour slot, so a normal day
+ * is a believable 13 stops for one van (one subscription is inactive).
+ */
+export function buildSeedSubscriptions(subsClients: Array<{ id: string }>): Array<{
+  client_id: string;
+  plan: string;
+  active: boolean;
+  preferred_time: string;
+  skip_dates: string[];
+  is_seed: true;
+}> {
+  return subsClients.map((c, i) => ({
+    client_id: c.id,
+    plan: "Daily Wash",
+    active: i % 13 !== 12,
+    preferred_time: TIMES[i % TIMES.length]!,
+    skip_dates: [],
+    is_seed: true as const,
+  }));
+}
+
+/**
+ * Historical double-seeds (before ensureDemoData was single-flighted) could leave
+ * two seeded subscriptions on one client. Keep the oldest row per client.
+ */
+async function dedupeSeedSubscriptions(sb: DB) {
+  const { data } = await sb
+    .from("subscriptions")
+    .select("id, client_id, created_at")
+    .eq("is_seed", true)
+    .order("created_at", { ascending: true });
+  const seen = new Set<string>();
+  const stale: string[] = [];
+  for (const s of data ?? []) {
+    if (seen.has(s.client_id)) stale.push(s.id);
+    else seen.add(s.client_id);
+  }
+  if (stale.length) await sb.from("subscriptions").delete().in("id", stale);
+}
+
 export async function seedDemo(sb: DB) {
   const started = Date.now();
   const { getRequest } = await import("@tanstack/react-start/server");
@@ -124,11 +168,13 @@ export async function seedDemo(sb: DB) {
     string | null,
   ];
 
-  // 40 daily-wash clients + 9 booking clients
+  // 14 daily-wash clients + 35 booking clients
   const clients = Array.from({ length: 49 }, (_, i) => {
     const area = areaNames[i % 4]!;
     return {
-      name: `${FIRST[i % FIRST.length]} ${LAST[(i * 3) % LAST.length]}`,
+      // FIRST × LAST pairs stay unique for all 49 rows: the surname changes every
+      // 20 clients, so i and i+20 can no longer collapse to the same name.
+      name: `${FIRST[i % FIRST.length]} ${LAST[Math.floor(i / FIRST.length) % LAST.length]}`,
       phone: `+91 9${String(733000000 + i * 1379).padStart(9, "0")}`,
       email: `demo${i + 1}@example.com`,
       building: BUILDINGS[i % BUILDINGS.length]!,
@@ -140,19 +186,10 @@ export async function seedDemo(sb: DB) {
   });
   const { data: cRows, error: ce } = await sb.from("clients").insert(clients).select("id, area");
   if (ce || !cRows) throw new Error("Seeding clients failed.");
-  const subsClients = cRows.slice(0, 40);
-  const bookClients = cRows.slice(40);
+  const subsClients = cRows.slice(0, SUB_COUNT);
+  const bookClients = cRows.slice(SUB_COUNT);
 
-  const subsP = sb.from("subscriptions").insert(
-    subsClients.map((c, i) => ({
-      client_id: c.id,
-      plan: "Daily Wash",
-      active: i % 13 !== 12,
-      preferred_time: TIMES[i % TIMES.length]!,
-      skip_dates: [],
-      is_seed: true,
-    })),
-  );
+  const subsP = sb.from("subscriptions").insert(buildSeedSubscriptions(subsClients));
 
   type Row = Database["public"]["Tables"]["bookings"]["Insert"];
   const mk = (i: number, r: Partial<Row> & { plan: Row["plan"] }): Row => {
@@ -297,5 +334,6 @@ export async function seedDemo(sb: DB) {
 
   const { materialiseDay } = await import("./schedule.server");
   await materialiseDay(sb, today);
+  await dedupeSeedSubscriptions(sb);
   return { ok: true, ms: Date.now() - started };
 }

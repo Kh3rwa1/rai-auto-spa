@@ -1,13 +1,21 @@
 import { Suspense } from "react";
-import { CircleCheck, MapPinned } from "lucide-react";
+import { CircleCheck, MapPinned, Droplets } from "lucide-react";
 import { STUDIO } from "@/lib/plans";
-import { planRoute } from "@/lib/ops-config";
+import { OPS, planRouteByTime } from "@/lib/ops-config";
 import { RouteMap } from "./shared";
 import type { Stop } from "./RouteMap";
 
-type Route = ReturnType<typeof planRoute<Stop>>;
+type Route = ReturnType<typeof planRouteByTime<Stop>>;
 
-export function RoutePanel({ route, liters }: { route: Route; liters: number }) {
+export function RoutePanel({
+  route,
+  liters,
+  tankRefills,
+}: {
+  route: Route;
+  liters: number;
+  tankRefills: number;
+}) {
   return (
     <>
       <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-muted" />}>
@@ -77,11 +85,19 @@ export function RoutePanel({ route, liters }: { route: Route; liters: number }) 
             <p className="font-display text-lg font-bold text-primary">
               {(route.naive - route.km).toFixed(1)} km
             </p>
-            <p className="text-[11px] text-muted-foreground">saved by clustering</p>
+            <p className="text-[11px] text-muted-foreground">saved vs separate trips</p>
           </div>
           <div className="rounded-xl bg-muted p-2.5">
-            <p className="font-display text-lg font-bold text-electric">{liters} L</p>
-            <p className="text-[11px] text-muted-foreground">water for today&apos;s jobs</p>
+            <p className="font-display flex items-center justify-center gap-1 text-lg font-bold text-electric">
+              <Droplets className="h-4 w-4" aria-hidden />
+              {liters} L
+            </p>
+            <p className="text-[11px] text-muted-foreground">water to load</p>
+            {tankRefills > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                tank refills: {tankRefills} ({OPS.vanTankLitres} L placeholder)
+              </p>
+            )}
           </div>
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">

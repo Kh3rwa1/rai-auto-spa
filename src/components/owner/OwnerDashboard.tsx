@@ -6,7 +6,7 @@ import { ensureDemoData, ownerData } from "@/lib/owner.functions";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inr } from "@/lib/plans";
-import { OPS, litresFor, planRoute } from "@/lib/ops-config";
+import { OPS, litresToLoad, needsVanWater, planRouteByTime } from "@/lib/ops-config";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { todayIST } from "@/lib/booking-rules";
 import type { Stop } from "./RouteMap";
@@ -52,8 +52,9 @@ export function OwnerDashboard() {
       lng: b.map_pin!.lng,
       label: `${b.time} ${b.vehicle_model} · ${b.clients?.name ?? ""}`,
       area: b.area ?? "",
+      time: b.time,
     }));
-  const route = useMemo(() => planRoute(stops), [JSON.stringify(stops)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const route = useMemo(() => planRouteByTime(stops), [JSON.stringify(stops)]); // eslint-disable-line react-hooks/exhaustive-deps
   // Revenue at risk = full value of real bookings dated today or later whose deposit hasn't been paid.
   const atRisk = bookings
     .filter(
@@ -65,7 +66,12 @@ export function OwnerDashboard() {
     )
     .reduce((a, b) => a + b.total, 0);
   const subVisits = todays.filter((b) => b.status === "subscription").length;
-  const liters = todays.reduce((a, b) => a + litresFor(b.plan), 0);
+  // Water to load counts only today's van jobs that actually need the tank.
+  const vanJobs = todays.filter((b) => b.location_type === "mobile");
+  const waterJobs = vanJobs.filter(needsVanWater);
+  const liters = litresToLoad(todays);
+  const withTap = vanJobs.length - waterJobs.length;
+  const tankRefills = Math.max(0, Math.ceil(liters / OPS.vanTankLitres) - 1);
   const fuelSaved = Math.max(0, (route.naive - route.km) * OPS.fuelLitresPerKm);
 
   if (bookingsQ.isLoading)
@@ -174,12 +180,12 @@ export function OwnerDashboard() {
           />
           <Stat
             icon={Fuel}
-            label="Fuel saved by clustering"
+            label="Fuel saved vs separate trips"
             value={`${fuelSaved.toFixed(1)} L`}
             sub={`vs ${route.naive.toFixed(1)} km separate trips`}
             tile="bg-amber-400/15"
             tone="text-amber-600 dark:text-amber-400"
-            formula={`(separate round trips ${route.naive.toFixed(1)} km − clustered ${route.km.toFixed(1)} km) × ${OPS.fuelLitresPerKm} L/km.`}
+            formula={`(separate round trips ${route.naive.toFixed(1)} km − time-ordered clustered route ${route.km.toFixed(1)} km) × ${OPS.fuelLitresPerKm} L/km.`}
           />
           <Stat
             icon={Wallet}
@@ -192,12 +198,16 @@ export function OwnerDashboard() {
           />
           <Stat
             icon={Droplets}
-            label="Water needed today"
+            label="Water to load on the van"
             value={`${liters} L`}
-            sub={`${todays.length} job(s) on the schedule`}
+            sub={`${waterJobs.length} van jobs need water · ${withTap} have a tap`}
             tone="text-electric"
             tile="bg-electric/10"
-            formula={`Per job: Essential ${OPS.litresPerWash.essential} L, Full Detail ${OPS.litresPerWash.detail} L, Signature ${OPS.litresPerWash.signature} L, Daily wash ${OPS.litresPerWash.daily} L.`}
+            formula={`Van jobs where the customer has no tap: Essential ${OPS.litresPerWash.essential} L, Full Detail ${OPS.litresPerWash.detail} L, Daily wash ${OPS.litresPerWash.daily} L each. Studio jobs and customers with water on site are excluded.${
+              tankRefills > 0
+                ? ` Placeholder tank assumption: ${tankRefills} refill(s) over ${OPS.vanTankLitres} L.`
+                : ""
+            }`}
           />
         </div>
       </TooltipProvider>
@@ -244,7 +254,7 @@ export function OwnerDashboard() {
         </div>
 
         <TabsContent value="route" className="mt-4 grid gap-4 lg:grid-cols-[2fr_1fr]">
-          <RoutePanel route={route} liters={liters} />
+          <RoutePanel route={route} liters={liters} tankRefills={tankRefills} />
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">

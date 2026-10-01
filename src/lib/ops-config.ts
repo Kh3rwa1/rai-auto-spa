@@ -17,6 +17,11 @@ export const OPS = {
   offerMinutes: 15,
   /** Max waitlisted customers offered a freed slot. */
   offerFanout: 3,
+  /**
+   * PLACEHOLDER van tank size for the demo only — an invented, clearly-commented
+   * assumption, not a spec for any real vehicle. Drives the "tank refills" hint.
+   */
+  vanTankLitres: 200,
 } as const;
 
 export function litresFor(plan: string) {
@@ -27,7 +32,14 @@ export function litresFor(plan: string) {
   return OPS.litresPerWash.essential;
 }
 
-export type Stop = { lat: number; lng: number; label: string; area: string };
+export type Stop = {
+  lat: number;
+  lng: number;
+  label: string;
+  area: string;
+  /** Visit time as HH:MM (null/undefined sorts last). */
+  time?: string | null;
+};
 
 /** Nearest-neighbour van route from the studio and back; `naive` = one separate round trip per stop. */
 export function planRoute<T extends { lat: number; lng: number }>(stops: T[]) {
@@ -46,6 +58,60 @@ export function planRoute<T extends { lat: number; lng: number }>(stops: T[]) {
   km += haversineKm(cur, STUDIO);
   const naive = stops.reduce((a, s) => a + 2 * haversineKm(STUDIO, s), 0);
   return { order, km, naive };
+}
+
+/**
+ * Same numbers as planRoute, but the day is walked in TIME order: stops are
+ * grouped by ascending HH:MM and, within one time, ordered by nearest-neighbour
+ * from the previous stop (the first group starts at the studio). `km` still
+ * includes the return to the studio; `naive` stays one round trip per stop.
+ */
+export function planRouteByTime<T extends { lat: number; lng: number; time?: string | null }>(
+  stops: T[],
+) {
+  const left = [...stops].sort((a, b) => (a.time ?? "99:99").localeCompare(b.time ?? "99:99"));
+  const order: T[] = [];
+  let cur = { lat: STUDIO.lat, lng: STUDIO.lng };
+  let km = 0;
+  while (left.length) {
+    // Only the earliest remaining time is eligible; ties break by proximity.
+    const t0 = left[0]!.time ?? "99:99";
+    let bi = 0;
+    left.forEach((s, i) => {
+      if ((s.time ?? "99:99") !== t0) return;
+      if (haversineKm(cur, s) < haversineKm(cur, left[bi]!)) bi = i;
+    });
+    const next = left.splice(bi, 1)[0]!;
+    km += haversineKm(cur, next);
+    cur = next;
+    order.push(next);
+  }
+  km += haversineKm(cur, STUDIO);
+  const naive = stops.reduce((a, s) => a + 2 * haversineKm(STUDIO, s), 0);
+  return { order, km, naive };
+}
+
+/**
+ * True when today's van job actually needs water on the van: mobile AND either
+ * the booking says so (water_needed) or — when the booking doesn't say
+ * (subscription visits) — the customer is known to have no tap.
+ */
+export function needsVanWater(b: {
+  location_type?: string | null;
+  water_needed?: boolean | null;
+  clients?: { water_access?: boolean | null } | null;
+}) {
+  if (b.location_type !== "mobile") return false;
+  if (b.water_needed === true) return true;
+  if (b.water_needed == null) return b.clients?.water_access === false;
+  return false;
+}
+
+/** Water to load on the van: litres only for today's mobile jobs without a tap. */
+export function litresToLoad(
+  jobs: Array<{ plan?: string | null } & Parameters<typeof needsVanWater>[0]>,
+) {
+  return jobs.reduce((sum, b) => (needsVanWater(b) ? sum + litresFor(b.plan ?? "") : sum), 0);
 }
 
 /** Deterministic pin near an area's centre for customers without a saved map pin. */
