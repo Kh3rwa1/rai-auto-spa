@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { claimOffer, getOffer } from "@/lib/offer.functions";
+import { PAUSED_NOTICE, isPausedError } from "@/lib/write-pause-ui";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/offer/$id")({
@@ -29,6 +30,7 @@ const MSG = {
   expired: "This offer has expired.",
   not_found: "This offer link isn't valid.",
   error: "Something went wrong. Please try again.",
+  paused: "Bookings are temporarily paused for an update. Please try again shortly.",
 };
 
 type ClaimOk = { result: "ok"; bookingId: string; manageToken: string };
@@ -46,6 +48,7 @@ function OfferPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [claimData, setClaimData] = useState<ClaimOk | null>(null);
+  const [paused, setPaused] = useState(false);
 
   async function onClaim() {
     setBusy(true);
@@ -53,8 +56,11 @@ function OfferPage() {
       const r = (await claim({ data: { id } })) as ClaimOk | ClaimOther;
       setResult(r.result);
       if (r.result === "ok") setClaimData(r as ClaimOk);
-    } catch {
-      setResult("error");
+    } catch (e) {
+      if (isPausedError(e)) {
+        setPaused(true);
+        setResult("paused");
+      } else setResult("error");
     } finally {
       setBusy(false);
     }

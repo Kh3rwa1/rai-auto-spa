@@ -8,6 +8,7 @@ import { EmailPreviewDialog } from "./EmailPreviewDialog";
 import { checkVideo, rescheduleBooking } from "@/lib/booking.functions";
 import { SLOTS, inr } from "@/lib/plans";
 import { addDays, formatSlot, todayIST } from "@/lib/booking-rules";
+import { bookingErrorMessage } from "@/lib/write-pause-ui";
 
 type Props = {
   bookingId: string;
@@ -101,7 +102,7 @@ export function BookedScreen(p: Props) {
       setRsOpen(false);
       toast.success("Rescheduled!");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(bookingErrorMessage(e, (e as Error).message));
     } finally {
       setRsBusy(false);
     }

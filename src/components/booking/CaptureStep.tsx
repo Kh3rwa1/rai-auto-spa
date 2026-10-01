@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Camera, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { uploadCar } from "@/lib/booking.functions";
+import { bookingErrorMessage } from "@/lib/write-pause-ui";
 
 const SAMPLES = [
   { file: "swift.jpg", label: "Maruti Swift" },
@@ -60,7 +61,7 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
         r.photoUrl ?? null,
       );
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(bookingErrorMessage(e, (e as Error).message || "Please try again."));
       onFailed();
     } finally {
       setUploading(false);

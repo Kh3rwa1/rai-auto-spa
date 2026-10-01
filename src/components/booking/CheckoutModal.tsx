@@ -13,6 +13,7 @@ import {
 import { PLANS, inr } from "@/lib/plans";
 import { confirmBooking, simulatePayment } from "@/lib/booking.functions";
 import type { Draft } from "./useBookingDraft";
+import { bookingErrorMessage } from "@/lib/write-pause-ui";
 
 type Stage = "idle" | "processing" | "verifying" | "success" | "failed";
 type Method = "upi" | "card" | "netbanking";
@@ -114,7 +115,7 @@ export function CheckoutModal({
       else if (msg.startsWith("PAYMENT_FAILED:")) setStage("failed");
       else {
         setStage("idle");
-        toast.error(msg);
+        toast.error(bookingErrorMessage(e, msg));
       }
     }
   }

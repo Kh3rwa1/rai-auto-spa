@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const { assertManageToken } = await import("./booking-core");
 const pause = await import("./write-pause.server");
+const ui = await import("./write-pause-ui");
 
 describe("assertManageToken (ownership rule)", () => {
   const TOKEN = "abcd1234abcd1234"; // 16 chars, matches server-side manage_token
@@ -31,13 +32,11 @@ describe("write pause (fail-closed default)", () => {
 
   it("writes are PAUSED by default (env unset)", () => {
     expect(pause.writesPaused()).toBe(true);
-    expect(() => pause.assertWritesOpen()).toThrow(/paused for a quick upgrade/);
   });
 
   it("opens only when BOOKING_WRITES_OPEN=1", () => {
     process.env["BOOKING_WRITES_OPEN"] = "1";
     expect(pause.writesPaused()).toBe(false);
-    expect(() => pause.assertWritesOpen()).not.toThrow();
   });
 
   it("any other value stays paused", () => {
@@ -45,5 +44,64 @@ describe("write pause (fail-closed default)", () => {
       process.env["BOOKING_WRITES_OPEN"] = v;
       expect(pause.writesPaused()).toBe(true);
     }
+  });
+
+  it("assertWritesOpen rejects with the MAINTENANCE_PAUSED-tagged error", () => {
+    let thrown: unknown;
+    try {
+      pause.assertWritesOpen();
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toContain("MAINTENANCE_PAUSED:");
+    expect((thrown as Error).message).toContain("paused for a quick upgrade");
+  });
+
+  it("assertWritesOpen does not throw while the pause is open", () => {
+    process.env["BOOKING_WRITES_OPEN"] = "1";
+    expect(() => pause.assertWritesOpen()).not.toThrow();
+  });
+});
+
+describe("pause recognition on the client", () => {
+  it("recognizes the thrown 503 Response", () => {
+    let thrown: unknown;
+    try {
+      pause.assertWritesOpen();
+    } catch (e) {
+      thrown = e;
+    }
+    expect(ui.isPausedError(thrown)).toBe(true);
+  });
+
+  it("recognizes the pause payload when the body arrives as text", () => {
+    expect(
+      ui.isPausedError(
+        new Error(JSON.stringify({ paused: true, message: pause.WRITE_PAUSE_MESSAGE })),
+      ),
+    ).toBe(true);
+    expect(ui.isPausedError(pause.WRITE_PAUSE_MESSAGE)).toBe(true);
+  });
+
+  it("treats genuine connection/server failures as NOT paused", () => {
+    expect(ui.isPausedError(new TypeError("Failed to fetch"))).toBe(false);
+    expect(ui.isPausedError(new Error("Could not reserve the slot. Please try again."))).toBe(
+      false,
+    );
+    expect(ui.isPausedError(undefined)).toBe(false);
+  });
+
+  it("bookingErrorMessage swaps in the required notice only for pauses", () => {
+    const paused = new Error(JSON.stringify({ paused: true }));
+    expect(
+      ui.bookingErrorMessage(paused, "Couldn't start your booking. Check your connection."),
+    ).toBe(ui.PAUSED_NOTICE);
+    expect(ui.bookingErrorMessage(new TypeError("Failed to fetch"), "Connection fallback")).toBe(
+      "Connection fallback",
+    );
+    expect(ui.PAUSED_NOTICE).toBe(
+      "Bookings are temporarily paused for an update. Please try again shortly.",
+    );
   });
 });

@@ -28,6 +28,7 @@ import {
 } from "@/lib/plans";
 import { getSlots, makePreview, uploadCar } from "@/lib/booking.functions";
 import { holdQuickSlot, releaseQuickSlot, startQuickBooking } from "@/lib/quickbook.functions";
+import { PAUSED_NOTICE, bookingErrorMessage, isPausedError } from "@/lib/write-pause-ui";
 import { CheckoutModal } from "./booking/CheckoutModal";
 import { initialDraft, type Draft } from "./booking/useBookingDraft";
 
@@ -184,6 +185,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const [previews, setPreviews] = useState<Partial<Record<PlanId, string>>>({});
   const [previewing, setPreviewing] = useState<PlanId | null>(null);
   const [previewFailed, setPreviewFailed] = useState<PlanId | null>(null);
+  const [previewPaused, setPreviewPaused] = useState(false);
   // where / when
   const [mobile, setMobile] = useState(false);
   const [area, setArea] = useState<string | null>(null);
@@ -239,9 +241,11 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
             toast.error(r.error);
             return null;
           })
-          .catch(() => {
+          .catch((e) => {
             starting.current = null;
-            toast.error("Couldn't start your booking. Check your connection.");
+            toast[isPausedError(e) ? "message" : "error"](
+              bookingErrorMessage(e, "Couldn't start your booking. Check your connection."),
+            );
             return null;
           });
       }
@@ -307,7 +311,10 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
         if (r.previewUrl) setPreviews((p) => ({ ...p, [plan]: r.previewUrl as string }));
         else setPreviewFailed(plan);
       })
-      .catch(() => setPreviewFailed(plan))
+      .catch((e) => {
+        setPreviewPaused(isPausedError(e));
+        setPreviewFailed(plan);
+      })
       .finally(() => setPreviewing((cur) => (cur === plan ? null : cur)));
   }, [plan, photoBookingId, bookingId, uploading, manageToken, previews, previewFn]);
 
@@ -383,8 +390,10 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     }
     try {
       await holdFor(id, ds, t);
-    } catch {
-      toast.error("Couldn't hold that time. Try again.");
+    } catch (e) {
+      toast[isPausedError(e) ? "message" : "error"](
+        bookingErrorMessage(e, "Couldn't hold that time. Try again."),
+      );
     } finally {
       setHolding(null);
       void loadSlots();
@@ -429,7 +438,9 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
         void loadSlots();
       }
     } catch (e) {
-      toast.error((e as Error).message || "Couldn't upload the photo.");
+      toast[isPausedError(e) ? "message" : "error"](
+        bookingErrorMessage(e, "Couldn't upload the photo."),
+      );
       setPhoto(null);
     } finally {
       setUploading(false);
@@ -744,7 +755,11 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                         glow-up…
                       </span>
                     ) : previewFailed === plan ? (
-                      "Preview unavailable right now — you can still book."
+                      previewPaused ? (
+                        PAUSED_NOTICE
+                      ) : (
+                        "Preview unavailable right now — you can still book."
+                      )
                     ) : uploading ? (
                       "Preview comes right after the photo."
                     ) : (

@@ -4,6 +4,7 @@ import { COLOURS, STYLES, type PlanId } from "@/lib/plans";
 import { previewKey } from "@/lib/booking-rules";
 import { DEFAULT_COUNTRY } from "@/lib/phone";
 import { makePreview } from "@/lib/booking.functions";
+import { bookingErrorMessage } from "@/lib/write-pause-ui";
 
 export type Draft = {
   booking: { id: string; vehicle: string } | null;
@@ -97,7 +98,7 @@ export function usePreviews(bookingId: string | undefined, manageToken?: string)
         else throw new Error("Preview came back empty. Retry or continue without it.");
       } catch (e) {
         started.current.delete(k);
-        setErrorFor({ key: k, message: (e as Error).message });
+        setErrorFor({ key: k, message: bookingErrorMessage(e, (e as Error).message) });
       } finally {
         setPending((cur) => (cur === k ? null : cur));
       }

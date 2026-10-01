@@ -6,15 +6,19 @@
  * previously published app never read, so the paused default cannot depend
  * on the old app understanding any new environment setting.
  *
- * Activate (this is the default): publish as-is. Every mutating booking path
- * (upload, preview, quick start/hold/release, confirm, payment, reschedule,
- * offer claim, payment link, phone-agent webhook) refuses with
- * WRITE_PAUSE_MESSAGE. Availability reads and the dashboard stay open.
+ * Rejection shape: assertWritesOpen() tags the error (MAINTENANCE_PAUSED) and
+ * sets the response status to 503, so server-function calls fail with
+ * HTTP 503 AND a message the client can recognize — distinguishable from
+ * genuine server/network failures. Client-side recognition lives in
+ * write-pause-ui.ts (client-safe, no server env access). The phone-agent
+ * webhook returns an explicit 503 JSON response.
  *
  * Lift the pause (approval-gated): set BOOKING_WRITES_OPEN=1 in the hosting
  * environment. If env changes require a redeploy on the host, publish a
  * one-line change flipping the default here instead.
  */
+import { setResponseStatus } from "@tanstack/react-start/server";
+import { MAINTENANCE_TAG } from "./write-pause-ui";
 
 export const WRITE_PAUSE_MESSAGE =
   "Rai's booking desk is paused for a quick upgrade — please try again in a few minutes.";
@@ -23,7 +27,14 @@ export function writesPaused(): boolean {
   return process.env["BOOKING_WRITES_OPEN"] !== "1";
 }
 
-/** Throws from inside server-fn handlers when writes are paused. */
+/** Throws a tagged, HTTP-503-marked rejection from server-fn handlers when paused. */
 export function assertWritesOpen(): void {
-  if (writesPaused()) throw new Error(WRITE_PAUSE_MESSAGE);
+  if (writesPaused()) {
+    try {
+      setResponseStatus(503, "Service Unavailable");
+    } catch {
+      // No request context (unit tests) — the tagged error still carries the signal.
+    }
+    throw new Error(`${MAINTENANCE_TAG}: ${WRITE_PAUSE_MESSAGE}`);
+  }
 }
