@@ -947,8 +947,8 @@ function Hero() {
           </p>
 
           <p className="ras-hero-description">
-            One owner. Two studio bays. One van. Pick a service and a time that&rsquo;s actually free, at the studio or
-            your doorstep, without ever calling Rai.
+            One owner, two studio bays, one van. See the times that actually work, book in a few taps, and lock it in
+            with a 30% deposit. No calling Rai, no waiting for a reply.
           </p>
 
           <div className="ras-hero-actions">
@@ -973,7 +973,7 @@ function Hero() {
             </li>
             <li>
               <Check className="h-4 w-4" aria-hidden />
-              30% deposit to confirm
+              30% deposit locks your slot
             </li>
           </ul>
 
@@ -983,7 +983,7 @@ function Hero() {
               <span>Guest mode is on. No login, no real payment.</span>
             </p>
             <a href="#book" className="ras-btn ras-btn-small ras-btn-primary">
-              Book with a sample car
+              Pick a plan, then a sample car
               <ArrowRight className="h-4 w-4" aria-hidden />
             </a>
             <Link to="/owner" className="ras-btn ras-btn-small">
@@ -1109,12 +1109,11 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
       </div>
 
       <div className="ras-demo-note mt-5">
-        <p className="font-bold">Trying the contest demo? Start here.</p>
+        <p className="font-bold">Contest judges, start here.</p>
 
         <p className="mt-2">
-          Choose a service, then use a sample car or type a car model. Pick a time and try the simulated checkout. No
-          real money is charged. Then open the owner demo to see the calendar, route and subscriptions from Rai&rsquo;s
-          side.
+          Pick a plan, then tap a sample car (or type a model). Choose a time and pay in the simulated checkout. No real
+          money moves. Then open the owner demo to see the route, calendar, waitlist and leads from Rai&rsquo;s side.
         </p>
 
         <p className="mt-2">AI previews are illustrative. You can still book if a preview is unavailable.</p>
@@ -1127,20 +1126,22 @@ function RaiRules() {
   const rules = [
     {
       title: "Water is asked up front",
-      description: `Van bookings ask if there's water on site. If not, the van brings a tank (+₹150) and the midday window closes, so Rai never arrives to a dry tap.`,
+      description:
+        "Van bookings ask if there's water on site. If not, the van brings a tank (+₹150) and the midday window closes, so Rai never arrives to a dry tap.",
       icon: Truck,
       color: "var(--mint)",
     },
     {
-      title: "A deposit holds the slot",
-      description: "A 30% deposit confirms the booking, so a no-show costs Rai less than an empty bay used to.",
+      title: "A deposit locks the slot",
+      description:
+        "Pay 30% and the slot is yours. Unpaid holds are released after 20 minutes, so a half-finished booking never blocks a real customer.",
       icon: ShieldCheck,
       color: "var(--yellow)",
     },
     {
-      title: "Cancelled slots don't go to waste",
+      title: "Cancelled slots get refilled",
       description:
-        "When someone drops out, the waitlist gets the offer and Rai doesn't have to chase the next booking.",
+        "A cancellation creates claim offers for waitlisted customers in that area. Rai sends each one on WhatsApp in a tap. First to claim wins, and the slot can't be double-booked.",
       icon: CalendarCheck,
       color: "var(--lilac)",
     },
@@ -1157,7 +1158,7 @@ function RaiRules() {
       </h2>
 
       <p className="ras-muted mt-3 max-w-xl text-sm leading-relaxed">
-        Rai used to explain all of this over the phone, one customer at a time. Now the booking form handles it before
+        Rai used to explain all of this on the phone, one customer at a time. Now the booking form handles it before
         anyone has to ask.
       </p>
 
@@ -1337,17 +1338,20 @@ function Transformation() {
 
 function OwnerStory() {
   const before = [
+    "Every booking was confirmed by hand. Rai phoned or messaged each customer to check the time and place.",
     "1,500 appointments, one notebook. Every new booking started with flipping pages.",
     "Every customer got the same questions: studio or van? Where? Is there water?",
-    "A no-show meant an empty bay and nothing to show for it.",
-    "A cancellation meant calling around to fill the gap.",
+    "A no-show meant an empty bay, and a cancellation meant calling around to fill it.",
+    "Someone who sent a photo and then went quiet was simply forgotten.",
   ];
 
   const after = [
-    "Customers pick the service, place and time. Rai just turns up.",
-    "Location and water are collected in the form, and the grid closes the slots that can't work.",
-    "A 30% deposit holds each slot, so a no-show costs less.",
-    "Cancelled slots go to the waitlist, and everything lives in one owner dashboard.",
+    "Customers pick the service, place and time. The grid closes slots that can't work, like the van with no water at midday.",
+    // Delete the next line if your owner dashboard's Calls tab only shows "not configured".
+    "After the deposit, Rai's voice assistant phones the customer to confirm: press 1 to confirm, 2 to change the time, 3 to change the plan. The result and transcript land in her dashboard.",
+    "When someone cancels, waitlisted customers in that area get a claim offer. First to claim wins, and the slot can't be double-booked.",
+    "Photo uploaded but never paid? It shows up as a lead with a payment link ready to send in one tap.",
+    "Every customer gets a manage link to pay or reschedule on their own, free until 12 hours before.",
   ];
 
   return (
@@ -1364,8 +1368,8 @@ function OwnerStory() {
             </h2>
 
             <p className="mt-3 max-w-xl text-sm leading-relaxed">
-              Rai is one owner juggling two bays and a mobile van. The booking flow collects the details. The dashboard
-              keeps the day in view.
+              Rai is one owner juggling two bays and a mobile van. The booking flow does the confirming, the backfilling
+              and the chasing. The dashboard keeps the day in view.
             </p>
           </div>
 
