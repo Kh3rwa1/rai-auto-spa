@@ -4,15 +4,12 @@ import {
   ArrowRight,
   CalendarCheck,
   Check,
-  Droplets,
   LayoutDashboard,
   MapPin,
   ShieldCheck,
   Sparkles,
   Store,
   Truck,
-  Users,
-  Wallet,
 } from "lucide-react";
 import { BookingFlow } from "@/components/BookingFlow";
 import { QuickBook } from "@/components/QuickBook";
@@ -1131,20 +1128,20 @@ function RaiRules() {
     {
       title: "Water is asked up front",
       description: `Van bookings ask if there's water on site. If not, the van brings a tank (+₹150) and the midday window closes, so Rai never arrives to a dry tap.`,
-      icon: Droplets,
+      icon: Truck,
       color: "var(--mint)",
     },
     {
       title: "A deposit holds the slot",
       description: "A 30% deposit confirms the booking, so a no-show costs Rai less than an empty bay used to.",
-      icon: Wallet,
+      icon: ShieldCheck,
       color: "var(--yellow)",
     },
     {
       title: "Cancelled slots don't go to waste",
       description:
         "When someone drops out, the waitlist gets the offer and Rai doesn't have to chase the next booking.",
-      icon: Users,
+      icon: CalendarCheck,
       color: "var(--lilac)",
     },
   ];
