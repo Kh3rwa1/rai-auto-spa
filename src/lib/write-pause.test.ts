@@ -1,8 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { assertManageToken } = await import("./booking-core");
 const pause = await import("./write-pause.server");
 const ui = await import("./write-pause-ui");
+
+// The shipped open-switch is a committed server-only module. The mock makes
+// every configured value testable; the shipped default is asserted separately
+// against the real module below.
+const configMock = vi.hoisted(() => ({ open: false as unknown }));
+vi.mock("./booking-writes.config", () => ({ BOOKING_WRITES_CONFIG: configMock }));
 
 describe("assertManageToken (ownership rule)", () => {
   const TOKEN = "abcd1234abcd1234"; // 16 chars, matches server-side manage_token
@@ -25,24 +31,44 @@ describe("assertManageToken (ownership rule)", () => {
   });
 });
 
-describe("write pause (fail-closed default)", () => {
+describe("write pause (fail-closed, config + override precedence)", () => {
   afterEach(() => {
-    delete process.env["BOOKING_WRITES_OPEN"];
+    delete process.env["BOOKING_WRITES_PAUSE"];
+    configMock.open = false;
   });
 
-  it("writes are PAUSED by default (env unset)", () => {
+  it("configured default (open: false) stays PAUSED", () => {
     expect(pause.writesPaused()).toBe(true);
   });
 
-  it("opens only when BOOKING_WRITES_OPEN=1", () => {
-    process.env["BOOKING_WRITES_OPEN"] = "1";
+  it("missing configuration key stays PAUSED", () => {
+    configMock.open = undefined;
+    expect(pause.writesPaused()).toBe(true);
+  });
+
+  it("non-boolean truthy junk stays PAUSED (explicit true required)", () => {
+    for (const junk of ["1", "true", 1, {}]) {
+      configMock.open = junk;
+      expect(pause.writesPaused()).toBe(true);
+    }
+  });
+
+  it("configured open (open: true) OPENS", () => {
+    configMock.open = true;
     expect(pause.writesPaused()).toBe(false);
   });
 
-  it("any other value stays paused", () => {
-    for (const v of ["0", "true", "open", ""]) {
-      process.env["BOOKING_WRITES_OPEN"] = v;
-      expect(pause.writesPaused()).toBe(true);
+  it("environment pause override wins over configured open", () => {
+    configMock.open = true;
+    process.env["BOOKING_WRITES_PAUSE"] = "1";
+    expect(pause.writesPaused()).toBe(true);
+  });
+
+  it("env values other than exactly '1' do not force a pause", () => {
+    configMock.open = true;
+    for (const v of ["0", "true", ""]) {
+      process.env["BOOKING_WRITES_PAUSE"] = v;
+      expect(pause.writesPaused()).toBe(false);
     }
   });
 
@@ -58,9 +84,16 @@ describe("write pause (fail-closed default)", () => {
     expect((thrown as Error).message).toContain("paused for a quick upgrade");
   });
 
-  it("assertWritesOpen does not throw while the pause is open", () => {
-    process.env["BOOKING_WRITES_OPEN"] = "1";
+  it("assertWritesOpen does not throw while configured open", () => {
+    configMock.open = true;
     expect(() => pause.assertWritesOpen()).not.toThrow();
+  });
+
+  it("the SHIPPED configuration intentionally opens (real module, unmocked)", async () => {
+    const real = (await vi.importActual("./booking-writes.config")) as {
+      BOOKING_WRITES_CONFIG: { open: unknown };
+    };
+    expect(real.BOOKING_WRITES_CONFIG.open).toBe(true);
   });
 });
 
