@@ -36,8 +36,8 @@ export function OwnerDashboard() {
     },
   });
   const bookingsQ = dataQ;
-  const bookings = (dataQ.data?.bookings ?? []) as unknown as Booking[];
-  const subs = (dataQ.data?.subs ?? []) as unknown as Sub[];
+  const bookings = (dataQ.data?.bookings ?? []) as Booking[];
+  const subs = (dataQ.data?.subs ?? []) as Sub[];
   const refresh = () => qc.invalidateQueries();
 
   const todays = bookings.filter(

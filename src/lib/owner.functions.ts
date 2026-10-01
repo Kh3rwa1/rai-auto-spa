@@ -21,6 +21,89 @@ const CLIENT_COLS = "id, is_seed, name, phone, email, area, building, floor, wat
 const BOOKING_COLS = `id, client_id, vehicle_model, photo_url, clean_preview_url, video_url, video_status, plan, colour, style, location_type, map_pin, area, guard_permission, water_needed, date, end_date, full_day, time, total, deposit_paid, status, approval_status, email_status, created_at, subscription_id, customer_phone_e164, detected_country, call_status, call_transcript, call_duration_seconds, call_from_number, call_attempt_id, call_detail, call_updated_at, notes, clients(${CLIENT_COLS})`;
 
 /**
+ * Concrete, serializable payload types for the dashboard. TanStack Start validates
+ * server-function return types against its serializable rules, so these cannot be
+ * `Record<string, unknown>` (values typed `unknown` fail the check). The shapes
+ * mirror BOOKING_COLS / CLIENT_COLS exactly; map_pin is the known {"lat","lng"}
+ * object the route map reads.
+ */
+type DashboardClient = {
+  id: string;
+  is_seed: boolean;
+  name: string;
+  phone: string;
+  email: string | null;
+  area: string | null;
+  building: string | null;
+  floor: string | null;
+  water_access: boolean;
+};
+
+type DashboardBooking = {
+  id: string;
+  client_id: string | null;
+  vehicle_model: string | null;
+  photo_url: string | null;
+  clean_preview_url: string | null;
+  video_url: string | null;
+  video_status: string | null;
+  plan: string;
+  colour: string | null;
+  style: string | null;
+  location_type: string;
+  map_pin: { lat: number; lng: number } | null;
+  area: string | null;
+  guard_permission: boolean | null;
+  water_needed: boolean | null;
+  date: string | null;
+  end_date: string | null;
+  full_day: boolean;
+  time: string | null;
+  total: number;
+  deposit_paid: boolean;
+  status: string;
+  approval_status: string | null;
+  email_status: string | null;
+  created_at: string;
+  subscription_id: string | null;
+  customer_phone_e164: string | null;
+  detected_country: string | null;
+  call_status: string | null;
+  call_transcript: string | null;
+  call_duration_seconds: number | null;
+  call_from_number: string | null;
+  call_attempt_id: string | null;
+  call_detail: string | null;
+  call_updated_at: string | null;
+  notes: string | null;
+  clients: DashboardClient | null;
+};
+
+type DashboardSub = {
+  id: string;
+  client_id: string;
+  plan: string;
+  active: boolean;
+  skip_dates: string[];
+  preferred_time: string;
+  is_seed: boolean;
+  created_at: string;
+  clients: DashboardClient | null;
+};
+
+type DashboardOffer = {
+  id: string;
+  date: string;
+  time: string;
+  area: string | null;
+  status: string;
+  expires_at: string;
+  created_at: string;
+  cancelled_booking_id: string;
+  clients: DashboardClient | null;
+};
+
+/**
  * In the guest sandbox, visitors must not read real customers' contact details.
  * Sample (seed) rows are fictional and stay fully visible for the demo; every
  * other customer gets masked phone/email/name — enforced here, on the server.
@@ -93,22 +176,17 @@ export const ownerData = createServerFn({ method: "POST" }).handler(async () => 
     sb.from("subscriptions").select(`*, clients(${CLIENT_COLS})`).order("preferred_time"),
   ]);
   if (b.error || s.error) throw new Error("Could not load dashboard data.");
-  const bookings = ((b.data ?? []) as Record<string, unknown>[]).map((row) => {
-    const client = maskClient(
-      row.clients as { is_seed?: boolean; name?: string; phone?: string; email?: string } | null,
-    );
-    if (!DEMO_MODE || (client as { is_seed?: boolean } | null)?.is_seed)
-      return { ...row, clients: client };
+  const bookings = ((b.data ?? []) as DashboardBooking[]).map((row) => {
+    const client = maskClient(row.clients);
+    if (!DEMO_MODE || client?.is_seed) return { ...row, clients: client };
     // Real customer row in the guest sandbox: blank the identifying booking fields too.
-    const clean: Record<string, unknown> = { ...row, clients: client };
+    const clean: DashboardBooking = { ...row, clients: client ?? null };
     for (const f of GUEST_HIDDEN_BOOKING_FIELDS) clean[f] = null;
     return clean;
   });
-  const subs = ((s.data ?? []) as Record<string, unknown>[]).map((row) => ({
+  const subs = ((s.data ?? []) as DashboardSub[]).map((row) => ({
     ...row,
-    clients: maskClient(
-      row.clients as { is_seed?: boolean; name?: string; phone?: string; email?: string } | null,
-    ),
+    clients: maskClient(row.clients),
   }));
   return { bookings, subs };
 });
@@ -284,11 +362,9 @@ export const listOffers = createServerFn({ method: "POST" }).handler(async () =>
     )
     .order("created_at", { ascending: false })
     .limit(30);
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+  return ((data ?? []) as DashboardOffer[]).map((row) => ({
     ...row,
-    clients: maskClient(
-      row.clients as { is_seed?: boolean; name?: string; phone?: string; email?: string } | null,
-    ),
+    clients: maskClient(row.clients),
   }));
 });
 
