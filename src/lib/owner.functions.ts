@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { DEMO_MODE } from "./demo-mode";
 
 export { DEMO_MODE } from "./demo-mode";
 
@@ -13,15 +14,67 @@ async function ownerDb() {
   return gate();
 }
 
-// Never send customer manage tokens to the dashboard.
-const BOOKING_COLS =
-  "id, client_id, vehicle_model, photo_url, clean_preview_url, video_url, video_status, plan, colour, style, location_type, map_pin, area, guard_permission, water_needed, date, end_date, full_day, time, total, deposit_paid, status, approval_status, email_status, created_at, subscription_id, customer_phone_e164, detected_country, call_status, call_transcript, call_duration_seconds, call_from_number, call_attempt_id, call_detail, call_updated_at, notes, clients(*)";
+// Never send customer manage tokens to the dashboard. Full contact columns stay
+// listed so real (non-demo) owners get them; the DEMO_MODE masking below decides
+// what actually leaves the server.
+const CLIENT_COLS = "id, is_seed, name, phone, email, area, building, floor, water_access";
+const BOOKING_COLS = `id, client_id, vehicle_model, photo_url, clean_preview_url, video_url, video_status, plan, colour, style, location_type, map_pin, area, guard_permission, water_needed, date, end_date, full_day, time, total, deposit_paid, status, approval_status, email_status, created_at, subscription_id, customer_phone_e164, detected_country, call_status, call_transcript, call_duration_seconds, call_from_number, call_attempt_id, call_detail, call_updated_at, notes, clients(${CLIENT_COLS})`;
+
+/**
+ * In the guest sandbox, visitors must not read real customers' contact details.
+ * Sample (seed) rows are fictional and stay fully visible for the demo; every
+ * other customer gets masked phone/email/name — enforced here, on the server.
+ */
+function maskClient<
+  T extends {
+    is_seed?: boolean | null;
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  },
+>(c: T | null | undefined): T | null | undefined {
+  if (!c || !DEMO_MODE || c.is_seed) return c;
+  const first = (c.name ?? "").trim().split(/\s+/)[0] ?? "";
+  return {
+    ...c,
+    name: first ? `${first} •••` : "•••",
+    phone: (c.phone ?? "").replace(/\d(?=\d{2})/g, "•") || null,
+    email: (c.email ?? "").replace(/^(.{2}).*?(@.*)$/, "$1•••$2") || null,
+  };
+}
+
+type OwnerDb = Awaited<ReturnType<typeof ownerDb>>;
+
+/**
+ * Booking-level fields that identify or locate a real customer. In the guest sandbox
+ * these are blanked for non-sample rows (call transcripts can contain spoken names and
+ * numbers; map pins are home addresses). Sample rows keep everything so the demo works.
+ */
+const GUEST_HIDDEN_BOOKING_FIELDS = [
+  "call_transcript",
+  "call_detail",
+  "call_from_number",
+  "customer_phone_e164",
+  "notes",
+  "map_pin",
+] as const;
+
+/** In the guest sandbox, destructive writes must only touch sample (seed) rows. */
+async function assertDemoEditableBooking(sb: OwnerDb, id: string) {
+  if (!DEMO_MODE) return;
+  const { data } = await sb.from("bookings").select("is_seed").eq("id", id).maybeSingle();
+  if (!data?.is_seed)
+    throw new Error(
+      "Guest sandbox: only sample bookings can be changed here — real customer bookings are protected.",
+    );
+}
 
 /** Re-runs the Sarvam confirmation call for one booking from the dashboard. */
 export const recallBooking = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ bookingId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const sb = await ownerDb();
+    await assertDemoEditableBooking(sb, data.bookingId);
     const { callBookingAndRecord, CALL_SELECT } = await import("./call-booking.server");
     const { data: b } = await sb
       .from("bookings")
@@ -37,25 +90,43 @@ export const ownerData = createServerFn({ method: "POST" }).handler(async () => 
   const sb = await ownerDb();
   const [b, s] = await Promise.all([
     sb.from("bookings").select(BOOKING_COLS).order("date", { ascending: true }),
-    sb.from("subscriptions").select("*, clients(*)").order("preferred_time"),
+    sb.from("subscriptions").select(`*, clients(${CLIENT_COLS})`).order("preferred_time"),
   ]);
   if (b.error || s.error) throw new Error("Could not load dashboard data.");
-  return { bookings: b.data, subs: s.data };
+  const bookings = ((b.data ?? []) as Record<string, unknown>[]).map((row) => {
+    const client = maskClient(
+      row.clients as { is_seed?: boolean; name?: string; phone?: string; email?: string } | null,
+    );
+    if (!DEMO_MODE || (client as { is_seed?: boolean } | null)?.is_seed)
+      return { ...row, clients: client };
+    // Real customer row in the guest sandbox: blank the identifying booking fields too.
+    const clean: Record<string, unknown> = { ...row, clients: client };
+    for (const f of GUEST_HIDDEN_BOOKING_FIELDS) clean[f] = null;
+    return clean;
+  });
+  const subs = ((s.data ?? []) as Record<string, unknown>[]).map((row) => ({
+    ...row,
+    clients: maskClient(
+      row.clients as { is_seed?: boolean; name?: string; phone?: string; email?: string } | null,
+    ),
+  }));
+  return { bookings, subs };
 });
 
 export const ownerSignedUrls = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
       .object({
-        paths: z
-          .array(z.string().regex(/^(uploads|previews|videos|demo|originals)\/[\w.-]+$/))
-          .max(200),
+        paths: z.array(z.string().regex(/^(uploads|previews|videos|demo)\/[\w.-]+$/)).max(200),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     if (!data.paths.length) return {} as Record<string, string>;
     const sb = await ownerDb();
+    // `originals/` are the un-blurred uploads; only customer-side code signs those via
+    // booking.functions. The dashboard never needs them, so they are not signable here.
+    // (Kept out of the regex below.)
     const { data: urls } = await sb.storage.from(BUCKET).createSignedUrls(data.paths, 3600);
     const m: Record<string, string> = {};
     urls?.forEach((u) => u.path && u.signedUrl && (m[u.path] = u.signedUrl));
@@ -116,6 +187,18 @@ export const updateSubscription = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await ownerDb();
+    if (DEMO_MODE) {
+      const { data: s } = await sb
+        .from("subscriptions")
+        .select("clients(is_seed)")
+        .eq("id", data.id)
+        .maybeSingle();
+      const seed = (s?.clients as unknown as { is_seed?: boolean } | null)?.is_seed;
+      if (!seed)
+        throw new Error(
+          "Guest sandbox: only sample subscriptions can be changed here — real customer subscriptions are protected.",
+        );
+    }
     const patch: { preferred_time?: string; active?: boolean; skip_dates?: string[] } = {};
     if (data.patch.preferred_time !== undefined) patch.preferred_time = data.patch.preferred_time;
     if (data.patch.active !== undefined) patch.active = data.patch.active;
@@ -139,6 +222,7 @@ export const setApproval = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await ownerDb();
+    await assertDemoEditableBooking(sb, data.id);
     await sb.from("bookings").update({ approval_status: data.status }).eq("id", data.id);
     return { ok: true };
   });
@@ -148,6 +232,7 @@ export const cancelBooking = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const sb = await ownerDb();
+    await assertDemoEditableBooking(sb, data.id);
     const { OPS } = await import("./ops-config");
     const { data: b } = await sb
       .from("bookings")
@@ -195,11 +280,16 @@ export const listOffers = createServerFn({ method: "POST" }).handler(async () =>
   const { data } = await sb
     .from("waitlist_offers")
     .select(
-      "id, date, time, area, status, expires_at, created_at, cancelled_booking_id, clients(name, phone)",
+      `id, date, time, area, status, expires_at, created_at, cancelled_booking_id, clients(${CLIENT_COLS})`,
     )
     .order("created_at", { ascending: false })
     .limit(30);
-  return data ?? [];
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    ...row,
+    clients: maskClient(
+      row.clients as { is_seed?: boolean; name?: string; phone?: string; email?: string } | null,
+    ),
+  }));
 });
 
 /** Materialise today's subscription visits (same logic as the daily cron). */

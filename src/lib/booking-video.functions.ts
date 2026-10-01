@@ -1,10 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { type PlanId } from "./plans";
-import { BUCKET, admin, signed, bookSlot } from "./booking-core";
+import { slotsForPlan } from "./plans";
+import { BUCKET, admin, signed, bookSlot, expireStaleHolds } from "./booking-core";
 
 export const checkVideo = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ bookingId: z.string().uuid() }).parse(d))
+  .inputValidator((d) =>
+    z.object({ bookingId: z.string().uuid(), token: z.string().min(16).max(64) }).parse(d),
+  )
   .handler(async ({ data }) => {
     const sb = await admin();
     const { data: b } = await sb
@@ -12,7 +15,10 @@ export const checkVideo = createServerFn({ method: "POST" })
       .select("*, clients(name, email, phone)")
       .eq("id", data.bookingId)
       .single();
-    if (!b) throw new Error("Booking not found");
+    // Token-gated like the email preview: a booking UUID alone must not be able to
+    // trigger the customer's reveal email or fetch their signed video URL.
+    if (!b || b.manage_token !== data.token)
+      return { status: "unavailable", videoUrl: null, emailStatus: null as string | null };
     if (b.video_url) {
       const videoUrl = await signed(b.video_url);
       let emailStatus = b.email_status;
@@ -107,13 +113,21 @@ export const rescheduleBooking = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    const { assertWritesOpen } = await import("./write-pause.server");
+    assertWritesOpen();
     const sb = await admin();
     const { data: b } = await sb
       .from("bookings")
-      .select("date, time, water_needed, location_type, full_day, manage_token")
+      .select("date, time, plan, water_needed, location_type, full_day, manage_token")
       .eq("id", data.bookingId)
       .maybeSingle();
     if (!b?.date || !b.time || b.manage_token !== data.token) throw new Error("Booking not found");
+    // Free expired unpaid holds so the capacity check sees the truth.
+    try {
+      await expireStaleHolds(sb);
+    } catch (e) {
+      console.error("hold cleanup failed", e);
+    }
     const start = new Date(`${b.date}T${b.time}:00+05:30`).getTime();
     if (start - Date.now() < 12 * 3600 * 1000)
       throw new Error("Free reschedule closes 12 hours before your slot. Please WhatsApp Rai.");
@@ -125,6 +139,8 @@ export const rescheduleBooking = createServerFn({ method: "POST" })
       mobile,
       !b.water_needed,
       b.full_day ? 2 : 1,
+      undefined,
+      b.full_day ? 1 : slotsForPlan(b.plan),
     );
     return { ok: true };
   });

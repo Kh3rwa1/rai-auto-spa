@@ -64,6 +64,7 @@ export function CheckoutModal({
         const res = await confirm({
           data: {
             bookingId: booking.id,
+            token: draft.manageToken || undefined,
             plan,
             colour: sig ? draft.colour : undefined,
             style: sig ? draft.style : undefined,

@@ -192,6 +192,8 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const [water, setWater] = useState(true);
   const [slots, setSlots] = useState<SlotMap>({});
   const [capacity, setCapacity] = useState(2);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [heldAt, setHeldAt] = useState<number | null>(null);
@@ -213,7 +215,12 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const previewRuns = useRef(new Set<string>());
 
   const today = ymd(istNow());
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => plusDays(today, i)), [today]);
+  // Weeks are browsable: offset 0 = this week, 1 = next week, …
+  const weekStart = plusDays(today, weekOffset * 7);
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => plusDays(weekStart, i)),
+    [weekStart],
+  );
   const carName = car.trim();
   const carOk = carName.length >= 2 && !uploading;
 
@@ -225,6 +232,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
           .then((r) => {
             if (r.ok) {
               setBookingId(r.bookingId);
+              setManageToken(r.manageToken ?? "");
               return r.bookingId;
             }
             starting.current = null;
@@ -242,15 +250,23 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     [bookingId, start, carName],
   );
 
+  // Sequence guard: only the newest availability request may update the grid,
+  // so a slow earlier response can't overwrite a fresher one.
+  const loadSeq = useRef(0);
   const loadSlots = useCallback(async () => {
+    const seq = ++loadSeq.current;
     try {
-      const r = await fetchSlots({ data: { start: today, mobile, pin: mobile ? pin : null } });
+      const r = await fetchSlots({ data: { start: weekStart, mobile, pin: mobile ? pin : null } });
+      if (seq !== loadSeq.current) return;
       setSlots(r.slots);
       setCapacity(r.capacity);
+      setSlotsError(null);
     } catch {
-      /* keep the last grid */
+      if (seq !== loadSeq.current) return;
+      // Surface it: silently keeping the old grid can show stale availability as live.
+      setSlotsError("Couldn't refresh live slots — showing the last known grid.");
     }
-  }, [fetchSlots, today, mobile, pin]);
+  }, [fetchSlots, weekStart, mobile, pin]);
 
   useEffect(() => {
     if (plan) void loadSlots();
@@ -286,20 +302,21 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     previewRuns.current.add(key);
     setPreviewing(plan);
     setPreviewFailed(null);
-    previewFn({ data: { bookingId: photoBookingId, plan } })
+    previewFn({ data: { bookingId: photoBookingId, plan, token: manageToken } })
       .then((r) => {
         if (r.previewUrl) setPreviews((p) => ({ ...p, [plan]: r.previewUrl as string }));
         else setPreviewFailed(plan);
       })
       .catch(() => setPreviewFailed(plan))
       .finally(() => setPreviewing((cur) => (cur === plan ? null : cur)));
-  }, [plan, photoBookingId, bookingId, uploading, previews, previewFn]);
+  }, [plan, photoBookingId, bookingId, uploading, manageToken, previews, previewFn]);
 
   const dropSlot = useCallback(() => {
-    if (slot && bookingId) void release({ data: { bookingId } }).catch(() => {});
+    if (slot && bookingId)
+      void release({ data: { bookingId, token: manageToken } }).catch(() => {});
     setSlot(null);
     setHeldAt(null);
-  }, [slot, bookingId, release]);
+  }, [slot, bookingId, manageToken, release]);
 
   // Availability mirrors book_slot(): capacity, owner blocks, dry window, 2-day Signature.
   const n = istNow();
@@ -339,6 +356,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
         mobile,
         water,
         vehicle: carName || undefined,
+        token: manageToken,
       },
     });
     if (r.ok) {
@@ -399,12 +417,13 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       setPreviewFailed(null);
       // The photo creates its own booking row — move any held slot over to it.
       setBookingId(r.bookingId);
+      setManageToken(r.manageToken ?? "");
       setPhotoBookingId(r.bookingId);
       starting.current = Promise.resolve(r.bookingId);
       if (prevSlot && prevBooking) {
         setSlot(null);
         setHeldAt(null);
-        await release({ data: { bookingId: prevBooking } }).catch(() => {});
+        await release({ data: { bookingId: prevBooking, token: manageToken } }).catch(() => {});
         const ok = await holdFor(r.bookingId, prevSlot.date, prevSlot.time).catch(() => false);
         if (!ok) toast.message("Photo added — please pick your time again.");
         void loadSlots();
@@ -495,6 +514,8 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     setBuilding("");
     setWater(true);
     setSlots({});
+    setSlotsError(null);
+    setWeekOffset(0);
     setDay(null);
     setSlot(null);
     setHeldAt(null);
@@ -572,7 +593,10 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
     return (
       <div className="qb qb-in p-4 text-center sm:p-8" role="status">
         <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="qb-big" aria-hidden>
+        <p className="mx-auto w-fit rounded-full bg-[#FFD84D] px-3 py-1 text-xs font-extrabold">
+          Demo booking — no real money was charged
+        </p>
+        <div className="qb-big mt-4" aria-hidden>
           <Check className="h-10 w-10" strokeWidth={3} />
         </div>
         <h3 className="qb-h mt-5 text-4xl">You&rsquo;re booked!</h3>
@@ -581,7 +605,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
         </p>
         <p className="mt-1 text-sm text-[#444]">{whereText}</p>
         <p className="mt-3 text-sm font-bold">
-          Paid {inr(deposit)} deposit · {inr(total - deposit)} due on the day
+          Simulated deposit paid: {inr(deposit)} · {inr(total - deposit)} due on the day
         </p>
         {preview && (
           <img
@@ -794,7 +818,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
           </label>
           <p className="mt-2 text-xs text-[#555]">
             {photo
-              ? "Your original photo stays private. Only the plate-blurred copy is shown."
+              ? "We blur the plate when we detect one. If no plate is detected the photo is shown as-is; originals stay owner-only."
               : "Photo is optional. Add one to see an AI preview of your car after the service."}
           </p>
           {photo && (
@@ -912,12 +936,23 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
 
       {plan && (
         <Block n={4} title="When?" done={!!slot && holdLive}>
-          {!gridLoaded ? (
+          {!gridLoaded && !slotsError ? (
             <p className="flex items-center gap-2 text-sm font-bold">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Checking live slots…
             </p>
           ) : (
             <>
+              {slotsError && (
+                <div
+                  role="alert"
+                  className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border-[2.5px] border-[#111] bg-[#FFF8EC] p-3 text-sm font-bold"
+                >
+                  <span>{slotsError}</span>
+                  <button type="button" className="qb-chip" onClick={() => void loadSlots()}>
+                    Retry
+                  </button>
+                </div>
+              )}
               {soonest && !slot && whereDone && (
                 <button
                   type="button"
@@ -939,6 +974,42 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
                   Signature takes 2 full days in a bay. Pick your drop-off day (9am).
                 </p>
               )}
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#555]">
+                  {weekOffset === 0
+                    ? "This week"
+                    : weekOffset === 1
+                      ? "Next week"
+                      : `${weekOffset} weeks out`}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="qb-chip"
+                    disabled={weekOffset === 0}
+                    aria-label="Previous week"
+                    onClick={() => {
+                      setSlots({});
+                      setDay(null);
+                      setWeekOffset((w) => Math.max(0, w - 1));
+                    }}
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    className="qb-chip"
+                    aria-label="Next week"
+                    onClick={() => {
+                      setSlots({});
+                      setDay(null);
+                      setWeekOffset((w) => w + 1);
+                    }}
+                  >
+                    Next week →
+                  </button>
+                </div>
+              </div>
               <div
                 role="group"
                 aria-label="Day"

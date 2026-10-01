@@ -96,6 +96,14 @@ export function videoPrompt(plan: PlanId, colour?: string, style?: string) {
 
 export const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
+/**
+ * Consecutive hourly slots each service occupies inside book_slot's authoritative
+ * transaction (Full Detail = 2 hours; Signature passes p_days=2 for whole days, so
+ * its slot count stays 1). Keep in sync with the bookings_duration_sync trigger.
+ */
+export const slotsForPlan = (plan: PlanId | string): number =>
+  plan === "detail" || plan === "Full Detail" ? 2 : 1;
+
 export function calcTotal(plan: PlanId, mobile: boolean, waterFee: boolean) {
   return PLANS[plan].price + (mobile ? MOBILE_FEE : 0) + (mobile && waterFee ? WATER_FEE : 0);
 }

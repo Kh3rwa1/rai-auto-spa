@@ -130,12 +130,19 @@ export function WeekCalendar({ bookings }: { bookings: Booking[] }) {
               <div className="py-2 font-medium text-muted-foreground">{t}</div>
               {days.map((d) => {
                 const k = `${d} ${t}`;
+                // Mirror book_slot occupancy: a two-hour Full Detail also occupies the
+                // next slot; whole-day rows block everything.
                 const bs = bookings.filter(
                   (b) =>
                     !!b.date &&
                     d >= b.date &&
                     d <= (b.end_date ?? b.date) &&
-                    (b.time === t || b.full_day) &&
+                    (!!b.full_day ||
+                      b.time === t ||
+                      (b.plan === "Full Detail" &&
+                        b.time != null &&
+                        SLOTS[SLOTS.indexOf(b.time) + 1] === t &&
+                        SLOTS.indexOf(b.time) >= 0)) &&
                     ["confirmed", "pending_deposit", "consultation"].includes(b.status),
                 );
                 const studio = bs.filter((b) => b.location_type === "studio").length;

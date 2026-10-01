@@ -68,10 +68,11 @@ export function BookedScreen(p: Props) {
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
-        const r = await check({ data: { bookingId: p.bookingId } });
+        const r = await check({ data: { bookingId: p.bookingId, token: p.manageToken } });
         if (stop) return;
         setVideo({ status: r.status, url: r.videoUrl ?? null, email: r.emailStatus ?? null });
-        if (r.status === "ready" || r.status.startsWith("failed")) return;
+        if (r.status === "ready" || r.status === "unavailable" || r.status.startsWith("failed"))
+          return;
       } catch {
         /* keep polling */
       }
@@ -82,7 +83,7 @@ export function BookedScreen(p: Props) {
       stop = true;
       clearTimeout(timer);
     };
-  }, [p.bookingId, check]);
+  }, [p.bookingId, p.manageToken, check]);
 
   const start = `${date.replace(/-/g, "")}T${time.replace(":", "")}00`;
   const endH = String(parseInt(time, 10) + 2).padStart(2, "0");
@@ -111,7 +112,9 @@ export function BookedScreen(p: Props) {
       ? "ready"
       : video.status.startsWith("failed")
         ? "failed"
-        : "rendering";
+        : video.status === "unavailable"
+          ? "unavailable"
+          : "rendering";
   const emailState =
     video.email === "sent"
       ? "sent"
@@ -243,6 +246,11 @@ export function BookedScreen(p: Props) {
             <p className="text-destructive">
               Video couldn&apos;t render — Rai will share it on WhatsApp. Your booking is
               unaffected.
+            </p>
+          )}
+          {videoState === "unavailable" && (
+            <p className="text-muted-foreground">
+              Video link isn&apos;t available for this session — reopen your booking link.
             </p>
           )}
           {emailState === "sent" && <p className="text-muted-foreground">Email delivery: sent ✓</p>}

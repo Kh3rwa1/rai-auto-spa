@@ -43,6 +43,9 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
   });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Bumped by the retry button so a failed load actually re-requests (same week start
+  // alone would be a no-op state change and never re-fetch).
+  const [retryTick, setRetryTick] = useState(0);
   const today = todayIST();
   const nowHour = nowISTHour();
   const days = useMemo(
@@ -68,7 +71,7 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
     return () => {
       cancelled = true;
     };
-  }, [weekStart, mobile, pin, slotsFn, nonce]);
+  }, [weekStart, mobile, pin, slotsFn, nonce, retryTick]);
 
   // Keep the mobile date-chips in sync when navigating weeks or when a slot is chosen.
   useEffect(() => {
@@ -181,7 +184,7 @@ export function WhereWhenStep({ draft, set, nonce, total, needsPin, onChooseSlot
               variant="outline"
               size="sm"
               className="mt-3 min-h-[44px]"
-              onClick={() => setWeekStart((s) => s)}
+              onClick={() => setRetryTick((t) => t + 1)}
             >
               Retry loading slots
             </Button>

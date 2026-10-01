@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { PLANS } from "@/lib/plans";
+import type { PlanId } from "@/lib/plans";
 
 /** Matches a spoken plan name onto one of our three plans. */
 const planName = (v: string) => {
@@ -110,18 +111,97 @@ export const Route = createFileRoute("/api/public/update-booking")({
           "";
         if (!secret || token !== secret) return new Response("Unauthorized", { status: 401 });
 
+        const { writesPaused, WRITE_PAUSE_MESSAGE } = await import("@/lib/write-pause.server");
+        if (writesPaused())
+          return Response.json(
+            { ok: false, reason: "paused", message: WRITE_PAUSE_MESSAGE },
+            { status: 503 },
+          );
+
         const raw = await request.json().catch(() => null);
         const direct = schema.safeParse(raw);
         const d = direct.success ? direct.data : fromOutcome(raw);
         if (!d) return new Response("Bad request", { status: 400 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { calcTotal } = await import("@/lib/plans");
         const { data: b } = await supabaseAdmin
           .from("bookings")
-          .select("id, date, time, location_type, plan, client_id")
+          .select(
+            "id, date, time, end_date, full_day, location_type, plan, total, water_needed, deposit_paid, status, client_id",
+          )
           .eq("id", d.bookingId)
           .maybeSingle();
         if (!b) return new Response("Not found", { status: 404 });
+        if (b.status === "cancelled")
+          return Response.json({ ok: false, reason: "cancelled" }, { status: 409 });
+
+        type Row = typeof b & { [k: string]: unknown };
+        const row = b as Row;
+        const planIdOf = (name: string): PlanId =>
+          (Object.keys(PLANS) as PlanId[]).find((k) => PLANS[k].name === name) ?? "wash";
+        const currentPlan = planIdOf(row.plan);
+        const newPlanName = d.new_plan ? planName(d.new_plan) : null;
+        const targetPlan: PlanId = newPlanName ? planIdOf(newPlanName) : currentPlan;
+        const planChanged = targetPlan !== currentPlan;
+
+        // After a deposit is paid the service (and its price) is locked, exactly like the
+        // website — the agent may reschedule but not sell a different plan.
+        if (planChanged && row.deposit_paid)
+          return Response.json({ ok: false, reason: "paid_plan_locked" }, { status: 409 });
+
+        const moving = !!(d.new_time || d.new_date);
+        const targetDate = d.new_date ?? (row.date as string | null);
+        const targetTime = d.new_time ?? (row.time as string | null);
+        if (d.new_time && !targetDate)
+          return Response.json({ ok: false, reason: "missing_date" }, { status: 400 });
+
+        // Same 12-hour free-reschedule cutoff as the website, measured on the slot being moved.
+        if (moving && row.date && row.time) {
+          const start = new Date(`${row.date}T${row.time}:00+05:30`).getTime();
+          if (start - Date.now() < 12 * 3600 * 1000)
+            return Response.json({ ok: false, reason: "cutoff_12h" }, { status: 409 });
+        }
+
+        // Capacity/size/water/duration go through book_slot in ONE locked decision, sized
+        // for the effective plan (Signature = 2 full studio days, Full Detail = 2 hours) —
+        // never a hardcoded 1-day hold. p_water mirrors the booking: water_needed means Rai
+        // brings the tank, so the 11am–4pm dry-window guard must stay active for the van.
+        const mobile = row.location_type === "mobile";
+        const pWater = mobile ? !(row.water_needed ?? false) : true;
+        const days = targetPlan === "signature" ? 2 : 1;
+        const slots = targetPlan === "detail" ? 2 : 1;
+        let rescheduled: string | null = null;
+        if (moving && targetDate && targetTime) {
+          const { data: code, error } = await supabaseAdmin.rpc("book_slot", {
+            p_booking_id: b.id,
+            p_date: targetDate,
+            p_time: targetTime,
+            p_mobile: mobile,
+            p_water: pWater,
+            p_days: days,
+            p_slots: slots,
+          });
+          if (error) return Response.json({ ok: false, reason: "error" }, { status: 409 });
+          rescheduled = (code as string) ?? "error";
+          if (rescheduled !== "ok")
+            return Response.json({ ok: false, reason: rescheduled }, { status: 409 });
+        } else if (planChanged && row.date && row.time) {
+          // Plan change without a time change must still fit the SAME slot at the new size
+          // (e.g. upgrading to Signature needs both days free); otherwise refuse entirely.
+          const { data: code, error } = await supabaseAdmin.rpc("book_slot", {
+            p_booking_id: b.id,
+            p_date: row.date as string,
+            p_time: row.time as string,
+            p_mobile: mobile,
+            p_water: pWater,
+            p_days: days,
+            p_slots: slots,
+          });
+          if (error) return Response.json({ ok: false, reason: "error" }, { status: 409 });
+          if ((code as string) !== "ok")
+            return Response.json({ ok: false, reason: code as string }, { status: 409 });
+        }
 
         const patch: {
           call_status?: string;
@@ -129,6 +209,9 @@ export const Route = createFileRoute("/api/public/update-booking")({
           call_duration_seconds?: number;
           call_updated_at?: string;
           plan?: string;
+          total?: number;
+          approval_status?: string | null;
+          held_at?: string;
         } = {};
         if (d.call_status) patch.call_status = d.call_status;
         if (d.call_transcript) patch.call_transcript = d.call_transcript;
@@ -136,37 +219,22 @@ export const Route = createFileRoute("/api/public/update-booking")({
           patch.call_duration_seconds = d.call_duration_seconds;
         if (d.call_status || d.call_transcript || d.call_duration_seconds !== undefined)
           patch.call_updated_at = new Date().toISOString();
-        if (d.new_plan) {
-          const name = planName(d.new_plan);
-          if (name) patch.plan = name;
+        if (planChanged) {
+          patch.plan = PLANS[targetPlan].name;
+          const waterFee = mobile && (row.water_needed ?? false);
+          patch.total = calcTotal(targetPlan, mobile, waterFee);
+          patch.approval_status = targetPlan === "signature" ? "pending" : null;
         }
-
-        let rescheduled: string | null = null;
-        if (d.new_time || d.new_date) {
-          const date = d.new_date ?? b.date;
-          const time = d.new_time ?? b.time;
-          if (date && time) {
-            const { data: code } = await supabaseAdmin.rpc("book_slot", {
-              p_booking_id: b.id,
-              p_date: date,
-              p_time: time,
-              p_mobile: b.location_type === "mobile",
-              p_water: true,
-              p_days: 1,
-            });
-            rescheduled = (code as string) ?? "error";
-            if (rescheduled !== "ok")
-              return Response.json({ ok: false, reason: rescheduled }, { status: 409 });
-          }
-        }
+        // A moved unpaid hold is a fresh hold — restart its 20-minute expiry window.
+        if (rescheduled === "ok" && !row.deposit_paid) patch.held_at = new Date().toISOString();
 
         if (Object.keys(patch).length)
           await supabaseAdmin.from("bookings").update(patch).eq("id", b.id);
-        if (d.new_building && b.client_id)
+        if (d.new_building && row.client_id)
           await supabaseAdmin
             .from("clients")
             .update({ building: d.new_building })
-            .eq("id", b.client_id);
+            .eq("id", row.client_id as string);
 
         return Response.json({ ok: true, rescheduled });
       },

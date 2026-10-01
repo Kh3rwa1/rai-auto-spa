@@ -26,7 +26,10 @@ type Props = {
   photo: string | null;
   vehicle: string | undefined;
   onStart: (localUrl: string) => void;
-  onUploaded: (booking: { id: string; vehicle: string }, displayUrl: string | null) => void;
+  onUploaded: (
+    booking: { id: string; vehicle: string; token?: string },
+    displayUrl: string | null,
+  ) => void;
   onFailed: () => void;
 };
 
@@ -52,7 +55,10 @@ export function CaptureStep({ photo, vehicle, onStart, onUploaded, onFailed }: P
         toast.warning(
           "Hmm, that doesn't look like a car — previews work best with a clear car photo.",
         );
-      onUploaded({ id: r.bookingId, vehicle: r.vehicle }, r.photoUrl ?? null);
+      onUploaded(
+        { id: r.bookingId, vehicle: r.vehicle, token: (r as { manageToken?: string }).manageToken },
+        r.photoUrl ?? null,
+      );
     } catch (e) {
       toast.error((e as Error).message);
       onFailed();

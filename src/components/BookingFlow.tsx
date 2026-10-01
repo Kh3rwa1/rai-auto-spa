@@ -7,6 +7,7 @@ import { PLANS, calcTotal, depositOf, inr, isDryWindow, type PlanId } from "@/li
 import { addDays, formatSlot, missingForPay, previewKey, todayIST } from "@/lib/booking-rules";
 import { countryLabel, flagEmoji } from "@/lib/phone";
 import { BookedScreen } from "./BookedScreen";
+import { releaseQuickSlot } from "@/lib/quickbook.functions";
 import { ProgressBar, Step } from "./booking/Step";
 import { CaptureStep } from "./booking/CaptureStep";
 import { PlanStep } from "./booking/PlanStep";
@@ -40,7 +41,7 @@ const scrollTo = (n: number) =>
 
 export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
   const { draft, set, reset } = useBookingDraft();
-  const previews = usePreviews(draft.booking?.id);
+  const previews = usePreviews(draft.booking?.id, draft.manageToken);
   const [activeStep, setActiveStep] = useState(1);
   const [payOpen, setPayOpen] = useState(false);
   const [booked, setBooked] = useState(false);
@@ -157,6 +158,7 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     // Signature reserves a studio bay for 2 full days — the server refuses it
     // for the van. Switch to studio with an explanation, keep everything else.
     if (p === "signature" && draft.mobile) {
+      dropAbandonedHold();
       set({ plan: p, mobile: false, slot: null });
       setSlotsNonce((n) => n + 1);
       toast.message(
@@ -167,6 +169,7 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
     // Changing plan after a slot was picked clears only the slot (durations differ).
     // Photo, preview cache, location and contact details are kept.
     if (slot && prevPlan.current && prevPlan.current !== p) {
+      dropAbandonedHold();
       set({ plan: p, slot: null });
       setSlotsNonce((n) => n + 1);
       toast.message(
@@ -175,6 +178,15 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
       return;
     }
     set({ plan: p });
+  }
+  // A failed/abandoned checkout leaves an unpaid server-side hold. Free it before the
+  // customer picks a differently sized service, so the old reservation can't linger.
+  // (Only unpaid pending_deposit holds are affected; paid bookings are never touched.)
+  function dropAbandonedHold() {
+    if (slot && booking && draft.manageToken)
+      void releaseQuickSlot({ data: { bookingId: booking.id, token: draft.manageToken } }).catch(
+        () => {},
+      );
   }
   useEffect(() => {
     prevPlan.current = plan;
@@ -305,7 +317,7 @@ export function BookingFlow({ resume }: { resume?: ResumeDraft } = {}) {
                 open(2);
               }}
               onUploaded={(b, url) => {
-                set({ booking: b, ...(url ? { photo: url } : {}) });
+                set({ booking: b, manageToken: b.token ?? "", ...(url ? { photo: url } : {}) });
               }}
               onFailed={() => {
                 set({ photo: null });

@@ -1,16 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { PLANS, SLOTS, STUDIO_BAYS, haversineKm, imagePrompt, videoPrompt } from "./plans";
-import { BUCKET, planEnum, admin, signed } from "./booking-core";
-
-/** Unpaid holds stop counting after this long (matches book_slot() in the database). */
-const HOLD_MS = 20 * 60_000;
+import {
+  BUCKET,
+  HOLD_MS,
+  planEnum,
+  admin,
+  signed,
+  expireStaleHolds,
+  assertManageToken,
+} from "./booking-core";
 
 type SlotRow = {
   date: string | null;
   end_date: string | null;
   full_day: boolean | null;
   time: string | null;
+  plan?: string | null;
   location_type: string | null;
   map_pin: unknown;
   status: string | null;
@@ -23,6 +29,8 @@ export const uploadCar = createServerFn({ method: "POST" })
     z.object({ image: z.string().max(9_000_000), mime: z.string().max(40).optional() }).parse(d),
   )
   .handler(async ({ data }) => {
+    const { assertWritesOpen } = await import("./write-pause.server");
+    assertWritesOpen();
     const { decodeUpload, blurRegion, parseBox } = await import("./image-safety.server");
     const input = decodeUpload(data.image);
     if (!input.ok) return { ok: false as const, error: input.error };
@@ -58,13 +66,14 @@ export const uploadCar = createServerFn({ method: "POST" })
         plan: "Essential Wash",
         status: "lead",
       })
-      .select("id")
+      .select("id, manage_token")
       .single();
     if (error)
       return { ok: false as const, error: "Could not start your booking. Please try again." };
     return {
       ok: true as const,
       bookingId: row.id,
+      manageToken: row.manage_token as string,
       vehicle: vehicle.model,
       isCar: vehicle.isCar,
       plateBlurred: !!blurred,
@@ -80,18 +89,33 @@ export const makePreview = createServerFn({ method: "POST" })
         plan: planEnum,
         colour: z.string().max(40).optional(),
         style: z.string().max(40).optional(),
+        token: z.string().min(16).max(64),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    const { assertWritesOpen } = await import("./write-pause.server");
+    assertWritesOpen();
     const { createVideoJob, editCarImage } = await import("./ai.server");
     const sb = await admin();
+    // Read the booking's current design + stage so the final write can be guarded:
+    // a preview for an older choice must not overwrite a newer one (or a confirmed booking).
     const { data: b } = await sb
       .from("bookings")
-      .select("photo_url, video_job_id, video_status")
+      .select(
+        "photo_url, video_job_id, video_status, plan, colour, style, status, deposit_paid, clean_preview_url, manage_token",
+      )
       .eq("id", data.bookingId)
       .single();
     if (!b?.photo_url) throw new Error("Please upload your car photo first.");
+    assertManageToken(b.manage_token, data.token);
+    // Previews are paid AI work: refuse them for finished bookings and don't regenerate
+    // a design that is already stored (repeated calls would burn AI credits for nothing).
+    if (b.deposit_paid)
+      throw new Error("This booking is already confirmed — no new preview needed.");
+    const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.jpg`;
+    if (b.clean_preview_url === path && b.video_job_id)
+      return { previewUrl: await signed(path), path };
     const file = await sb.storage.from(BUCKET).download(b.photo_url);
     if (file.error) throw new Error("Could not read your photo.");
     const bytes = new Uint8Array(await file.data.arrayBuffer());
@@ -101,8 +125,11 @@ export const makePreview = createServerFn({ method: "POST" })
       "image/jpeg",
       imagePrompt(data.plan, data.colour, data.style),
     );
-    const path = `previews/${data.bookingId}-${data.plan}-${(data.colour ?? "").replace(/\W/g, "")}-${(data.style ?? "").replace(/\W/g, "")}.jpg`;
     await sb.storage.from(BUCKET).upload(path, out, { contentType: "image/jpeg", upsert: true });
+    // Only persist the design if the booking still shows the design this preview was
+    // requested for: same plan name and unchanged stage. If the customer picked another
+    // service meanwhile (or the booking was confirmed), the older preview is returned for
+    // the UI cache but must NOT overwrite plan/colour/style/clean_preview_url.
     await sb
       .from("bookings")
       .update({
@@ -111,7 +138,9 @@ export const makePreview = createServerFn({ method: "POST" })
         colour: data.colour ?? null,
         style: data.style ?? null,
       })
-      .eq("id", data.bookingId);
+      .eq("id", data.bookingId)
+      .eq("plan", b.plan)
+      .eq("status", b.status);
 
     // Use the finished design as the reveal's opening frame, then let both results
     // continue through the booking without showing generation status to customers.
@@ -162,24 +191,38 @@ export const getSlots = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await admin();
+    // Free expired unpaid holds first so both this display and any booking made right
+    // after see the truth (book_slot has no expiry rule of its own).
+    try {
+      await expireStaleHolds(sb);
+    } catch (e) {
+      console.error("hold cleanup failed", e);
+    }
     const end = new Date(data.start);
     end.setDate(end.getDate() + 7);
     const endStr = end.toISOString().slice(0, 10);
-    const [{ data: bookings }, { data: blocked }] = await Promise.all([
-      sb
-        .from("bookings")
-        .select(
-          "date, end_date, full_day, time, location_type, map_pin, status, held_at, deposit_paid",
-        )
-        .gte("date", new Date(new Date(data.start).getTime() - 86400000).toISOString().slice(0, 10))
-        .lt("date", endStr)
-        .in("status", ["confirmed", "pending_deposit", "consultation"]),
-      sb
-        .from("blocked_slots")
-        .select("date, time, reason")
-        .gte("date", data.start)
-        .lt("date", endStr),
-    ]);
+    const [{ data: bookings, error: bookingsError }, { data: blocked, error: blockedError }] =
+      await Promise.all([
+        sb
+          .from("bookings")
+          .select(
+            "date, end_date, full_day, time, plan, location_type, map_pin, status, held_at, deposit_paid",
+          )
+          .gte(
+            "date",
+            new Date(new Date(data.start).getTime() - 86400000).toISOString().slice(0, 10),
+          )
+          .lt("date", endStr)
+          .in("status", ["confirmed", "pending_deposit", "consultation"]),
+        sb
+          .from("blocked_slots")
+          .select("date, time, reason")
+          .gte("date", data.start)
+          .lt("date", endStr),
+      ]);
+    // A database hiccup must fail loudly: an empty result would render every slot as free.
+    if (bookingsError || blockedError)
+      throw new Error("Could not load live availability. Please retry.");
 
     // Same rule as book_slot(): unpaid holds older than 20 min no longer take a slot.
     const now = Date.now();
@@ -190,6 +233,19 @@ export const getSlots = createServerFn({ method: "POST" })
         !b.held_at ||
         now - new Date(b.held_at).getTime() < HOLD_MS,
     );
+
+    // Mirror book_slot's occupancy for display: a two-hour Full Detail occupies its
+    // starting slot AND the next one (whole-day rows block everything via full_day).
+    const occupies = (b: SlotRow, t: string) => {
+      if (b.full_day) return true;
+      if (!b.time) return false;
+      if (b.time === t) return true;
+      if (b.plan === "Full Detail") {
+        const i = SLOTS.indexOf(b.time);
+        return i >= 0 && SLOTS[i + 1] === t;
+      }
+      return false;
+    };
 
     const result: Record<
       string,
@@ -206,7 +262,7 @@ export const getSlots = createServerFn({ method: "POST" })
             !!b.date &&
             ds >= b.date &&
             ds <= (b.end_date ?? b.date) &&
-            (b.time === t || !!b.full_day) &&
+            occupies(b, t) &&
             (b.location_type === "mobile") === data.mobile,
         );
         const block = (blocked ?? []).find((b) => b.date === ds && b.time === t);

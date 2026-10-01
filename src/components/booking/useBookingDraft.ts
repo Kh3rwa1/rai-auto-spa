@@ -73,7 +73,7 @@ export function useBookingDraft() {
 }
 
 /** Background AI previews keyed by plan (+colour/style for Signature); each key is generated once. */
-export function usePreviews(bookingId: string | undefined) {
+export function usePreviews(bookingId: string | undefined, manageToken?: string) {
   const preview = useServerFn(makePreview);
   const [cache, setCache] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<string | null>(null);
@@ -90,7 +90,9 @@ export function usePreviews(bookingId: string | undefined) {
       setPending(k);
       setErrorFor(null);
       try {
-        const r = await preview({ data: { bookingId, plan: p, colour: c, style: s } });
+        const r = await preview({
+          data: { bookingId, plan: p, colour: c, style: s, token: manageToken },
+        });
         if (r.previewUrl) setCache((m) => ({ ...m, [k]: r.previewUrl! }));
         else throw new Error("Preview came back empty. Retry or continue without it.");
       } catch (e) {
@@ -100,7 +102,7 @@ export function usePreviews(bookingId: string | undefined) {
         setPending((cur) => (cur === k ? null : cur));
       }
     },
-    [bookingId, preview, cache],
+    [bookingId, manageToken, preview, cache],
   );
 
   const seed = useCallback((k: string, url: string) => {

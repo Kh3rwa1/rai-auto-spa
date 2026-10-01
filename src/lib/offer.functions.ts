@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-
-const admin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+import { admin, expireStaleHolds } from "./booking-core";
+import { slotsForPlan } from "./plans";
 
 /** Public: the waitlist offer link sent on WhatsApp. The offer UUID itself is the capability. */
 export const getOffer = createServerFn({ method: "POST" })
@@ -32,6 +32,8 @@ export const getOffer = createServerFn({ method: "POST" })
 export const claimOffer = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    const { assertWritesOpen } = await import("./write-pause.server");
+    assertWritesOpen();
     const sb = await admin();
     const { data: o } = await sb
       .from("waitlist_offers")
@@ -42,6 +44,12 @@ export const claimOffer = createServerFn({ method: "POST" })
     if (o.status === "claimed") return { result: "claimed" as const };
     if (o.status !== "offered") return { result: "taken" as const };
     if (new Date(o.expires_at).getTime() < Date.now()) return { result: "expired" as const };
+    // Free expired unpaid holds so the capacity check sees the truth.
+    try {
+      await expireStaleHolds(sb);
+    } catch (e) {
+      console.error("hold cleanup failed", e);
+    }
 
     const { data: orig } = o.cancelled_booking_id
       ? await sb
@@ -77,6 +85,7 @@ export const claimOffer = createServerFn({ method: "POST" })
       p_water: true,
       p_days: 1,
       p_status: "pending_deposit",
+      p_slots: slotsForPlan(orig?.plan ?? "Essential Wash"),
     });
     if (code !== "ok") {
       await sb.from("bookings").delete().eq("id", nb.id);
@@ -87,6 +96,12 @@ export const claimOffer = createServerFn({ method: "POST" })
         .eq("status", "offered");
       return { result: "taken" as const };
     }
+    // Stamp the claim hold so the 20-minute expiry rule applies to it too.
+    await sb
+      .from("bookings")
+      .update({ held_at: new Date().toISOString() })
+      .eq("id", nb.id)
+      .eq("status", "pending_deposit");
     // Mark this one claimed; siblings for the same freed slot become "taken".
     const { data: won } = await sb
       .from("waitlist_offers")
