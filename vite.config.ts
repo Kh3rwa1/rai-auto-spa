@@ -20,6 +20,26 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  nitro: {
+    // Landing spot for the deployed server runtime's own env vars (Worker
+    // bindings, read via process.env by server functions). The write-pause
+    // guard reads BOOKING_WRITES_OPEN at runtime — fail-closed while unset.
+    //
+    // The wrapper's public types predate nitro's `cloudflare.wrangler`
+    // passthrough (its d.ts says the option surface is "narrow on purpose");
+    // the runtime merge (`...userNitroOpts.cloudflare`) forwards the key
+    // verbatim, and nitro's generated .output/server/wrangler.json carries it
+    // into `wrangler deploy`. Only effective because deployConfig: true is
+    // set by the wrapper (with deployConfig, Cloudflare-dashboard env vars
+    // are discarded, so the repo config is the authoritative source).
+    cloudflare: {
+      wrangler: {
+        vars: {
+          BOOKING_WRITES_OPEN: "1",
+        },
+      },
+    } as { nodeCompat?: boolean; deployConfig?: boolean },
+  },
   vite: {
     plugins: [mcpPlugin()],
     // react-phone-input-2 is CommonJS; pre-bundling it up front stops Vite from
