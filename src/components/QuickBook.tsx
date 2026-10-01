@@ -211,7 +211,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const [locating, setLocating] = useState(false);
   const [, setTick] = useState(0);
 
-  const starting = useRef<Promise<string | null> | null>(null);
+  const starting = useRef<Promise<{ id: string; token: string } | null> | null>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRuns = useRef(new Set<string>());
@@ -227,15 +227,19 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const carOk = carName.length >= 2 && !uploading;
 
   const ensureBooking = useCallback(
-    (p: PlanId): Promise<string | null> => {
-      if (bookingId) return Promise.resolve(bookingId);
+    (p: PlanId): Promise<{ id: string; token: string } | null> => {
+      // The fresh token is returned alongside the id on purpose: the caller
+      // may hold the slot in the same tick, before React re-renders — state
+      // read through a closure would still be "" and holdQuickSlot would
+      // reject it (ZodError: token too_small).
+      if (bookingId) return Promise.resolve({ id: bookingId, token: manageToken });
       if (!starting.current) {
         starting.current = start({ data: { plan: p, vehicle: carName || undefined } })
           .then((r) => {
             if (r.ok) {
               setBookingId(r.bookingId);
               setManageToken(r.manageToken ?? "");
-              return r.bookingId;
+              return { id: r.bookingId, token: r.manageToken ?? "" };
             }
             starting.current = null;
             toast.error(r.error);
@@ -251,7 +255,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       }
       return starting.current;
     },
-    [bookingId, start, carName],
+    [bookingId, manageToken, start, carName],
   );
 
   // Sequence guard: only the newest availability request may update the grid,
@@ -352,8 +356,13 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
   const activeDay = day ?? slot?.date ?? soonest?.date ?? days[0]!;
   const gridLoaded = Object.keys(slots).length > 0;
 
-  async function holdFor(id: string, ds: string, t: string) {
+  async function holdFor(id: string, token: string, ds: string, t: string) {
     if (!plan) return false;
+    // Defense-in-depth: never send a token the server must reject.
+    if (token.length < 16) {
+      toast.message("Please pick your time again.");
+      return false;
+    }
     const r = await hold({
       data: {
         bookingId: id,
@@ -363,7 +372,7 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
         mobile,
         water,
         vehicle: carName || undefined,
-        token: manageToken,
+        token,
       },
     });
     if (r.ok) {
@@ -383,13 +392,13 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       return;
     }
     setHolding(`${ds} ${t}`);
-    const id = await ensureBooking(plan);
-    if (!id) {
+    const created = await ensureBooking(plan);
+    if (!created) {
       setHolding(null);
       return;
     }
     try {
-      await holdFor(id, ds, t);
+      await holdFor(created.id, created.token, ds, t);
     } catch (e) {
       toast[isPausedError(e) ? "message" : "error"](
         bookingErrorMessage(e, "Couldn't hold that time. Try again."),
@@ -428,12 +437,17 @@ export function QuickBook({ onUsePhotoFlow }: { onUsePhotoFlow?: () => void }) {
       setBookingId(r.bookingId);
       setManageToken(r.manageToken ?? "");
       setPhotoBookingId(r.bookingId);
-      starting.current = Promise.resolve(r.bookingId);
+      starting.current = Promise.resolve({ id: r.bookingId, token: r.manageToken ?? "" });
       if (prevSlot && prevBooking) {
         setSlot(null);
         setHeldAt(null);
         await release({ data: { bookingId: prevBooking, token: manageToken } }).catch(() => {});
-        const ok = await holdFor(r.bookingId, prevSlot.date, prevSlot.time).catch(() => false);
+        const ok = await holdFor(
+          r.bookingId,
+          r.manageToken ?? "",
+          prevSlot.date,
+          prevSlot.time,
+        ).catch(() => false);
         if (!ok) toast.message("Photo added — please pick your time again.");
         void loadSlots();
       }
