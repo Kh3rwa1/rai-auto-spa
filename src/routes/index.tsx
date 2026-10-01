@@ -19,7 +19,7 @@ import { BookingFlow } from "@/components/BookingFlow";
 import { QuickBook } from "@/components/QuickBook";
 import { getSlots } from "@/lib/booking.functions";
 import { BRAND } from "@/lib/brand";
-import { MOBILE_FEE, PLANS, SLOTS, WATER_FEE, inr, isDryWindow } from "@/lib/plans";
+import { PLANS, SLOTS, WATER_FEE, inr, isDryWindow } from "@/lib/plans";
 
 const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
 const DAY_MS = 86_400_000;
@@ -78,8 +78,7 @@ const CSS = `
 .ras .ras-hero-copy{padding:clamp(24px,4vw,46px)}
 .ras .ras-hero-title{margin-top:20px;font-size:clamp(62px,7.5vw,104px)}
 .ras .ras-hero-subtitle{max-width:460px;margin-top:16px;font-size:20px;font-weight:800;line-height:1.3}
-.ras .ras-hero-description{max-width:470px;margin-top:10px;font-size:15px;line-height:1.75;color:#444}
-.ras .ras-hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.ras .ras-hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
 .ras .ras-next{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:14px;padding:8px 14px;border:2px solid var(--ink);border-radius:999px;background:var(--mint);color:var(--ink);font-size:13px;font-weight:800;text-decoration:none}
 .ras .ras-next-dot{width:9px;height:9px;border-radius:999px;background:#0b8a4b;box-shadow:0 0 0 3px rgba(11,138,75,.25)}
 .ras .ras-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
@@ -110,7 +109,7 @@ const CSS = `
 .ras .ras-flow-switch{display:inline-flex;min-height:44px;align-items:center;gap:8px;margin-top:16px;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
 
 .ras .ras-rules-section{padding-bottom:50px}
-.ras .ras-rules-grid{display:grid;grid-template-columns:1.05fr 1fr;align-items:start;gap:24px;margin-top:22px}
+.ras .ras-rules-grid{display:grid;grid-template-columns:1.05fr 1fr;align-items:center;gap:24px;margin-top:22px}
 .ras .ras-slot-card{padding:20px}
 .ras .ras-slot-row+.ras-slot-row{margin-top:18px}
 .ras .ras-slot-title{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:800}
@@ -118,12 +117,11 @@ const CSS = `
 .ras .ras-slot{padding:9px 2px;border:2px solid var(--ink);border-radius:10px;background:var(--mint);font-size:12px;font-weight:800;text-align:center}
 .ras .ras-slot[data-blocked="true"]{background:#e4dfd5;color:#4b4945;text-decoration:line-through;text-decoration-thickness:2px}
 .ras .ras-rule-list{display:grid;gap:12px}
-.ras .ras-rule,.ras .ras-step{display:flex;align-items:flex-start;gap:14px;padding:17px;border:2px solid var(--ink);border-radius:15px;background:#fff}
+.ras .ras-rule{display:flex;align-items:flex-start;gap:14px;padding:17px;border:2px solid var(--ink);border-radius:15px;background:#fff}
 .ras .ras-step-icon{display:grid;flex-shrink:0;width:42px;height:42px;place-items:center;border:2px solid var(--ink);border-radius:999px}
 
 .ras .ras-glow-grid{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:32px;padding-bottom:50px}
 .ras .ras-slot-card{padding:20px}
-.ras .ras-step-list{display:grid;gap:12px;margin-top:23px}
 
 .ras .ras-how-section{padding-bottom:50px}
 .ras .ras-how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
@@ -314,14 +312,11 @@ function Hero() {
             to beast.
           </h1>
 
-          <p className="ras-eyebrow mt-5">Car wash · Detail · Custom wrap</p>
+          <p className="ras-eyebrow mt-5" style={{ fontSize: "14px" }}>
+            Car wash · Detail · Custom wrap
+          </p>
 
           <p className="ras-hero-subtitle">Book your car&rsquo;s glow-up in a few taps.</p>
-
-          <p className="ras-hero-description">
-            Visit our MG Marg studio or let the van come to your door. See the times that are
-            actually free, lock yours in with a 30% deposit, and skip the phone tag.
-          </p>
 
           <div className="ras-hero-actions">
             <a href="#book" className="ras-btn ras-btn-primary">
@@ -357,10 +352,6 @@ function Hero() {
             <li>
               <Check className="h-4 w-4" aria-hidden />
               No account needed
-            </li>
-            <li>
-              <Check className="h-4 w-4" aria-hidden />
-              Prices upfront
             </li>
             <li>
               <Check className="h-4 w-4" aria-hidden />
@@ -482,8 +473,8 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
       </div>
 
       <p className="ras-fine">
-        Your slot is held for 20 minutes while you check out. Pay 30% now and the rest on the day.
-        Checkout on this site is a demo, so no real payment is taken. AI previews are illustrative.
+        Pay 30% now, the rest on the day. Your slot is held for 20 minutes. Checkout here is a demo,
+        so no real payment is taken. AI previews are illustrative.
       </p>
     </section>
   );
@@ -496,20 +487,6 @@ function Rules() {
       description: `Van bookings ask if you have a tap. No tap? The van brings a tank (+${inr(WATER_FEE)}) and the midday slots close, so nobody turns up to a dry hose.`,
       icon: Truck,
       color: "var(--mint)",
-    },
-    {
-      title: "30% locks your slot.",
-      description:
-        "Pay a 30% deposit and the time is yours. The rest is due on the day. Your slot is held for 20 minutes while you check out.",
-      icon: ShieldCheck,
-      color: "var(--yellow)",
-    },
-    {
-      title: "Plans change. That's fine.",
-      description:
-        "Reschedule free up to 12 hours before from your booking link. When a slot frees up, waitlisted customers get first claim.",
-      icon: CalendarCheck,
-      color: "var(--lilac)",
     },
   ];
 
@@ -595,27 +572,6 @@ function Rules() {
 }
 
 function Transformation() {
-  const steps = [
-    {
-      title: "Pick your service",
-      description: "Essential wash, full detail or a custom wrap. See the price before you begin.",
-      icon: Sparkles,
-      color: "var(--mint)",
-    },
-    {
-      title: "Choose where and when",
-      description: "Studio or doorstep. Choose from times that are actually free.",
-      icon: CalendarCheck,
-      color: "var(--yellow)",
-    },
-    {
-      title: "Confirm your booking",
-      description: "Add your details and pay the 30% deposit. A photo preview is optional.",
-      icon: Check,
-      color: "var(--lilac)",
-    },
-  ];
-
   return (
     <section id="glow" className="ras-wrap ras-section ras-glow-grid" aria-labelledby="glow-title">
       <figure className="ras-panel ras-compare-frame">
@@ -640,22 +596,9 @@ function Transformation() {
           <span style={{ color: "#a51e60" }}>dripping.</span>
         </h2>
 
-        <ol className="ras-step-list">
-          {steps.map((step, index) => (
-            <li className="ras-step" key={step.title}>
-              <span className="ras-step-icon" style={{ background: step.color }}>
-                <step.icon className="h-5 w-5" aria-hidden />
-              </span>
-
-              <div>
-                <h3 className="text-sm font-extrabold">
-                  {index + 1}. {step.title}
-                </h3>
-                <p className="ras-muted mt-1 text-sm leading-relaxed">{step.description}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <p className="ras-muted mt-3 max-w-xl text-sm leading-relaxed">
+          Drag the slider. Same car, new look.
+        </p>
       </div>
     </section>
   );
@@ -665,25 +608,25 @@ function AfterBooking() {
   const steps = [
     {
       title: "Slot locked",
-      text: "Pay the 30% deposit and your time is yours. A confirmation email follows with your booking link.",
+      text: "Pay the 30% deposit. A confirmation email brings your booking link.",
       icon: CalendarCheck,
       color: "var(--yellow)",
     },
     {
       title: "Quick confirmation call",
-      text: "Rai's assistant rings to check the details. Press 1 to confirm, 2 to change the time or 3 to change the plan.",
+      text: "Rai's assistant rings you. Press 1 to confirm, 2 to change the time, 3 to change the plan.",
       icon: PhoneCall,
       color: "var(--mint)",
     },
     {
       title: "Change it yourself",
-      text: "Need another time? Use your booking link. Rescheduling is free until 12 hours before.",
+      text: "Reschedule free from your booking link until 12 hours before.",
       icon: RefreshCw,
       color: "var(--lilac)",
     },
     {
       title: "We turn up, you shine",
-      text: "Visit the MG Marg studio or wait for the van. Pay the remaining balance on the day.",
+      text: "Visit the MG Marg studio or wait for the van. Pay the balance on the day.",
       icon: Truck,
       color: "var(--pink)",
     },
@@ -720,14 +663,6 @@ function AfterBooking() {
 
 function Faq() {
   const items = [
-    {
-      q: "How much does it cost?",
-      a: `Essential Wash is ${inr(PLANS.wash.price)} (${PLANS.wash.duration}), Full Detail is ${inr(PLANS.detail.price)} (${PLANS.detail.duration}) and Signature Super Design is ${inr(PLANS.signature.price)} (${PLANS.signature.duration}). The doorstep van adds ${inr(MOBILE_FEE)}, and ${inr(WATER_FEE)} more if there is no water tap at your place.`,
-    },
-    {
-      q: "Do I pay everything up front?",
-      a: "No. You pay a 30% deposit to lock your slot, and the rest on the day.",
-    },
     {
       q: "Can I change my time?",
       a: "Yes. Use the booking link in your confirmation to reschedule for free until 12 hours before your slot.",
@@ -777,7 +712,7 @@ function Behind() {
           <p className="text-sm leading-relaxed">
             Rai ran 1,500+ appointments out of a notebook. Now confirmations, reschedules and
             refilling cancelled slots run through the booking desk, so Rai spends the day on cars
-            instead of on the phone.
+            instead of on the phone. A 30% deposit keeps no-shows out of the diary.
           </p>
         </div>
       </div>
