@@ -3,6 +3,7 @@
  * Two +91 agent numbers are used round-robin; if the first attempt fails we
  * immediately retry with the second. Number 2 is also the inbound callback line.
  */
+import { PLANS } from "./plans";
 
 const BASE = "https://apps.sarvam.ai/api/outbounds";
 
@@ -80,6 +81,34 @@ function unknownVars(detail: string): string[] {
  */
 const rejectedVars = new Set<string>();
 
+/** Spoken plan: the PLANS display name when the raw value is a plan id, else verbatim. */
+function speakPlan(plan: string) {
+  return (PLANS as Record<string, { name: string }>)[plan]?.name ?? plan;
+}
+
+/** "2026-10-02" -> "Friday, 2 October" in Asia/Kolkata. Parsed as midnight IST so the
+ * calendar day can never shift, whatever the server's own timezone is. */
+function speakDate(date: string) {
+  const d = new Date(`${date}T00:00:00+05:30`);
+  return Number.isNaN(d.getTime())
+    ? date
+    : new Intl.DateTimeFormat("en-IN", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: "Asia/Kolkata",
+      }).format(d);
+}
+
+/** "07:00" -> "7 AM", "14:30" -> "2:30 PM". Unparseable values pass through verbatim. */
+function speakTime(time: string) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!m) return time;
+  const h = Number(m[1]);
+  const min = m[2] === "00" ? "" : `:${m[2]}`;
+  return `${h % 12 || 12}${min} ${h < 12 ? "AM" : "PM"}`;
+}
+
 function buildBody(env: Env, from: string, v: CallVars, vars: Record<string, string>) {
   return {
     app_config: {
@@ -90,7 +119,7 @@ function buildBody(env: Env, from: string, v: CallVars, vars: Record<string, str
       agent_variables: vars,
       app_overrides: {
         initial_language_name: "English",
-        initial_bot_message: `Hello ${v.customerName}, this is Rai's assistant from Rai's Auto Spa confirming your ${v.plan} on ${v.date} at ${v.time} at ${v.building}. Press 1 to confirm, 2 to change time, 3 to change plan.`,
+        initial_bot_message: `Hello ${v.customerName}, this is Rai's assistant from Rai's Auto Spa confirming your ${speakPlan(v.plan)} on ${speakDate(v.date)} at ${speakTime(v.time)} at ${v.building}. Press 1 to confirm, 2 to change time, 3 to change plan.`,
       },
     },
     user_config: { user_phone_number: v.customerPhoneE164 },
