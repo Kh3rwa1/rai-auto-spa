@@ -428,7 +428,26 @@ export const ensureDemoData = createServerFn({ method: "POST" }).handler(async (
     .select("id", { count: "exact", head: true })
     .eq("is_seed", true)
     .gte("date", today);
-  if ((count ?? 0) > 0) return { seeded: false };
+  if ((count ?? 0) > 0) {
+    // Seeded rows exist, but nothing in this repo schedules today's subscription
+    // visits (no pg_cron wiring). Idempotent upsert on (subscription_id, date);
+    // skipped entirely when today already has visits. Never blocks the dashboard.
+    const { materialiseDay, istToday } = await import("./schedule.server");
+    const day = istToday();
+    const { count: visits } = await sb
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "subscription")
+      .eq("date", day);
+    if ((visits ?? 0) === 0) {
+      try {
+        await materialiseDay(sb, day);
+      } catch (e) {
+        console.error("today's subscription visits could not be materialised", e);
+      }
+    }
+    return { seeded: false };
+  }
   // seedDemo only ever deletes rows it created, so a visitor's in-progress booking survives.
   const { seedDemo } = await import("./seed.server");
   await seedOnce(() => seedDemo(sb));

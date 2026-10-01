@@ -93,7 +93,7 @@ describe("needsVanWater / litresToLoad", () => {
 });
 
 describe("buildSeedSubscriptions", () => {
-  const clients = Array.from({ length: 14 }, (_, i) => ({ id: `c${i + 1}` }));
+  const clients = Array.from({ length: 8 }, (_, i) => ({ id: `c${i + 1}` }));
   const subs = buildSeedSubscriptions(clients);
 
   it("creates one subscription per client — never two on the same client", () => {
@@ -102,18 +102,17 @@ describe("buildSeedSubscriptions", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("spreads preferred_time across 06:30–10:00 with at most 2 per half-hour slot", () => {
+  it("places at most 1 visit per half-hour slot across 06:30–10:00", () => {
     const byTime = new Map<string, number>();
     for (const s of subs) {
       expect(s.preferred_time >= "06:30").toBe(true);
       expect(s.preferred_time <= "10:00").toBe(true);
       byTime.set(s.preferred_time, (byTime.get(s.preferred_time) ?? 0) + 1);
     }
-    for (const n of byTime.values()) expect(n).toBeLessThanOrEqual(2);
-    // A believable day for one van: 10–14 stops once inactives and skips are applied.
+    for (const n of byTime.values()) expect(n).toBeLessThanOrEqual(1);
+    // One van, one stop at a time: all 8 are active.
     const active = subs.filter((s) => s.active).length;
-    expect(active).toBeGreaterThanOrEqual(10);
-    expect(active).toBeLessThanOrEqual(14);
+    expect(active).toBe(8);
   });
 
   it("flags every seeded subscription and plans them as Daily Wash", () => {

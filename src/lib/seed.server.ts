@@ -50,8 +50,8 @@ const BUILDINGS = [
   "Denzong Homes",
 ];
 const TIMES = ["06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00"];
-/** Daily-wash subscription count: ~13 active stops/day spread over 06:30–10:00, ≤2 per half hour. */
-const SUB_COUNT = 14;
+/** Daily-wash subscription count: 8 active stops, one per half-hour slot 06:30–10:00. */
+const SUB_COUNT = 8;
 const areaNames = ["Tadong", "MG Marg", "Deorali", "Development Area"] as const;
 
 const istToday = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
@@ -85,9 +85,9 @@ async function uploadSample(sb: DB, origin: string, name: string, existing: Set<
  * fresh, today-relative dataset (IST). A real visitor's in-progress booking is never touched.
  */
 /**
- * Pure plan for the seeded daily-wash subscriptions: one per client, times
- * spread across 06:30–10:00 with at most 2 per half-hour slot, so a normal day
- * is a believable 13 stops for one van (one subscription is inactive).
+ * Pure plan for the seeded daily-wash subscriptions: one per client, one stop
+ * per half-hour slot across 06:30–10:00, every subscription active — exactly 8
+ * van stops on a normal day, one van doing one job at a time.
  */
 export function buildSeedSubscriptions(subsClients: Array<{ id: string }>): Array<{
   client_id: string;
@@ -100,7 +100,7 @@ export function buildSeedSubscriptions(subsClients: Array<{ id: string }>): Arra
   return subsClients.map((c, i) => ({
     client_id: c.id,
     plan: "Daily Wash",
-    active: i % 13 !== 12,
+    active: true,
     preferred_time: TIMES[i % TIMES.length]!,
     skip_dates: [],
     is_seed: true as const,
@@ -168,7 +168,7 @@ export async function seedDemo(sb: DB) {
     string | null,
   ];
 
-  // 14 daily-wash clients + 35 booking clients
+  // 8 daily-wash clients + 41 booking clients
   const clients = Array.from({ length: 49 }, (_, i) => {
     const area = areaNames[i % 4]!;
     return {

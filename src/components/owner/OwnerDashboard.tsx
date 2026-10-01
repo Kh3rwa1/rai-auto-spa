@@ -70,7 +70,6 @@ export function OwnerDashboard() {
   const vanJobs = todays.filter((b) => b.location_type === "mobile");
   const waterJobs = vanJobs.filter(needsVanWater);
   const liters = litresToLoad(todays);
-  const withTap = vanJobs.length - waterJobs.length;
   const tankRefills = Math.max(0, Math.ceil(liters / OPS.vanTankLitres) - 1);
   const fuelSaved = Math.max(0, (route.naive - route.km) * OPS.fuelLitresPerKm);
 
@@ -200,7 +199,7 @@ export function OwnerDashboard() {
             icon={Droplets}
             label="Water to load on the van"
             value={`${liters} L`}
-            sub={`${waterJobs.length} van jobs need water · ${withTap} have a tap`}
+            sub={`${waterJobs.length} of ${vanJobs.length} van job${vanJobs.length === 1 ? "" : "s"} need water`}
             tone="text-electric"
             tile="bg-electric/10"
             formula={`Van jobs where the customer has no tap: Essential ${OPS.litresPerWash.essential} L, Full Detail ${OPS.litresPerWash.detail} L, Daily wash ${OPS.litresPerWash.daily} L each. Studio jobs and customers with water on site are excluded.${
