@@ -268,12 +268,16 @@ export const getSlots = createServerFn({ method: "POST" })
         const block = (blocked ?? []).find((b) => b.date === ds && b.time === t);
         let travelMin: number | null = null;
         if (data.mobile && data.pin && dayMobile.length) {
-          const km = Math.min(
-            ...dayMobile.map((b) =>
-              haversineKm(data.pin!, b.map_pin as { lat: number; lng: number }),
-            ),
-          );
-          travelMin = Math.max(5, Math.round((km / 20) * 60));
+          // map_pin is nullable: quick-flow bookings exist before the customer
+          // picks a pin, so skip pin-less vans instead of crashing the grid.
+          const pins = dayMobile.flatMap((b) => {
+            const p = b.map_pin as { lat: number; lng: number } | null;
+            return p && typeof p.lat === "number" && typeof p.lng === "number" ? [p] : [];
+          });
+          if (pins.length) {
+            const km = Math.min(...pins.map((p) => haversineKm(data.pin!, p)));
+            travelMin = Math.max(5, Math.round((km / 20) * 60));
+          }
         }
         result[`${ds} ${t}`] = { taken: here.length, blocked: block?.reason ?? null, travelMin };
       }
