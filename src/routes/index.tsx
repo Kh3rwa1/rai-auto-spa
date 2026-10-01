@@ -4,8 +4,12 @@ import {
   ArrowRight,
   CalendarCheck,
   Check,
+  FileText,
   LayoutDashboard,
   MapPin,
+  PhoneCall,
+  PhoneMissed,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
   Store,
@@ -1032,6 +1036,9 @@ function Hero() {
               <br />
               Start with a service. Add a photo for an AI preview.
             </p>
+            <a href="#owner-desk" className="ras-art-link">
+              See Rai&rsquo;s side <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </a>
           </div>
         </div>
       </div>
@@ -1146,7 +1153,7 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
         <p className="mt-2">
           Pick a plan, then tap a sample car (or type a model). Choose a time and pay in the
           simulated checkout. No real money moves. Then open the owner demo to see the route,
-          calendar, waitlist and leads from Rai&rsquo;s side.
+          calendar, waitlist, leads and confirmation calls from Rai&rsquo;s side.
         </p>
 
         <p className="mt-2">
@@ -1396,7 +1403,7 @@ function OwnerStory() {
   const after = [
     "Customers pick the service, place and time. The grid closes slots that can't work, like the van with no water at midday.",
     // Delete the next line if your owner dashboard's Calls tab only shows "not configured".
-    "After the deposit, Rai's voice assistant phones the customer to confirm: press 1 to confirm, 2 to change the time, 3 to change the plan. The result and transcript land in her dashboard.",
+    "After the deposit, Rai's voice assistant phones the customer to confirm: press 1 to confirm, 2 to change the time, 3 to change the plan. The result and transcript land in the dashboard.",
     "When someone cancels, waitlisted customers in that area get a claim offer. First to claim wins, and the slot can't be double-booked.",
     "Photo uploaded but never paid? It shows up as a lead with a payment link ready to send in one tap.",
     "Every customer gets a manage link to pay or reschedule on their own, free until 12 hours before.",
@@ -1454,7 +1461,7 @@ function OwnerStory() {
 
           <article className="ras-panel ras-owner-card" style={{ background: "var(--mint)" }}>
             <span className="ras-pill" style={{ background: "#fff" }}>
-              After · The booking desk
+              After · Rai&rsquo;s dashboard
             </span>
 
             <h3 className="ras-display mt-4 text-3xl">Customers book. Rai runs the day.</h3>
@@ -1469,6 +1476,9 @@ function OwnerStory() {
             </ul>
           </article>
         </div>
+
+        <ChoreList />
+        <DashboardPreview />
       </div>
     </section>
   );
@@ -1537,6 +1547,7 @@ function Index() {
   return (
     <div id="top" className="ras">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: EXTRA_CSS }} />
 
       <a href="#book" className="ras-skip">
         Skip to booking
@@ -1550,6 +1561,7 @@ function Index() {
         <RaiRules />
         <Transformation />
         <OwnerStory />
+        <FinalCta />
       </main>
 
       <Footer />
@@ -1563,5 +1575,271 @@ function Index() {
         </div>
       )}
     </div>
+  );
+}
+
+const EXTRA_CSS = `
+.ras .ras-art-link { display: inline-flex; min-height: 44px; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; font-weight: 800; color: #111; text-decoration: underline; text-underline-offset: 4px; }
+.ras .ras-desk-wrap { margin-top: 40px; scroll-margin-top: 100px; }
+.ras .ras-desk { display: grid; grid-template-columns: 1.25fr 1fr; align-items: start; gap: 18px; margin-top: 18px; }
+.ras .ras-desk-stack { display: grid; gap: 18px; }
+.ras .ras-desk-card { padding: 18px; background: #fff; }
+.ras .ras-desk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.ras .ras-desk-title { font-family: Outfit, Inter, sans-serif; font-size: 19px; font-weight: 800; line-height: 1.2; }
+.ras .ras-desk-sub { margin-top: 2px; font-size: 12px; line-height: 1.5; color: #4b4945; }
+.ras .ras-desk-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-top: 2px solid #e4dfd5; }
+.ras .ras-desk-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; }
+.ras .ras-desk-meta { margin-top: 2px; font-size: 12px; color: #4b4945; }
+.ras .ras-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.ras .ras-badge[data-tone="ok"] { background: #c9f1de; color: #0b5132; }
+.ras .ras-badge[data-tone="warn"] { background: #ffe9a8; color: #6b4a00; }
+.ras .ras-badge[data-tone="ring"] { background: #dcd3ff; color: #35208a; }
+.ras .ras-mock-actions { display: flex; gap: 6px; }
+.ras .ras-mock-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border: 2px solid #111; border-radius: 9px; background: #fff; font-size: 11px; font-weight: 800; }
+.ras .ras-mock-btn[data-solid="true"] { background: #ffd84d; }
+.ras .ras-mock-btn[data-off="true"] { opacity: .5; }
+.ras .ras-desk-foot { margin-top: 12px; font-size: 12px; line-height: 1.6; color: #4b4945; }
+.ras .ras-chores-head { margin-top: 40px; }
+.ras .ras-chores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+.ras .ras-chore { padding: 16px; border: 2px solid #111; border-radius: 15px; background: #fff; }
+.ras .ras-chore-old { margin-top: 4px; font-size: 14px; font-weight: 700; color: #4b4945; text-decoration: line-through; text-decoration-thickness: 2px; }
+.ras .ras-chore-new { margin-top: 4px; font-size: 14px; line-height: 1.55; }
+.ras .ras-chore-arrow { margin-block: 8px; }
+.ras .ras-final { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 22px; margin-block: 48px; padding: clamp(22px, 4vw, 38px); background: #ffd84d; }
+.ras .ras-final-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 1000px) { .ras .ras-chores { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 767px) { .ras .ras-desk, .ras .ras-chores { grid-template-columns: 1fr; } }
+`;
+
+function DashboardPreview() {
+  const calls = [
+    {
+      name: "Customer A",
+      detail: "Wash · Tomorrow 10am · Studio",
+      tone: "ok",
+      label: "Answered",
+      extra: "1m 12s",
+      note: "Pressed 1 · confirmed",
+      icon: PhoneCall,
+    },
+    {
+      name: "Customer B",
+      detail: "Detail · Tomorrow 2pm · Studio",
+      tone: "warn",
+      label: "No answer",
+      extra: "",
+      note: "One tap to call again",
+      icon: PhoneMissed,
+    },
+    {
+      name: "Customer C",
+      detail: "Wash · Tomorrow 4pm · Studio",
+      tone: "ring",
+      label: "Ringing",
+      extra: "",
+      note: "Status updates when the call ends",
+      icon: PhoneCall,
+    },
+  ];
+
+  return (
+    <div id="owner-desk" className="ras-desk-wrap">
+      <p className="ras-eyebrow mb-3">What Rai sees</p>
+      <h3 className="ras-display text-3xl sm:text-4xl">Inside Rai&rsquo;s dashboard.</h3>
+      <p className="mt-3 max-w-xl text-sm leading-relaxed">
+        Rai doesn&rsquo;t open a notebook. One screen shows the day. Here&rsquo;s a sample of it,
+        with made-up customers.
+      </p>
+
+      <div className="ras-desk">
+        <section className="ras-panel ras-desk-card" aria-label="Sample confirmation calls">
+          <div className="ras-desk-head">
+            <div>
+              <p className="ras-desk-title">Confirmation calls</p>
+              <p className="ras-desk-sub">
+                Rai&rsquo;s assistant rings every customer after payment.
+              </p>
+            </div>
+            <span className="ras-pill" style={{ background: "var(--cream)" }}>
+              Sample data
+            </span>
+          </div>
+          <ul>
+            {calls.map((c) => (
+              <li key={c.name} className="ras-desk-row">
+                <div>
+                  <p className="ras-desk-name">
+                    {c.name}
+                    <span className="ras-badge" data-tone={c.tone}>
+                      <c.icon className="h-3 w-3" aria-hidden />
+                      {c.label}
+                      {c.extra ? ` · ${c.extra}` : ""}
+                    </span>
+                  </p>
+                  <p className="ras-desk-meta">
+                    {c.detail} · {c.note}
+                  </p>
+                </div>
+                <div className="ras-mock-actions" aria-hidden>
+                  <span className="ras-mock-btn" data-off={c.label === "Ringing"}>
+                    <FileText className="h-3 w-3" />
+                    Transcript
+                  </span>
+                  <span className="ras-mock-btn" data-solid="true">
+                    <RefreshCw className="h-3 w-3" />
+                    Call again
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="ras-desk-foot">
+            Each call asks the customer to press 1 to confirm, 2 to change the time or 3 to change
+            the plan. The outcome and transcript are saved on the booking.
+          </p>
+        </section>
+
+        <div className="ras-desk-stack">
+          <section className="ras-panel ras-desk-card" aria-label="Sample waitlist offers">
+            <div className="ras-desk-head">
+              <div>
+                <p className="ras-desk-title">Waitlist</p>
+                <p className="ras-desk-sub">
+                  A slot opened up. Offers go to the people waiting in that area.
+                </p>
+              </div>
+              <span className="ras-pill" style={{ background: "var(--cream)" }}>
+                Sample data
+              </span>
+            </div>
+            <div className="ras-desk-row">
+              <div>
+                <p className="ras-desk-name">
+                  Claim offer ready
+                  <span className="ras-badge" data-tone="ring">
+                    First to claim wins
+                  </span>
+                </p>
+                <p className="ras-desk-meta">Rai taps once to send it on WhatsApp.</p>
+              </div>
+              <div className="ras-mock-actions" aria-hidden>
+                <span className="ras-mock-btn" data-solid="true">
+                  Send offer
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section className="ras-panel ras-desk-card" aria-label="Sample leads">
+            <div className="ras-desk-head">
+              <div>
+                <p className="ras-desk-title">Leads</p>
+                <p className="ras-desk-sub">Photo uploaded, never paid. Not forgotten.</p>
+              </div>
+              <span className="ras-pill" style={{ background: "var(--cream)" }}>
+                Sample data
+              </span>
+            </div>
+            <div className="ras-desk-row">
+              <div>
+                <p className="ras-desk-name">
+                  Customer D
+                  <span className="ras-badge" data-tone="warn">
+                    Not paid
+                  </span>
+                </p>
+                <p className="ras-desk-meta">Payment link is ready to send.</p>
+              </div>
+              <div className="ras-mock-actions" aria-hidden>
+                <span className="ras-mock-btn" data-solid="true">
+                  Send payment link
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <p className="mt-4">
+        <Link to="/owner" className="ras-btn ras-btn-small ras-btn-primary">
+          <LayoutDashboard className="h-4 w-4" aria-hidden />
+          Open the real dashboard
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function ChoreList() {
+  const chores = [
+    {
+      old: "Phone every customer to confirm",
+      now: "The voice assistant rings after the deposit. The result and transcript land in the dashboard.",
+    },
+    {
+      old: "Explain water and van timings to each caller",
+      now: "The booking form asks about water and closes the slots that can't work.",
+    },
+    {
+      old: "Ring around to refill a cancelled slot",
+      now: "Waitlisted customers in that area get a claim offer. First to claim wins.",
+    },
+    {
+      old: "Forget the photo that went quiet",
+      now: "It shows up as a lead with a payment link ready in one tap.",
+    },
+    {
+      old: "Handle every reschedule request",
+      now: "Customers use their manage link, free until 12 hours before.",
+    },
+    { old: "Take the hit on a no-show", now: "The 30% deposit is already paid." },
+  ];
+
+  return (
+    <div className="ras-chores-head">
+      <p className="ras-eyebrow mb-3">Owner effort, itemised</p>
+      <h3 className="ras-display text-3xl sm:text-4xl">Six chores, handed off.</h3>
+      <ul className="ras-chores">
+        {chores.map((c) => (
+          <li key={c.old} className="ras-chore">
+            <p className="ras-eyebrow">Used to</p>
+            <p className="ras-chore-old">{c.old}</p>
+            <p className="ras-chore-arrow" aria-hidden>
+              ↓
+            </p>
+            <p className="ras-eyebrow">Now</p>
+            <p className="ras-chore-new">{c.now}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function FinalCta() {
+  return (
+    <section className="ras-wrap" aria-labelledby="final-title">
+      <div className="ras-panel ras-final">
+        <div>
+          <p className="ras-eyebrow mb-2">Two sides, one product</p>
+          <h2 id="final-title" className="ras-display text-3xl sm:text-5xl">
+            Book it.
+            <br />
+            Then see who ran it.
+          </h2>
+        </div>
+        <div className="ras-final-actions">
+          <a href="#book" className="ras-btn" style={{ background: "#fff" }}>
+            Book a slot
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </a>
+          <Link to="/owner" className="ras-btn" style={{ background: "var(--lilac)" }}>
+            <LayoutDashboard className="h-4 w-4" aria-hidden />
+            Open owner dashboard
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
