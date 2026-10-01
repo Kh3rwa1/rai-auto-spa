@@ -4,17 +4,20 @@ import {
   ArrowRight,
   CalendarCheck,
   Check,
+  Droplets,
   LayoutDashboard,
   MapPin,
   ShieldCheck,
   Sparkles,
   Store,
   Truck,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { BookingFlow } from "@/components/BookingFlow";
 import { QuickBook } from "@/components/QuickBook";
 import { BRAND } from "@/lib/brand";
-import { PLANS, inr } from "@/lib/plans";
+import { PLANS, SLOTS, inr, isDryWindow } from "@/lib/plans";
 import heroImg from "@/assets/hero.jpg";
 
 const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
@@ -278,6 +281,30 @@ const CSS = `
   font-weight: 700;
 }
 
+.ras .ras-judge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 12px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: var(--lilac);
+}
+
+.ras .ras-judge-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.ras .ras-judge-label span:last-child {
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .ras .ras-hero-art {
   position: relative;
   display: flex;
@@ -327,7 +354,7 @@ const CSS = `
 
 .ras .ras-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   margin-top: 16px;
   overflow: hidden;
 }
@@ -380,11 +407,11 @@ const CSS = `
 }
 
 .ras .ras-demo-note {
-  padding: 10px 13px;
-  border: 1px dashed #817465;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border: 2px dashed #817465;
+  border-radius: 12px;
   background: var(--cream);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -399,6 +426,73 @@ const CSS = `
   text-decoration: underline;
   text-underline-offset: 4px;
   cursor: pointer;
+}
+
+.ras .ras-rules-section {
+  padding-bottom: 50px;
+}
+
+.ras .ras-rules-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  align-items: start;
+  gap: 24px;
+  margin-top: 22px;
+}
+
+.ras .ras-slot-card {
+  padding: 20px;
+}
+
+.ras .ras-slot-row + .ras-slot-row {
+  margin-top: 18px;
+}
+
+.ras .ras-slot-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ras .ras-slot-list {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+}
+
+.ras .ras-slot {
+  padding: 9px 2px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: var(--mint);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ras .ras-slot[data-blocked="true"] {
+  background: #e4dfd5;
+  color: #4b4945;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.ras .ras-rule-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ras .ras-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 17px;
+  border: 2px solid var(--ink);
+  border-radius: 15px;
+  background: #fff;
 }
 
 .ras .ras-glow-grid {
@@ -627,6 +721,18 @@ const CSS = `
   }
 }
 
+@media (min-width: 768px) and (max-width: 1000px) {
+  .ras .ras-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ras .ras-stat:nth-child(3) {
+    border-left: 0;
+  }
+  .ras .ras-stat:nth-child(n + 3) {
+    border-top: 2px solid var(--ink);
+  }
+}
+
 @media (max-width: 767px) {
   .ras .ras-hero {
     grid-template-columns: 1fr;
@@ -658,11 +764,15 @@ const CSS = `
     font-size: 22px;
   }
   .ras .ras-glow-grid,
-  .ras .ras-owner-grid {
+  .ras .ras-owner-grid,
+  .ras .ras-rules-grid {
     grid-template-columns: 1fr;
   }
   .ras .ras-glow-grid {
     gap: 24px;
+  }
+  .ras .ras-slot-list {
+    grid-template-columns: repeat(4, 1fr);
   }
   .ras .ras-nav-desktop {
     display: none;
@@ -704,6 +814,11 @@ const CSS = `
 }
 `;
 
+const timeLabel = (t: string) => {
+  const h = Number(t.slice(0, 2));
+  return `${h % 12 || 12}${h < 12 ? "am" : "pm"}`;
+};
+
 function Wordmark() {
   return (
     <span className="ras-wordmark">
@@ -729,6 +844,9 @@ function Navigation() {
         <nav className="ras-nav-links" aria-label="Main navigation">
           <a href="#book" className="ras-nav-link ras-nav-desktop">
             Prices &amp; booking
+          </a>
+          <a href="#rules" className="ras-nav-link ras-nav-desktop">
+            How it works
           </a>
           <a href="#owner-story" className="ras-nav-link ras-nav-desktop">
             For Rai
@@ -832,8 +950,8 @@ function Hero() {
           </p>
 
           <p className="ras-hero-description">
-            One owner. Two studio bays. One van. Pick your service and an available time—at the studio or your
-            doorstep—without calling Rai.
+            One owner. Two studio bays. One van. Pick a service and a time that&rsquo;s actually free, at the studio or
+            your doorstep, without ever calling Rai.
           </p>
 
           <div className="ras-hero-actions">
@@ -841,9 +959,9 @@ function Hero() {
               Book a slot
               <ArrowRight className="h-4 w-4" aria-hidden />
             </a>
-            <a href="#glow" className="ras-btn">
+            <a href="#rules" className="ras-btn">
               <Sparkles className="h-4 w-4" aria-hidden />
-              See the glow-up
+              See how it works
             </a>
           </div>
 
@@ -861,6 +979,21 @@ function Hero() {
               30% deposit to confirm
             </li>
           </ul>
+
+          <div className="ras-judge" role="group" aria-label="Contest demo shortcuts">
+            <p className="ras-judge-label">
+              <span className="ras-eyebrow">Contest judge?</span>
+              <span>Guest mode is on. No login, no real payment.</span>
+            </p>
+            <a href="#book" className="ras-btn ras-btn-small ras-btn-primary">
+              Book with a sample car
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
+            <Link to="/owner" className="ras-btn ras-btn-small">
+              <LayoutDashboard className="h-4 w-4" aria-hidden />
+              Open owner dashboard
+            </Link>
+          </div>
         </div>
 
         <div className="ras-hero-art">
@@ -882,6 +1015,14 @@ function Hero() {
       </div>
 
       <ul className="ras-panel ras-stats" aria-label="Business at a glance">
+        <li className="ras-stat" style={{ background: "var(--yellow)" }}>
+          <CalendarCheck className="h-6 w-6 shrink-0" aria-hidden />
+          <div>
+            <p className="ras-stat-number">1,500+</p>
+            <p className="ras-stat-label">Appointments, all from a notebook</p>
+          </div>
+        </li>
+
         <li className="ras-stat">
           <Store className="h-6 w-6 shrink-0" aria-hidden />
           <div>
@@ -970,16 +1111,114 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
         )}
       </div>
 
-      <details className="ras-demo-note mt-5">
-        <summary className="cursor-pointer font-bold">Trying the contest demo? Start here.</summary>
+      <div className="ras-demo-note mt-5">
+        <p className="font-bold">Trying the contest demo? Start here.</p>
 
         <p className="mt-2">
           Choose a service, then use a sample car or type a car model. Pick a time and try the simulated checkout. No
-          real money is charged. Open the owner demo to explore routes, calendars and subscriptions.
+          real money is charged. Then open the owner demo to see the calendar, route and subscriptions from Rai&rsquo;s
+          side.
         </p>
 
         <p className="mt-2">AI previews are illustrative. You can still book if a preview is unavailable.</p>
-      </details>
+      </div>
+    </section>
+  );
+}
+
+function RaiRules() {
+  const rules = [
+    {
+      title: "Water is asked up front",
+      description: `Van bookings ask if there's water on site. If not, the van brings a tank (+₹150) and the midday window closes, so Rai never arrives to a dry tap.`,
+      icon: Droplets,
+      color: "var(--mint)",
+    },
+    {
+      title: "A deposit holds the slot",
+      description: "A 30% deposit confirms the booking, so a no-show costs Rai less than an empty bay used to.",
+      icon: Wallet,
+      color: "var(--yellow)",
+    },
+    {
+      title: "Cancelled slots don't go to waste",
+      description:
+        "When someone drops out, the waitlist gets the offer and Rai doesn't have to chase the next booking.",
+      icon: Users,
+      color: "var(--lilac)",
+    },
+  ];
+
+  return (
+    <section id="rules" className="ras-wrap ras-section ras-rules-section" aria-labelledby="rules-title">
+      <p className="ras-eyebrow mb-3">Rai&rsquo;s rules, built in</p>
+
+      <h2 id="rules-title" className="ras-display ras-section-heading">
+        The grid
+        <br />
+        knows the rules.
+      </h2>
+
+      <p className="ras-muted mt-3 max-w-xl text-sm leading-relaxed">
+        Rai used to explain all of this over the phone, one customer at a time. Now the booking form handles it before
+        anyone has to ask.
+      </p>
+
+      <div className="ras-rules-grid">
+        <figure className="ras-panel ras-slot-card">
+          <div className="ras-slot-row">
+            <p className="ras-slot-title">
+              <Truck className="h-4 w-4" aria-hidden />
+              Doorstep van · no water on site
+            </p>
+            <ul className="ras-slot-list">
+              {SLOTS.map((t) => {
+                const blocked = isDryWindow(t);
+                return (
+                  <li key={t} className="ras-slot" data-blocked={blocked}>
+                    {timeLabel(t)}
+                    <span className="sr-only">{blocked ? " blocked, no water" : " available"}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <div className="ras-slot-row">
+            <p className="ras-slot-title">
+              <Store className="h-4 w-4" aria-hidden />
+              Studio bay · water on tap
+            </p>
+            <ul className="ras-slot-list">
+              {SLOTS.map((t) => (
+                <li key={t} className="ras-slot" data-blocked={false}>
+                  {timeLabel(t)}
+                  <span className="sr-only"> available</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <figcaption className="ras-muted pt-4 text-xs leading-relaxed">
+            Illustration of the rule the live grid applies. Struck-out times are unavailable for the van without water.
+          </figcaption>
+        </figure>
+
+        <ul className="ras-rule-list">
+          {rules.map((rule) => (
+            <li className="ras-rule" key={rule.title}>
+              <span className="ras-step-icon" style={{ background: rule.color }}>
+                <rule.icon className="h-5 w-5" aria-hidden />
+              </span>
+
+              <div>
+                <h3 className="text-sm font-extrabold">{rule.title}</h3>
+                <p className="ras-muted mt-1 text-sm leading-relaxed">{rule.description}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -1101,15 +1340,17 @@ function Transformation() {
 
 function OwnerStory() {
   const before = [
-    "Check the notebook before promising a time.",
-    "Ask each customer: studio or van, where, and is water available?",
-    "Coordinate changes and chase the next booking manually.",
+    "1,500 appointments, one notebook. Every new booking started with flipping pages.",
+    "Every customer got the same questions: studio or van? Where? Is there water?",
+    "A no-show meant an empty bay and nothing to show for it.",
+    "A cancellation meant calling around to fill the gap.",
   ];
 
   const after = [
-    "Customers choose a service and check available times themselves.",
-    "Location and water details are collected during booking.",
-    "Rai manages bookings, subscriptions and waitlist offers in one dashboard.",
+    "Customers pick the service, place and time. Rai just turns up.",
+    "Location and water are collected in the form, and the grid closes the slots that can't work.",
+    "A 30% deposit holds each slot, so a no-show costs less.",
+    "Cancelled slots go to the waitlist, and everything lives in one owner dashboard.",
   ];
 
   return (
@@ -1251,6 +1492,7 @@ function Index() {
       <main>
         <Hero />
         <Booking sectionRef={bookingRef} />
+        <RaiRules />
         <Transformation />
         <OwnerStory />
       </main>
