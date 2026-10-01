@@ -14,12 +14,12 @@ import {
   Store,
   Truck,
 } from "lucide-react";
+import { BeforeAfter } from "@/components/BeforeAfter";
 import { BookingFlow } from "@/components/BookingFlow";
 import { QuickBook } from "@/components/QuickBook";
 import { getSlots } from "@/lib/booking.functions";
 import { BRAND } from "@/lib/brand";
 import { MOBILE_FEE, PLANS, SLOTS, WATER_FEE, inr, isDryWindow } from "@/lib/plans";
-import heroImg from "@/assets/hero.jpg";
 
 const MAPS_URL = "https://maps.google.com/?q=MG+Marg+Gangtok+737101";
 const DAY_MS = 86_400_000;
@@ -91,11 +91,11 @@ const CSS = `
 .ras .ras-checks{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:18px}
 .ras .ras-checks li{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700}
 .ras .ras-hero-art{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:410px;padding:32px;border-left:3px solid var(--ink);background:var(--pink)}
-.ras .ras-hero-art::before,.ras .ras-hero-art::after{content:"✦";position:absolute;font-size:30px}
-.ras .ras-hero-art::before{top:25px;left:25px}
-.ras .ras-hero-art::after{right:25px;bottom:27px;font-size:23px}
-.ras .ras-mascot{width:min(68%,235px);height:auto;animation:ras-bob 4s ease-in-out infinite}
-.ras .ras-art-note{width:min(100%,300px);padding:14px;border:2px solid var(--ink);border-radius:14px;background:var(--cream);text-align:center;box-shadow:4px 4px 0 var(--ink)}
+.ras .ras-hero-art{padding:0;gap:0;align-items:stretch;justify-content:flex-start;overflow:hidden;background:var(--cream)}
+.ras .ras-hero-art [role="slider"],.ras .ras-compare-frame [role="slider"]{touch-action:pan-y !important}
+.ras .ras-hero-art [role="slider"]{flex:1;aspect-ratio:auto;min-height:340px;border-radius:0;box-shadow:none}
+.ras .ras-compare-frame [role="slider"]{border:2px solid var(--ink);border-radius:14px;box-shadow:none}
+.ras .ras-hero-cap{padding:10px 14px;border-top:3px solid var(--ink);font-size:12px;font-weight:700;line-height:1.5}
 
 .ras .ras-stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:16px;overflow:hidden}
 .ras .ras-stat{display:flex;align-items:center;gap:12px;padding:17px 21px}
@@ -122,14 +122,7 @@ const CSS = `
 .ras .ras-step-icon{display:grid;flex-shrink:0;width:42px;height:42px;place-items:center;border:2px solid var(--ink);border-radius:999px}
 
 .ras .ras-glow-grid{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:32px;padding-bottom:50px}
-.ras .ras-compare-frame{padding:10px}
-.ras .ras-compare{position:relative;aspect-ratio:4/3;overflow:hidden;border:2px solid var(--ink);border-radius:14px}
-.ras .ras-compare img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.ras .ras-compare-label{position:absolute;top:12px;z-index:2;padding:5px 9px;border:2px solid var(--ink);border-radius:999px;font-size:10px;font-weight:800;text-transform:uppercase}
-.ras .ras-compare-range{position:absolute;inset:0;z-index:4;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;touch-action:pan-y}
-.ras .ras-compare-line{position:absolute;top:0;bottom:0;z-index:3;width:3px;background:var(--ink);pointer-events:none;transform:translateX(-50%)}
-.ras .ras-compare-knob{position:absolute;top:50%;left:50%;display:grid;width:44px;height:44px;place-items:center;border:3px solid var(--ink);border-radius:999px;background:var(--yellow);font-size:20px;font-weight:800;transform:translate(-50%,-50%)}
-.ras .ras-compare:focus-within{outline:3px solid #6d28d9;outline-offset:4px}
+.ras .ras-slot-card{padding:20px}
 .ras .ras-step-list{display:grid;gap:12px;margin-top:23px}
 
 .ras .ras-how-section{padding-bottom:50px}
@@ -161,8 +154,6 @@ const CSS = `
 .ras .ras-skip{position:fixed;top:8px;left:8px;z-index:100;padding:12px 16px;border-radius:10px;background:var(--ink);color:#fff;transform:translateY(-150%)}
 .ras .ras-skip:focus{transform:translateY(0)}
 
-@keyframes ras-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}
-
 @media (min-width:768px){
   .ras .ras-mobile-cta{display:none}
   .ras .ras-footer{padding-bottom:30px}
@@ -179,8 +170,7 @@ const CSS = `
 @media (max-width:767px){
   .ras .ras-hero{grid-template-columns:1fr}
   .ras .ras-hero-art{min-height:270px;padding:23px;gap:10px;border-top:3px solid var(--ink);border-left:0}
-  .ras .ras-mascot{width:140px}
-  .ras .ras-art-note{padding:10px}
+  .ras .ras-hero-art [role="slider"]{min-height:260px}
   .ras .ras-stats{grid-template-columns:1fr}
   .ras .ras-stat+.ras-stat{border-top:2px solid var(--ink);border-left:0}
   .ras .ras-stat{padding:13px 17px}
@@ -306,82 +296,6 @@ function Navigation() {
   );
 }
 
-function Mascot() {
-  const foam: Array<[number, number, number]> = [
-    [60, 68, 17],
-    [84, 52, 19],
-    [111, 47, 20],
-    [137, 56, 18],
-    [152, 76, 13],
-    [44, 86, 11],
-  ];
-
-  return (
-    <svg viewBox="0 0 200 220" className="ras-mascot" aria-hidden focusable="false">
-      <ellipse cx="100" cy="210" rx="56" ry="7" fill="#111" />
-      <path d="M80 172v24M120 172v24" stroke="#111" strokeWidth="6" strokeLinecap="round" />
-      <path
-        d="M58 202q0-15 23-13q10 1 10 13zM109 202q0-12 10-13q23-2 23 13z"
-        fill="#b9a7ff"
-        stroke="#111"
-        strokeWidth="4"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M47 122q-22 2-24-18M153 122q20-6 26-28"
-        stroke="#111"
-        strokeWidth="5"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <circle cx="22" cy="98" r="9" fill="#fff" stroke="#111" strokeWidth="4" />
-      <rect
-        x="170"
-        y="72"
-        width="22"
-        height="18"
-        rx="5"
-        fill="#9ee6c4"
-        stroke="#111"
-        strokeWidth="4"
-      />
-      <rect
-        x="45"
-        y="62"
-        width="110"
-        height="114"
-        rx="26"
-        fill="#ffd84d"
-        stroke="#111"
-        strokeWidth="5"
-      />
-      <circle cx="62" cy="150" r="5" fill="#e9b824" />
-      <circle cx="140" cy="140" r="6" fill="#e9b824" />
-      <circle cx="100" cy="162" r="3" fill="#e9b824" />
-      {foam.map(([x, y, radius], index) => (
-        <circle key={`edge-${index}`} cx={x} cy={y} r={radius + 3} fill="#111" />
-      ))}
-      {foam.map(([x, y, radius], index) => (
-        <circle key={`foam-${index}`} cx={x} cy={y} r={radius} fill="#cff5ff" />
-      ))}
-      <ellipse cx="80" cy="104" rx="12" ry="15" fill="#fff" stroke="#111" strokeWidth="4" />
-      <ellipse cx="120" cy="104" rx="12" ry="15" fill="#fff" stroke="#111" strokeWidth="4" />
-      <circle cx="83" cy="107" r="6" fill="#111" />
-      <circle cx="123" cy="107" r="6" fill="#111" />
-      <circle cx="63" cy="126" r="7" fill="#ff5fa2" />
-      <circle cx="137" cy="126" r="7" fill="#ff5fa2" />
-      <path
-        d="M82 128q18 26 36 0z"
-        fill="#111"
-        stroke="#111"
-        strokeWidth="4"
-        strokeLinejoin="round"
-      />
-      <path d="M92 138q8 6 16 0q-2 7-8 7t-8-7z" fill="#ff5fa2" />
-    </svg>
-  );
-}
-
 function Hero() {
   const next = useNextFree();
 
@@ -456,20 +370,13 @@ function Hero() {
         </div>
 
         <div className="ras-hero-art">
-          <span className="ras-pill" style={{ background: "var(--cream)" }}>
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />A little dirty? A lot of potential.
-          </span>
-
-          <Mascot />
-
-          <div className="ras-art-note">
-            <p className="ras-display text-2xl">You pick. We shine.</p>
-            <p className="mt-2 text-xs leading-relaxed">
-              Wash, detail or a whole new look.
-              <br />
-              Add a photo of your car to preview the result with AI.
-            </p>
-          </div>
+          <BeforeAfter
+            before="/samples/thar.jpg"
+            after="/samples/thar-wrap.jpg"
+            beforeLabel="Before"
+            afterLabel="Signature Super Design"
+          />
+          <p className="ras-hero-cap">Sample preview, not a customer result. Drag to compare.</p>
         </div>
       </div>
 
@@ -531,7 +438,7 @@ function Booking({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) 
     >
       <div className="ras-heading-row">
         <div>
-          <p className="ras-eyebrow mb-3">Book in under a few taps</p>
+          <p className="ras-eyebrow mb-3">Book in a few taps</p>
 
           <h2 id="book-title" className="ras-display ras-section-heading">
             Your glow-up
@@ -688,8 +595,6 @@ function Rules() {
 }
 
 function Transformation() {
-  const [position, setPosition] = useState(50);
-
   const steps = [
     {
       title: "Pick your service",
@@ -714,62 +619,14 @@ function Transformation() {
   return (
     <section id="glow" className="ras-wrap ras-section ras-glow-grid" aria-labelledby="glow-title">
       <figure className="ras-panel ras-compare-frame">
-        <div className="ras-compare">
-          <img
-            src={heroImg}
-            alt="Illustration of a car-care transformation"
-            loading="lazy"
-            decoding="async"
-          />
-
-          <div
-            className="absolute inset-0"
-            style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
-            aria-hidden
-          >
-            <img
-              src={heroImg}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              style={{ filter: "grayscale(.5) sepia(.45) brightness(.65)" }}
-            />
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(circle at 25% 75%, rgba(90,60,25,.55), transparent 28%), linear-gradient(to top, rgba(88,60,26,.5), transparent 60%)",
-              }}
-            />
-          </div>
-
-          <span className="ras-compare-label left-3" style={{ background: "var(--cream)" }}>
-            Before
-          </span>
-
-          <span className="ras-compare-label right-3" style={{ background: "var(--yellow)" }}>
-            After
-          </span>
-
-          <input
-            className="ras-compare-range"
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={position}
-            onChange={(event) => setPosition(Number(event.target.value))}
-            aria-label="Before image visibility"
-            aria-valuetext={`${position}% of the before illustration visible`}
-          />
-
-          <div className="ras-compare-line" style={{ left: `${position}%` }} aria-hidden>
-            <span className="ras-compare-knob">↔</span>
-          </div>
-        </div>
-
+        <BeforeAfter
+          before="/samples/creta.jpg"
+          after="/samples/creta-wrap.jpg"
+          beforeLabel="Before"
+          afterLabel="Signature Super Design"
+        />
         <figcaption className="ras-muted px-1 pb-1 pt-3 text-xs leading-relaxed">
-          Illustration, not a customer result. Add a photo while booking to preview your own car
+          Sample preview, not a customer result. Add a photo while booking to preview your own car
           with AI.
         </figcaption>
       </figure>
