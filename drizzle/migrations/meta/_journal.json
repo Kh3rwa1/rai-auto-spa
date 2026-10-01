@@ -85,6 +85,20 @@
       "when": 1790760317984,
       "tag": "0011_add_call_detail_columns_to_bookings",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790837857772,
+      "tag": "0012_0012_slot_duration_and_atomic_payment",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790838107621,
+      "tag": "0013_0013_payment_input_validation_first",
+      "breakpoints": true
     }
   ]
 }

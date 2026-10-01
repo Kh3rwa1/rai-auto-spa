@@ -45,7 +45,7 @@ async function book(
   days = 1,
   id?: string,
   status?: string,
-  slots = 1,
+  slots?: number,
 ) {
   const { data, error } = await sb!.rpc("book_slot", {
     p_booking_id: id ?? (await lead()),
@@ -55,7 +55,9 @@ async function book(
     p_water: water,
     p_days: days,
     ...(status ? { p_status: status } : {}),
-    p_slots: slots,
+    // Omitted entirely when undefined, so the database's plan-derived
+    // duration path (p_slots DEFAULT NULL) is what legacy callers exercise.
+    ...(slots !== undefined ? { p_slots: slots } : {}),
   });
   if (error) throw error;
   return data;
@@ -233,8 +235,8 @@ describe.skipIf(!sb)("book_slot", () => {
     // Two legacy-style calls with NO p_slots: both Details must occupy two hours.
     const d1 = await mkDetail();
     const d2 = await mkDetail();
-    expect(await book(DD, "09:00", false, true, 1, d1)).toBe("ok");
-    expect(await book(DD, "09:00", false, true, 1, d2)).toBe("ok");
+    expect(await book(DD, "09:00", false, true, 1, d1, "confirmed")).toBe("ok");
+    expect(await book(DD, "09:00", false, true, 1, d2, "confirmed")).toBe("ok");
     const { data: row } = await sb!
       .from("bookings")
       .select("duration_slots")
@@ -254,7 +256,7 @@ describe.skipIf(!sb)("book_slot", () => {
       .single();
     if (error) throw error;
     ids.push(data.id);
-    expect(await book(DE, "09:00", true, true, 1, data.id)).toBe("ok");
+    expect(await book(DE, "09:00", true, true, 1, data.id, "confirmed")).toBe("ok");
     // The van is busy through 10:00 — a Wash at 10:00 is rejected.
     expect(await book(DE, "10:00", true)).toBe("full");
   });
@@ -308,26 +310,28 @@ describe.skipIf(!sb)("book_slot", () => {
 
   it("rejects NULL and invalid inputs with named codes", async () => {
     // NULL booking id / date / days / flags on book_slot.
-    await expect(
-      sb!.rpc("book_slot", {
+    const rpcData = async (args: Record<string, unknown>) =>
+      (await sb!.rpc("book_slot", args)).data;
+    expect(
+      await rpcData({
         p_booking_id: null,
         p_date: day(900),
         p_time: "09:00",
         p_mobile: false,
         p_water: true,
       }),
-    ).resolves.toBe("invalid_slot");
-    await expect(
-      sb!.rpc("book_slot", {
+    ).toBe("invalid_slot");
+    expect(
+      await rpcData({
         p_booking_id: await lead(),
         p_date: null,
         p_time: "09:00",
         p_mobile: false,
         p_water: true,
       }),
-    ).resolves.toBe("invalid_slot");
-    await expect(
-      sb!.rpc("book_slot", {
+    ).toBe("invalid_slot");
+    expect(
+      await rpcData({
         p_booking_id: await lead(),
         p_date: day(900),
         p_time: "09:00",
@@ -335,16 +339,16 @@ describe.skipIf(!sb)("book_slot", () => {
         p_water: true,
         p_days: 0,
       }),
-    ).resolves.toBe("invalid_slot");
-    await expect(
-      sb!.rpc("book_slot", {
+    ).toBe("invalid_slot");
+    expect(
+      await rpcData({
         p_booking_id: await lead(),
         p_date: day(900),
         p_time: "09:00",
         p_mobile: null,
         p_water: true,
       }),
-    ).resolves.toBe("invalid_slot");
+    ).toBe("invalid_slot");
     // NULL method / NULL amount on payment.
     const bk = await payable();
     expect(
@@ -370,7 +374,7 @@ describe.skipIf(!sb)("book_slot", () => {
   it("payment and reservation share the resource lock: after a paid booking, the slot is full", async () => {
     const DY = day(999 + Math.floor(Math.random() * 20));
     const bk = await payable();
-    expect(await book(DY, "09:00", false, true, 1, bk.id, "pending_deposit")).toBe("ok");
+    expect(await book(DY, "09:00", true, true, 1, bk.id, "pending_deposit")).toBe("ok");
     const { data: paidCode } = await sb!.rpc("confirm_demo_payment", {
       p_booking_id: bk.id,
       p_method: "card",
