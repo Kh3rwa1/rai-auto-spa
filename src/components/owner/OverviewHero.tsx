@@ -50,8 +50,8 @@ export function OverviewHero({
               Today&apos;s operations
             </h1>
             <p className="mt-1 text-sm text-charcoal-foreground/70">
-              {todays.length} jobs today · {stops.length} van stops · {route.km.toFixed(1)} km route
-              (est. hill roads)
+              {todays.length} job{todays.length === 1 ? "" : "s"} today · {stops.length} van stop
+              {stops.length === 1 ? "" : "s"} · {route.km.toFixed(1)} km route (est. hill roads)
             </p>
           </div>
           <Button

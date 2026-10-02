@@ -14,6 +14,8 @@ import { type Booking, type Sub, Stat } from "./shared";
 import { OverviewHero } from "./OverviewHero";
 import { TABS } from "./tabs";
 import { RoutePanel } from "./RoutePanel";
+import { Reminders } from "./Reminders";
+import { reminderRows } from "./reminders-data";
 import { WeekCalendar } from "./WeekCalendar";
 import { Subscriptions } from "./Subscriptions";
 import { Waitlist } from "./Waitlist";
@@ -125,8 +127,10 @@ export function OwnerDashboard() {
   const galleryCount = bookings.filter((b) => b.clean_preview_url && b.photo_url).length;
   const activeSubs = subs.filter((s) => s.active).length;
   const callRows = bookings.filter((b) => b.deposit_paid || b.call_status).length;
+  const reminderCount = reminderRows(bookings, today).rows.length;
   const counts: Record<(typeof TABS)[number]["value"], number> = {
     route: stops.length,
+    reminders: reminderCount,
     calendar: pendingDeposits,
     calls: callRows,
     subs: activeSubs,
@@ -165,14 +169,14 @@ export function OwnerDashboard() {
             icon={CalendarDays}
             label="Today's bookings"
             value={String(todays.length)}
-            sub={`${todays.length - subVisits} customers · ${subVisits} subscription`}
+            sub={`${todays.length - subVisits} customer${todays.length - subVisits === 1 ? "" : "s"} · ${subVisits} subscription`}
             formula={`${todays.length - subVisits} customer bookings + ${subVisits} subscription visits (paused and skipped customers excluded).`}
           />
           <Stat
             icon={RouteIcon}
             label="Van route today"
             value={`${route.km.toFixed(1)} km`}
-            sub={`${route.order.length} stops · est. hill roads`}
+            sub={`${route.order.length} stop${route.order.length === 1 ? "" : "s"} · est. hill roads`}
             tile="bg-electric/10"
             tone="text-electric"
             formula={`Nearest-stop route Studio → ${route.order.length} van stops → Studio. Straight-line distance × ${OPS.roadMultiplier} for hill roads.`}
@@ -254,6 +258,10 @@ export function OwnerDashboard() {
 
         <TabsContent value="route" className="mt-4 grid gap-4 lg:grid-cols-[2fr_1fr]">
           <RoutePanel route={route} liters={liters} tankRefills={tankRefills} />
+        </TabsContent>
+
+        <TabsContent value="reminders" className="mt-4">
+          <Reminders bookings={bookings} />
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">

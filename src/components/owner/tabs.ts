@@ -1,4 +1,5 @@
 import {
+  BellRing,
   CalendarDays,
   Hourglass,
   Images,
@@ -11,6 +12,7 @@ import {
 
 export const TABS = [
   { value: "route", label: "Route", icon: MapPinned },
+  { value: "reminders", label: "Reminders", icon: BellRing },
   { value: "calendar", label: "Calendar", icon: CalendarDays },
   { value: "calls", label: "Calls", icon: PhoneCall },
   { value: "subs", label: "Subscriptions", icon: Repeat },
