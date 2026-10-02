@@ -18,6 +18,7 @@ import { Route as PayBookingIdRouteImport } from './routes/pay.$bookingId'
 import { Route as ApiPublicInitiateSarvamCallRouteImport } from './routes/api/public/initiate-sarvam-call'
 import { Route as ApiPublicUpdateBookingRouteImport } from './routes/api/public/update-booking'
 import { Route as ApiPublicHooksRunScheduleRouteImport } from './routes/api/public/hooks/run-schedule'
+import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
@@ -68,6 +69,12 @@ const ApiPublicHooksRunScheduleRoute =
     path: '/api/public/hooks/run-schedule',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSendRemindersRoute =
+  ApiPublicHooksSendRemindersRouteImport.update({
+    id: '/api/public/hooks/send-reminders',
+    path: '/api/public/hooks/send-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
   '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
+  '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -97,6 +105,7 @@ export interface FileRoutesByTo {
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
   '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
+  '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
@@ -110,6 +119,7 @@ export interface FileRoutesById {
   '/api/public/initiate-sarvam-call': typeof ApiPublicInitiateSarvamCallRoute
   '/api/public/update-booking': typeof ApiPublicUpdateBookingRoute
   '/api/public/hooks/run-schedule': typeof ApiPublicHooksRunScheduleRoute
+  '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/api/public/initiate-sarvam-call'
     | '/api/public/update-booking'
     | '/api/public/hooks/run-schedule'
+    | '/api/public/hooks/send-reminders'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/api/public/initiate-sarvam-call'
     | '/api/public/update-booking'
     | '/api/public/hooks/run-schedule'
+    | '/api/public/hooks/send-reminders'
     | '/lovable/email/transactional/preview'
   id:
     | '__root__'
@@ -148,6 +160,7 @@ export interface FileRouteTypes {
     | '/api/public/initiate-sarvam-call'
     | '/api/public/update-booking'
     | '/api/public/hooks/run-schedule'
+    | '/api/public/hooks/send-reminders'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
@@ -161,6 +174,7 @@ export interface RootRouteChildren {
   ApiPublicInitiateSarvamCallRoute: typeof ApiPublicInitiateSarvamCallRoute
   ApiPublicUpdateBookingRoute: typeof ApiPublicUpdateBookingRoute
   ApiPublicHooksRunScheduleRoute: typeof ApiPublicHooksRunScheduleRoute
+  ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
@@ -229,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksRunScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/send-reminders': {
+      id: '/api/public/hooks/send-reminders'
+      path: '/api/public/hooks/send-reminders'
+      fullPath: '/api/public/hooks/send-reminders'
+      preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
@@ -250,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicInitiateSarvamCallRoute: ApiPublicInitiateSarvamCallRoute,
   ApiPublicUpdateBookingRoute: ApiPublicUpdateBookingRoute,
   ApiPublicHooksRunScheduleRoute: ApiPublicHooksRunScheduleRoute,
+  ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
