@@ -113,13 +113,15 @@ function buildBody(env: Env, from: string, v: CallVars, vars: Record<string, str
   return {
     app_config: {
       app_id: env.agentId,
-      app_version: Number(process.env["SARVAM_AGENT_VERSION"] ?? 1),
+      ...(process.env["SARVAM_AGENT_VERSION"]
+        ? { app_version: Number(process.env["SARVAM_AGENT_VERSION"]) }
+        : { version_filter: "latest_committed" }),
       app_type: "agent",
       connection_config: { connection_id: env.connectionId, agent_phone_number: from },
       agent_variables: vars,
       app_overrides: {
         initial_language_name: "English",
-        initial_bot_message: `Hello ${v.customerName}, this is Rai's assistant from Rai's Auto Spa confirming your ${speakPlan(v.plan)} on ${speakDate(v.date)} at ${speakTime(v.time)} at ${v.building}. Press 1 to confirm, 2 to change time, 3 to change plan.`,
+        initial_bot_message: `Hello ${v.customerName}, this is Rai's assistant from Rai's Auto Spa confirming your ${speakPlan(v.plan)} on ${speakDate(v.date)} at ${speakTime(v.time)} at ${v.building}. You can reschedule for free up to 12 hours before your appointment. Press 1 to confirm, or 2 to reschedule.`,
       },
     },
     user_config: { user_phone_number: v.customerPhoneE164 },
